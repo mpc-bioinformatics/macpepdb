@@ -57,11 +57,15 @@ Appending `--help` shows the existing command line parmeter.
 
 ### Docker installation
 To create a Docker image use: `docker build --tag trypperdb-py .` . You can use the image to start a container with
-`docker run --network=trypperdb -it --rm trypperdb-py --help`.
+`docker run -it --rm trypperdb-py --help`.
 To access your files in the container mount your files to `/usr/src/trypperdb/data` with `-v YOUR_DATA_FOLDER:/usr/src/trypperdb/data` (add it before the `trypperdb-py`). Keep in mind your working in a container, so all files pathes are within the container.   
 If you intend to create a protein/peptide database and your Postgresql server is running in a Docke container too, make sure both, the  Postgresql server and the TrypperDB container have access to the same Docker network by adding `--network=YOUR_DOCKER_NETWORK` (before the ´trypperdb-py´).
 
 ### Building a databse
+#### Prepare the database
+Run `TRYPPERDB_DB_URL=postgresql://<USER>:<PASSWORD>@<HOST>:<PORT>/<DATABASE> test alembic upgrade head`    
+If you use the docker container, run the command in a temporary container: `docker run --rm -it trypperdb-py sh`
+
 #### Digest
 To build the database you need a running postgresql server with an empty database. As input file for the digestion you can use FASTA-files or the [UniProt-text-files](https://www.uniprot.org/docs/userman.htm#linetypes). Then run the digestion command: `python -m trypperdb digestion ...`, check out `python -m trypperdb digestion --help` for more information.
 
