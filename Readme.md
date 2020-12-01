@@ -52,7 +52,7 @@ TRYPPERDB_TEST_DB_URL=postgresql://postgres:developer@127.0.0.1:5433/trypperdb_t
 ## Usage
 
 ### Native installation
-You can follow the development instruction to `pip install -r ./requirements.txt`. Then you can use TrypperDB by running `python main.py`. 
+You can follow the development instruction to `pip install -r ./requirements.txt`. Then you can use TrypperDB by running `python -m trypperdb`. 
 Appending `--help` shows the existing command line parmeter.
 
 ### Docker installation
