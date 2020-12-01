@@ -48,6 +48,8 @@ If you add some new python modules, make sure you update `requirements.txt` by r
 ```bash
 TRYPPERDB_TEST_DB_URL=postgresql://postgres:developer@127.0.0.1:5433/trypperdb_test python -m unittest tests/*_test_case.py
 ```
+### Run the modules CLI
+Run `python -m trypperdb --help` in the root-folderof the repository.
 
 ## Usage
 
