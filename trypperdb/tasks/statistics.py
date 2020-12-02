@@ -6,6 +6,9 @@ from sqlalchemy.pool import StaticPool
 from ..models.peptide import Peptide
 
 class Statistics:
+    # Can be overriden in subclasses to change the peptide tables
+    peptide_class=Peptide
+
     @classmethod
     def estimate_peptide_partition_utilizations(cls, session: Session) -> list:
         """
@@ -14,7 +17,7 @@ class Statistics:
         @param session Open database session
         @return List of tupels [(parition_count, partition_name), ...]
         """
-        return session.execute(f"SELECT relname, reltuples::BIGINT FROM pg_class WHERE relname SIMILAR TO '{Peptide.__tablename__}_[0-9]{{3}}';").fetchall()
+        return session.execute(f"SELECT relname, reltuples::BIGINT FROM pg_class WHERE relname SIMILAR TO '{cls.peptide_class.__tablename__}_[0-9]{{3}}';").fetchall()
 
     @classmethod
     def estimate_peptide_count(cls, session: Session) -> int:
@@ -33,11 +36,10 @@ class Statistics:
     def get_partition_boundaries(cls, session: Session):
         """
         This return the peptide partition boundaries.
-
         @param session Open database session
         @return List of tupel [(partition_name, from, to), ...]
         """
-        rows = session.execute("select pg_class.relname, pg_get_expr(pg_class.relpartbound, pg_class.oid, true) from pg_class where relname SIMILAR TO 'peptides_[0-9]{3}';").fetchall()
+        rows = session.execute(f"select pg_class.relname, pg_get_expr(pg_class.relpartbound, pg_class.oid, true) from pg_class where relname SIMILAR TO '{cls.peptide_class.__tablename__}_[0-9]{{3}}';").fetchall()
         num_regex = re.compile(r"\d+")
         partition_boundaries = []
         for row in rows:
