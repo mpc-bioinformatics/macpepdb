@@ -1,11 +1,17 @@
 import unittest
 import pathlib
 import re
+import os
 
 from trypperdb.proteomics.modification_collection import ModificationCollection
 from trypperdb.models.modified_peptide_where_clause_builder import ModifiedPeptideWhereClauseBuilder
 from trypperdb.proteomics.mass.convert import to_int as mass_to_int, thomson_to_dalton
 from trypperdb.models.peptide import Peptide
+from trypperdb.tasks.digestion import Digestion
+from trypperdb.proteomics.enzymes.digest_enzyme import DigestEnzyme
+from trypperdb.proteomics.file_reader.file_reader import FileReader
+from trypperdb.peptide_mass_validator import PeptideMassValidator
+from trypperdb.proteomics.mass.precursor_range import PrecursorRange
 
 from .abstract_database_test_case import AbstractDatabaseTestCase
 
@@ -134,3 +140,67 @@ class ModifiedPeptideWhereClauseBuilderTestCase(AbstractDatabaseTestCase):
         self.assertEqual(len(peptides), len(PEPTIDES_FOR_MODIFIED_SEARCH['matching']))
         for peptide in peptides:
             self.assertIn(peptide.sequence, PEPTIDES_FOR_MODIFIED_SEARCH['matching'])
+
+    def test_with_real_data(self):
+        VARIABLE_MODIFICATION_LIMIT = 2
+        # Mass of MFPVTJEDTEGNVJTVSPPCYGFJQJR
+        PRECURSOR = 3025492916648
+        PRECURSOR_TOLERANCE = 20
+        # With the given mass, tolerance and modifications 3 peptides shoud be found
+
+        protein_file_path = pathlib.Path('./test_files/UP000002006.txt')
+        modifications_file_path = pathlib.Path('./test_files/modifications.csv')
+
+        digestion = Digestion(
+            [protein_file_path],
+            'text',
+            pathlib.Path("./digestion_test.log"),
+            pathlib.Path("./digestion_test.unprocessible_proteins.fasta"),
+            pathlib.Path("./digestion_test.statistics.csv"),
+            5,
+            4,
+            "Trypsin",
+            2,
+            6   ,
+            50,
+            0
+        )
+
+        digestion.digest_to_database(os.getenv("TRYPPERDB_TEST_DB_URL"))
+
+        modification_collection = ModificationCollection.read_from_csv_file(modifications_file_path)
+        peptide_mass_validator = PeptideMassValidator(modification_collection, VARIABLE_MODIFICATION_LIMIT, PrecursorRange(PRECURSOR, PRECURSOR_TOLERANCE, PRECURSOR_TOLERANCE))
+
+        validated_matching_peptide_sequences = set()
+
+        session = self.session_factory()
+        # Run through all peptidesv (in batches of 100 peptides) and check which match the precursor and modification requirements
+        for peptide in session.query(Peptide).yield_per(1000):
+            if peptide_mass_validator.validate(peptide):
+                validated_matching_peptide_sequences.add(peptide.sequence)
+
+        # Close and delete old session and create a new one so there is no cache
+        session.close()
+        del session
+        session = self.session_factory()
+
+        builder =  ModifiedPeptideWhereClauseBuilder(modification_collection, PRECURSOR, PRECURSOR_TOLERANCE, PRECURSOR_TOLERANCE, VARIABLE_MODIFICATION_LIMIT)
+        where_clause = builder.build(Peptide)
+        peptides = session.query(Peptide).filter(where_clause).all()
+
+        queried_matching_peptide_sequences = set()
+        for peptide in peptides:
+            queried_matching_peptide_sequences.add(peptide.sequence)
+
+        # Check length of both manually validated set and the queried set
+        self.assertEqual(len(validated_matching_peptide_sequences), len(queried_matching_peptide_sequences))
+
+        # Cross check if peptide from one set is in the other set
+        for sequence in queried_matching_peptide_sequences:
+            self.assertIn(sequence, validated_matching_peptide_sequences)
+
+        for sequence in validated_matching_peptide_sequences:
+            self.assertIn(sequence, queried_matching_peptide_sequences)
+
+
+
