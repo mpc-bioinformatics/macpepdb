@@ -39,7 +39,7 @@ postgres -D $(pwd)/.db/pgsql/data -h 127.0.0.1 -p 5433 -k $(pwd)/.db/pgsql/run
 psql -h 127.0.0.1 -p 5433 -U postgres -c "create database trypperdb_dev;"
 psql -h 127.0.0.1 -p 5433 -U postgres -c "create database trypperdb_test;"
 # Run migrations
-TRYPPERDB_DB_URL=postgresql://postgres:developer@127.0.0.1:5434/trypperdb_test alembic upgrade head
+TRYPPERDB_DB_URL=postgresql://postgres:developer@127.0.0.1:5433/trypperdb_test alembic upgrade head
 ```
 
 If you add some new python modules, make sure you update `requirements.txt` by running `pip freeze > requirements.txt`
