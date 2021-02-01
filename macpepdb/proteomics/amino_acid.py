@@ -1,6 +1,6 @@
 from .mass.convert import to_int as mass_to_int
 
-AMINO_ACIDS_FOR_COUNTING = ["A", "C", "D", "E", "F", "G", "H", "J", "K", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "Y"]
+AMINO_ACIDS_FOR_COUNTING = ["A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "Y"]
 
 class AminoAcid:
     def __init__(self, name: str, one_letter_code: str, three_letter_code: str, chemical_formula: str, mono_mass: float, average_mass: float, distribution: float):
@@ -47,7 +47,7 @@ F = AminoAcid("Phenylalanine", 'F', "Phe", "C9H9ON", 147.068413945, 147.1766, 3.
 G = AminoAcid("Glycine", 'G', "Gly", "C2H3ON", 57.021463735, 57.0519, 7.3)
 H = AminoAcid("Histidine", 'H', "His", "C6H7ON3", 137.058911875, 137.1411, 2.1)
 I = AminoAcid("Isoleucine", 'I', "Ile", "C6H11ON", 113.084064015, 113.1594, 5.6)
-J = AminoAcid("Isoleucine or Leucine", 'J', "Ile or Leu", "C6H11ON", 113.084064015, 113.1594, 15.4)
+#J = AminoAcid("Isoleucine or Leucine", 'J', "Ile or Leu", "C6H11ON", 113.084064015, 113.1594, 15.4)
 K = AminoAcid("Lysine", 'K', "Lys", "C6H12ON2", 128.094963050, 128.1741, 4.9)
 L = AminoAcid("Leucine", 'L', "Leu", "C6H11ON", 113.084064015, 113.1594, 9.8)
 M = AminoAcid("Methionine", 'M', "Met", "C5H9ONS", 131.040484645, 131.1926, 2.3)

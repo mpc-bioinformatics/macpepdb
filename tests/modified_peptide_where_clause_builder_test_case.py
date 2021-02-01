@@ -24,28 +24,28 @@ VARIABLE_MODIFICATION_MAXIMUM = 3
 PEPTIDES_FOR_UNMODIFIED_SEARCH = {
     'too_low': [
         # 10 ppm
-        'GJJVJGJJFJJR',	    # 1325.879879215
-        'JFJAVJJAVVJR',	    # 1325.879879215
-        'JFJJJVGXJJGJR',	# 1325.879879215
-        'JFJJJVGGJJXJR' 	# 1325.879879215
+        'GLLVIGILFIIR',	    # 1325.879879215
+        'LFIAVIIAVVLR',	    # 1325.879879215
+        'IFLILVGXLLGIR',	# 1325.879879215
+        'LFILLVGGILXIR' 	# 1325.879879215
     ],
     'matching': [
         # first matching
-        'KVKJJJJQMJK',	    # 1325.88325005
+        'KVKLLLLQMLK',	    # 1325.88325005
         # some matching between
-        'JMJKJKNJJJK',	    # 1325.883250051
-        'KKAJJJJCJJAK',	    # 1325.883250052
-        'JTTJJJJJSJVK',	    # 1325.889775244
-        'FJJJGJJRJJR',	    # 1325.891112585
+        'IMLKIKNLLLK',	    # 1325.883250051
+        'KKAIIILCLIAK',	    # 1325.883250052
+        'LTTIIILISIVK',	    # 1325.889775244
+        'FLLLGIIRLIR',	    # 1325.891112585
         # last matching
-        'AJJJJVRFJJR'	    # 1325.891112585
+        'AILLLVRFLIR'	    # 1325.891112585
     ],
     'too_high': [
         # 10 ppm
-        'KAJJTSKJJJVK',	    # 1325.901008612
-        'STJJKJJKGJJK',	    # 1325.901008612
-        'JJKJTGJJKSJK',	    # 1325.901008612
-        'JVJGKKTJJJTK'	    # 1325.901008612
+        'KAIITSKILLVK',	    # 1325.901008612
+        'STLLKLLKGILK',	    # 1325.901008612
+        'ILKLTGLIKSIK',	    # 1325.901008612
+        'LVLGKKTILITK'	    # 1325.901008612
     ]
 }
 
@@ -54,28 +54,28 @@ PEPTIDES_FOR_UNMODIFIED_SEARCH = {
 PEPTIDES_FOR_MODIFIED_SEARCH = {
     'too_low': [
         # 25 ppm
-        'JJVCAJKRJJK',	    # 1268.836634178
-        'JJJJGCJKJKR',	    # 1268.836634178
-        'RKJGJJJCJJK',	    # 1268.836634178
-        'KJJVAJJJRCK'	    # 1268.836634178
+        'IIVCALKRILK',	    # 1268.836634178
+        'ILIIGCIKIKR',	    # 1268.836634178
+        'RKLGIIICLLK',	    # 1268.836634178
+        'KIIVALLLRCK'	    # 1268.836634178
     ],
     'matching': [
         # first matching
-        'VVJKKJJJCJK',	    # 1268.861786317
+        'VVLKKIIICIK',	    # 1268.861786317
         # some matching between
-        'MAKVVJJJAJKK',     # 1325.883250051
-        'JJMJJJJKTJR',	    # 1325.883250053
-        'JKRPJKFJAJK',	    # 1325.891112582
-        'JRJAFVJJJJR',	    # 1325.891112585
+        'MAKVVLLIAIKK',     # 1325.883250051
+        'ILMIIILKTIR',	    # 1325.883250053
+        'LKRPLKFLAIK',	    # 1325.891112582
+        'IRLAFVIIIIR',	    # 1325.891112585
         # last matching
-        'AJJJJVRFJJR'	    # 1325.891112585
+        'ALLIIVRFLLR'	    # 1325.891112585
     ],
     'too_high': [
         # 15 ppm
-        'KAJJTSKJJJVK',     # 1325.901008612
-        'STJJKJJKGJJK',     # 1325.901008612
-        'JJKJTGJJKSJK',     # 1325.901008612
-        'JVJGKKTJJJTK'      # 1325.901008612
+        'KALITSKLLIVK',     # 1325.901008612
+        'STILKILKGLLK',     # 1325.901008612
+        'ILKLTGLLKSLK',     # 1325.901008612
+        'IVIGKKTLLLTK'      # 1325.901008612
     ]
 }
 

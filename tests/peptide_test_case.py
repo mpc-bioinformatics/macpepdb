@@ -9,15 +9,6 @@ LEPTIN_SEQUENCE = "AVPIRKVQDDTKTLIKTIVTRINDISHTQSVSSKQRVTGLDFIPGLHPLLSLSKMDQTLA"
 LEPTIN_SEQUENCE_WEIGHT = 6622.66
 
 class PeptideTestCase(AbstractDatabaseTestCase):
-    def test_sequenze_generalization(self):
-        original_number_of_leucine_and_isoleucine = LEPTIN_SEQUENCE.count("L") + LEPTIN_SEQUENCE.count("I")
-        self.assertGreater(original_number_of_leucine_and_isoleucine, 0)
-        generalized_sequence = Peptide.generalize(LEPTIN_SEQUENCE)
-        self.assertEqual(len(LEPTIN_SEQUENCE), len(generalized_sequence))
-        generalized_number_of_leucine_and_isoleucine = generalized_sequence.count("L") + generalized_sequence.count("I")
-        self.assertEqual(0, generalized_number_of_leucine_and_isoleucine)
-        self.assertEqual(original_number_of_leucine_and_isoleucine, generalized_sequence.count("J"))
-
     def test_termini(self):
         leptin = Peptide(LEPTIN_SEQUENCE, 0)
         self.assertEqual("A", leptin.n_terminus)
@@ -32,8 +23,9 @@ class PeptideTestCase(AbstractDatabaseTestCase):
         self.assertEqual(leptin.f_count, 1)
         self.assertEqual(leptin.g_count, 2)
         self.assertEqual(leptin.h_count, 2)
-        self.assertEqual(leptin.j_count, 13)
+        self.assertEqual(leptin.i_count, 6)
         self.assertEqual(leptin.k_count, 5)
+        self.assertEqual(leptin.l_count, 7)
         self.assertEqual(leptin.m_count, 1)
         self.assertEqual(leptin.n_count, 1)
         self.assertEqual(leptin.o_count, 0)
@@ -54,8 +46,9 @@ class PeptideTestCase(AbstractDatabaseTestCase):
             + leptin.f_count \
             + leptin.g_count \
             + leptin.h_count \
-            + leptin.j_count \
+            + leptin.i_count \
             + leptin.k_count \
+            + leptin.l_count \
             + leptin.m_count \
             + leptin.n_count \
             + leptin.o_count \
@@ -91,7 +84,7 @@ class PeptideTestCase(AbstractDatabaseTestCase):
         # start new db session
         session = self.session_factory()
         # get Leptin-peptide by sequence
-        leptin = session.query(Peptide).filter(Peptide.sequence == Peptide.generalize(LEPTIN_SEQUENCE)).one()
+        leptin = session.query(Peptide).filter(Peptide.sequence == LEPTIN_SEQUENCE).one()
         self.assertEqual(LEPTIN_ID, leptin.id)
         session.close()
 
@@ -99,7 +92,7 @@ class PeptideTestCase(AbstractDatabaseTestCase):
         # start new db session
         session = self.session_factory()
         # update sequence
-        NEW_SEQUENCE = Peptide.generalize("THESEQUENCEHASCHANGEDEFORTHETEST")
+        NEW_SEQUENCE = "THESEQUENCEHASCHANGEDEFORTHETEST"
         leptin.sequence = NEW_SEQUENCE
         session.add(leptin)
         session.commit()

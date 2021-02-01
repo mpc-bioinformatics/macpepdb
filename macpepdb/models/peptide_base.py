@@ -24,8 +24,9 @@ class PeptideBase(object):
     f_count = Column(SmallInteger)
     g_count = Column(SmallInteger)
     h_count = Column(SmallInteger)
-    j_count = Column(SmallInteger)
+    i_count = Column(SmallInteger)
     k_count = Column(SmallInteger)
+    l_count = Column(SmallInteger)
     m_count = Column(SmallInteger)
     n_count = Column(SmallInteger)
     o_count = Column(SmallInteger)
@@ -53,18 +54,13 @@ class PeptideBase(object):
 
     # Sets new sequence and missed cleavages and sets new weight, length, amino acid counts and termini according to the new sequence
     def set_sequence(self, sequence: str, number_of_missed_cleavages: int):
-        self.sequence = self.__class__.generalize(sequence)
+        self.sequence = sequence.upper()
         self.length = len(self.sequence)
         self.number_of_missed_cleavages = number_of_missed_cleavages
         self.weight = self.__class__.calculate_weight(self.sequence)
         self.__count_amino_acids()
         self.n_terminus = self.sequence[0]
         self.c_terminus = self.sequence[len(self.sequence) - 1]
-
-    # Replaces Isoleucine (I) and Leucine(L) with shared one letter code (J)
-    @classmethod
-    def generalize(cls, sequence: str) -> str:
-        return sequence.replace("I", "J").replace("L", "J")
 
     # Calculats the weight of a sequence
     @classmethod
@@ -92,10 +88,12 @@ class PeptideBase(object):
                 self.g_count = self.sequence.count(one_letter_code)
             elif one_letter_code == 'H':
                 self.h_count = self.sequence.count(one_letter_code)
-            elif one_letter_code == 'J':
-                self.j_count = self.sequence.count(one_letter_code)
+            elif one_letter_code == 'I':
+                self.i_count = self.sequence.count(one_letter_code)
             elif one_letter_code == 'K':
                 self.k_count = self.sequence.count(one_letter_code)
+            elif one_letter_code == 'L':
+                self.l_count = self.sequence.count(one_letter_code)
             elif one_letter_code == 'M':
                 self.m_count = self.sequence.count(one_letter_code)
             elif one_letter_code == 'N':
@@ -151,8 +149,9 @@ class PeptideBase(object):
             "f_count": self.f_count,
             "g_count": self.g_count,
             "h_count": self.h_count,
-            "j_count": self.j_count,
+            "i_count": self.i_count,
             "k_count": self.k_count,
+            "l_count": self.l_count,
             "m_count": self.m_count,
             "n_count": self.n_count,
             "o_count": self.o_count,
@@ -190,8 +189,9 @@ class PeptideBase(object):
         peptide.f_count = attributes["f_count"]
         peptide.g_count = attributes["g_count"]
         peptide.h_count = attributes["h_count"]
-        peptide.j_count = attributes["j_count"]
+        peptide.i_count = attributes["i_count"]
         peptide.k_count = attributes["k_count"]
+        peptide.l_count = attributes["l_count"]
         peptide.m_count = attributes["m_count"]
         peptide.n_count = attributes["n_count"]
         peptide.o_count = attributes["o_count"]
