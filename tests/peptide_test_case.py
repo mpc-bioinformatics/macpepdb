@@ -1,5 +1,5 @@
-from trypperdb.models.peptide import Peptide
-from trypperdb.proteomics.mass.convert import to_float as mass_to_float
+from macpep_db.models.peptide import Peptide
+from macpep_db.proteomics.mass.convert import to_float as mass_to_float
 
 from .abstract_database_test_case import AbstractDatabaseTestCase
 

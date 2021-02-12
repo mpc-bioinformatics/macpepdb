@@ -1,7 +1,7 @@
 import re
 
-from trypperdb.models.protein import Protein
-from trypperdb.models.protein_merge import ProteinMerge
+from macpep_db.models.protein import Protein
+from macpep_db.models.protein_merge import ProteinMerge
 
 from .file_reader import FileReader
 

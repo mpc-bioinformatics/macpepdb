@@ -1,4 +1,4 @@
-from trypperdb.models.protein import Protein
+from macpep_db.models.protein import Protein
 
 from .abstract_database_test_case import AbstractDatabaseTestCase
 

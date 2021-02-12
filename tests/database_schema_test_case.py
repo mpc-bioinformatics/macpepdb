@@ -1,9 +1,9 @@
 import re
 
-from trypperdb.models.peptide import Peptide
-from trypperdb.proteomics.amino_acid import AminoAcid
-from trypperdb.proteomics.neutral_loss import NeutralLoss
-from trypperdb.tasks.statistics import Statistics
+from macpep_db.models.peptide import Peptide
+from macpep_db.proteomics.amino_acid import AminoAcid
+from macpep_db.proteomics.neutral_loss import NeutralLoss
+from macpep_db.tasks.statistics import Statistics
 
 from .abstract_database_test_case import AbstractDatabaseTestCase
 

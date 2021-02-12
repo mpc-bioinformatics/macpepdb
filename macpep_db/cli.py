@@ -1,6 +1,6 @@
 import argparse
 
-from trypperdb.tasks.digestion import Digestion
+from macpep_db.tasks.digestion import Digestion
 from .tasks.precursor_range_calculation import PrecursorRangeCalculation
 from .tasks.taxonomy_maintenance import TaxonomyMaintenance
 from .tasks.statistics import Statistics

@@ -1,6 +1,6 @@
 import unittest
 import pathlib
-from trypperdb.proteomics.file_reader.fasta_reader import FastaReader
+from macpep_db.proteomics.file_reader.fasta_reader import FastaReader
 
 class FastaReaderTestCase(unittest.TestCase):
     def test_reading(self):

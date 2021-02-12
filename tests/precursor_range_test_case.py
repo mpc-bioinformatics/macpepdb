@@ -1,6 +1,6 @@
 import unittest
 
-from trypperdb.proteomics.mass.precursor_range import PrecursorRange
+from macpep_db.proteomics.mass.precursor_range import PrecursorRange
 
 PRECURSOR = 1325887444084
 PRECURSOR_TOLERANCE = 5

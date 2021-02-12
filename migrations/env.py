@@ -11,7 +11,7 @@ from alembic import context
 # access to the values within the .ini file in use.
 config = context.config
 
-sqlalchemy_url_from_env_var = os.getenv('TRYPPERDB_DB_URL')
+sqlalchemy_url_from_env_var = os.getenv('MACPEP_DB_URL')
 if sqlalchemy_url_from_env_var:
     config.set_main_option('sqlalchemy.url', sqlalchemy_url_from_env_var)
 

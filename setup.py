@@ -4,14 +4,14 @@ with open("Readme.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="TrypperDB",
+    name="MaCPep DB",
     version="1.0.0",
     author="Dirk Winkelhardt",
     author_email="dirk.winkelhardt@rub.de",
     description="Package for building large peptide databases.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/mpc-bioinformatics/trypperdb",
+    url="https://github.com/mpc-bioinformatics/macpep_db",
     packages=setuptools.find_packages(),
     classifiers=[
     ],

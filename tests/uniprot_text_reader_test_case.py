@@ -1,7 +1,7 @@
 import unittest
 import pathlib
 
-from trypperdb.proteomics.file_reader.uniprot_text_reader import UniprotTextReader
+from macpep_db.proteomics.file_reader.uniprot_text_reader import UniprotTextReader
 
 class UniprotTextReaderTestCase(unittest.TestCase):
     def test_reading(self):

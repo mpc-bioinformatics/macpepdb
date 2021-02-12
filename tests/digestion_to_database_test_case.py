@@ -4,12 +4,12 @@ import os
 from sqlalchemy import func, distinct
 from sqlalchemy.sql import exists
 
-from trypperdb.tasks.digestion import Digestion
-from trypperdb.proteomics.enzymes.digest_enzyme import DigestEnzyme
-from trypperdb.proteomics.file_reader.file_reader import FileReader
-from trypperdb.models.peptide import Peptide
-from trypperdb.models.protein import Protein
-from trypperdb.models.protein_merge import ProteinMerge
+from macpep_db.tasks.digestion import Digestion
+from macpep_db.proteomics.enzymes.digest_enzyme import DigestEnzyme
+from macpep_db.proteomics.file_reader.file_reader import FileReader
+from macpep_db.models.peptide import Peptide
+from macpep_db.models.protein import Protein
+from macpep_db.models.protein_merge import ProteinMerge
 
 from .abstract_database_test_case import AbstractDatabaseTestCase
 
@@ -42,7 +42,7 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase):
                 0
             )
 
-            digestion.digest_to_database(os.getenv("TRYPPERDB_TEST_DB_URL"))
+            digestion.digest_to_database(os.getenv("TEST_MACPEP_DB_URL"))
 
             EnzymeClass = DigestEnzyme.get_enzyme_by_name("Trypsin")
             trypsin = EnzymeClass(TRYPSIN_MAX_MISSED_CLEAVAGES, TRYPSIN_MIN_PEPTIDE_LENGTH, TRYPSIN_MAX_PEPTIDE_LENGTH)

@@ -1,8 +1,8 @@
 import unittest
 import pathlib
 
-from trypperdb.proteomics.modification import Modification, ModificationPosition
-from trypperdb.proteomics.amino_acid import AminoAcid
+from macpep_db.proteomics.modification import Modification, ModificationPosition
+from macpep_db.proteomics.amino_acid import AminoAcid
 
 class ModificationTestCase(unittest.TestCase):
     def test_csv_read(self):
