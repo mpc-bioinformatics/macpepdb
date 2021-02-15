@@ -1,8 +1,8 @@
 import unittest
 
-from macpep_db.proteomics.enzymes.trypsin import Trypsin
-from macpep_db.models.protein import Protein
-from macpep_db.models.peptide import Peptide
+from macpepdb.proteomics.enzymes.trypsin import Trypsin
+from macpepdb.models.protein import Protein
+from macpepdb.models.peptide import Peptide
 
 # Peptides for Leptin (UniProt accession Q257X2) digested with 3 missed cleavages, length 0 - 60
 # Tested with https://web.expasy.org/peptide_mass/

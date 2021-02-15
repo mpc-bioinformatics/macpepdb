@@ -29,14 +29,14 @@ class FastaReader(FileReader):
     # (?=(?P<name>(?![A-Z]{2,}=).+?)(\s+[A-Z]{2,}=|\s*$)){0,1}
     # Next, the attributes are follow. Starting with upper case letters and a equals sign.
     # This are matched by positive lookaheads (?= ...), so they can occure in any abitrary order.
-    # There are also two MaCPep DB specific attributes "TDBPI" the proteome id and "TDBPM" old protein accessions which are merged with this proteins.
+    # There are also two MacPepDB specific attributes "TDBPI" the proteome id and "TDBPM" old protein accessions which are merged with this proteins.
     # They will only added for unprocessible proteins during digestion if the input file was in text format.
     # The attribute regexes start with anything (because they are anchored after the entry name and the name must be skipped, see the description for the name) followed by uppercase letters and an equals sign.
     # The content can vary, so can the stop condition.
     # Each attribute can occure only never or once: "{0,1}"
     # Taxonomy id: Contain only numbers "\d+"
     # (?=.*OX=(?P<taxonomy_id>\d+)){0,1}
-    # Protein id (MaCPep DB-specific): Contain only numbers "\d+"
+    # Protein id (MacPepDB-specific): Contain only numbers "\d+"
     # (?=.*TDBPI=(?P<proteome_id>UP\d+)){0,1}
     # Protein merges: Contain non-whitespace characters
     # (?=.*TDBPM=(?P<protein_merges>(\S+))){0,1}

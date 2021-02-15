@@ -2,7 +2,7 @@ import unittest
 import tempfile
 import pathlib
 
-from macpep_db.proteomics.modification_collection import ModificationCollection, ModificationLimitError, InvalidModificationCombinationError
+from macpepdb.proteomics.modification_collection import ModificationCollection, ModificationLimitError, InvalidModificationCombinationError
 
 CORRECT = """
 "accession","name","aa","delta","static","position"

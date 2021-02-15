@@ -1,8 +1,8 @@
 import unittest
 import pathlib
 
-from macpep_db.proteomics.modification import Modification, ModificationPosition
-from macpep_db.proteomics.amino_acid import AminoAcid
+from macpepdb.proteomics.modification import Modification, ModificationPosition
+from macpepdb.proteomics.amino_acid import AminoAcid
 
 class ModificationTestCase(unittest.TestCase):
     def test_csv_read(self):

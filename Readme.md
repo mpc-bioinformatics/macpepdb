@@ -36,40 +36,40 @@ initdb -D .db/pgsql/data -X $(pwd)/.db/pgsql/wal -U postgres -W
 postgres -D $(pwd)/.db/pgsql/data -h 127.0.0.1 -p 5433 -k $(pwd)/.db/pgsql/run
 
 # In another terminal(tab) create the databases
-psql -h 127.0.0.1 -p 5433 -U postgres -c "create database macpep_db_dev;"
-psql -h 127.0.0.1 -p 5433 -U postgres -c "create database macpep_db_test;"
+psql -h 127.0.0.1 -p 5433 -U postgres -c "create database macpepdb_dev;"
+psql -h 127.0.0.1 -p 5433 -U postgres -c "create database macpepdb_test;"
 # Run migrations
-MACPEP_DB_DB_URL=postgresql://postgres:developer@127.0.0.1:5433/macpep_db_test alembic upgrade head
+MACPEPDB_DB_URL=postgresql://postgres:developer@127.0.0.1:5433/macpepdb_test alembic upgrade head
 ```
 
 If you add some new python modules, make sure you update `requirements.txt` by running `pip freeze > requirements.txt`
 
 ### Running tests
 ```bash
-MACPEP_DB_TEST_DB_URL=postgresql://postgres:developer@127.0.0.1:5433/macpep_db_test python -m unittest tests/*_test_case.py
+TEST_MACPEPDB_URL=postgresql://postgres:developer@127.0.0.1:5433/macpepdb_test python -m unittest tests/*_test_case.py
 ```
 ### Run the modules CLI
-Run `python -m macpep_db --help` in the root-folderof the repository.
+Run `python -m macpepdb --help` in the root-folderof the repository.
 
 ## Usage
 
 ### Native installation
-You can follow the development instruction to `pip install -r ./requirements.txt`. Then you can use MaCPep DB by running `python -m macpep_db`. 
+You can follow the development instruction to `pip install -r ./requirements.txt`. Then you can use MacPepDB by running `python -m macpepdb`. 
 Appending `--help` shows the existing command line parmeter.
 
 ### Docker installation
-To create a Docker image use: `docker build --tag macpep_db-py .` . You can use the image to start a container with
-`docker run -it --rm macpep_db-py --help`.
-To access your files in the container mount your files to `/usr/src/macpep_db/data` with `-v YOUR_DATA_FOLDER:/usr/src/macpep_db/data` (add it before the `macpep_db-py`). Keep in mind your working in a container, so all files pathes are within the container.   
-If you intend to create a protein/peptide database and your Postgresql server is running in a Docke container too, make sure both, the  Postgresql server and the MaCPep DB container have access to the same Docker network by adding `--network=YOUR_DOCKER_NETWORK` (before the ´macpep_db-py´).
+To create a Docker image use: `docker build --tag macpepdb-py .` . You can use the image to start a container with
+`docker run -it --rm macpepdb-py --help`.
+To access your files in the container mount your files to `/usr/src/macpepdb/data` with `-v YOUR_DATA_FOLDER:/usr/src/macpepdb/data` (add it before the `macpepdb-py`). Keep in mind your working in a container, so all files pathes are within the container.   
+If you intend to create a protein/peptide database and your Postgresql server is running in a Docke container too, make sure both, the  Postgresql server and the MacPepDB container have access to the same Docker network by adding `--network=YOUR_DOCKER_NETWORK` (before the ´macpepdb-py´).
 
 ### Building a databse
 #### Prepare the database
-Run `MACPEP_DB_DB_URL=postgresql://<USER>:<PASSWORD>@<HOST>:<PORT>/<DATABASE> test alembic upgrade head`    
-If you use the docker container, run the command in a temporary container: `docker run --rm -it macpep_db-py sh`
+Run `MACPEPDB_DB_URL=postgresql://<USER>:<PASSWORD>@<HOST>:<PORT>/<DATABASE> test alembic upgrade head`    
+If you use the docker container, run the command in a temporary container: `docker run --rm -it macpepdb-py sh`
 
 #### Digest
-To build the database you need a running postgresql server with an empty database. As input file for the digestion you can use FASTA-files or the [UniProt-text-files](https://www.uniprot.org/docs/userman.htm#linetypes). Then run the digestion command: `python -m macpep_db digestion ...`, check out `python -m macpep_db digestion --help` for more information.
+To build the database you need a running postgresql server with an empty database. As input file for the digestion you can use FASTA-files or the [UniProt-text-files](https://www.uniprot.org/docs/userman.htm#linetypes). Then run the digestion command: `python -m macpepdb digestion ...`, check out `python -m macpepdb digestion --help` for more information.
 
 #### Include taxonomy trees
-This step is only necessary if you want to run the webinterface. Download the `taxdump.zip` from [NCBI](https://ftp.ncbi.nih.gov/pub/taxonomy/). Then run the include command: `python -m macpep_db taxonomy-maintenance ...`, check out `python -m macpep_db taxonomy-maintenance --help` for more information.
+This step is only necessary if you want to run the webinterface. Download the `taxdump.zip` from [NCBI](https://ftp.ncbi.nih.gov/pub/taxonomy/). Then run the include command: `python -m macpepdb taxonomy-maintenance ...`, check out `python -m macpepdb taxonomy-maintenance --help` for more information.

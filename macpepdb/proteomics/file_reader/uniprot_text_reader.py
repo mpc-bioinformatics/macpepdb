@@ -1,7 +1,7 @@
 import re
 
-from macpep_db.models.protein import Protein
-from macpep_db.models.protein_merge import ProteinMerge
+from macpepdb.models.protein import Protein
+from macpepdb.models.protein_merge import ProteinMerge
 
 from .file_reader import FileReader
 

@@ -1,6 +1,6 @@
-from macpep_db.models.protein import Protein
-from macpep_db.models.peptide import Peptide
-from macpep_db.proteomics.enzymes.trypsin import Trypsin
+from macpepdb.models.protein import Protein
+from macpepdb.models.peptide import Peptide
+from macpepdb.proteomics.enzymes.trypsin import Trypsin
 
 from .abstract_database_test_case import AbstractDatabaseTestCase
 

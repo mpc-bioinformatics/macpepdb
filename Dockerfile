@@ -1,7 +1,7 @@
 FROM python:3.7.8-alpine
 LABEL maintainer="dirk.winkelhardt@gmail.com"
 
-WORKDIR /usr/src/macpep_db
+WORKDIR /usr/src/macpepdb
 
 COPY . .
 RUN apk update \
@@ -12,4 +12,4 @@ RUN apk update \
 
 
 
-ENTRYPOINT [ "python", "-m", "macpep_db" ]
+ENTRYPOINT [ "python", "-m", "macpepdb" ]

@@ -10,7 +10,7 @@ class AbstractDatabaseTestCase(unittest.TestCase):
         """
         Creates engine and session_factory before each test.
         """
-        self.engine = create_engine(os.getenv("TEST_MACPEP_DB_URL"), echo=False)
+        self.engine = create_engine(os.getenv("TEST_MACPEPDB_URL"), echo=False)
         self.session_factory = sessionmaker(bind=self.engine)
 
     def tearDown(self):

@@ -3,15 +3,15 @@ import pathlib
 import re
 import os
 
-from macpep_db.proteomics.modification_collection import ModificationCollection
-from macpep_db.models.modified_peptide_where_clause_builder import ModifiedPeptideWhereClauseBuilder
-from macpep_db.proteomics.mass.convert import to_int as mass_to_int, thomson_to_dalton
-from macpep_db.models.peptide import Peptide
-from macpep_db.tasks.digestion import Digestion
-from macpep_db.proteomics.enzymes.digest_enzyme import DigestEnzyme
-from macpep_db.proteomics.file_reader.file_reader import FileReader
-from macpep_db.peptide_mass_validator import PeptideMassValidator
-from macpep_db.proteomics.mass.precursor_range import PrecursorRange
+from macpepdb.proteomics.modification_collection import ModificationCollection
+from macpepdb.models.modified_peptide_where_clause_builder import ModifiedPeptideWhereClauseBuilder
+from macpepdb.proteomics.mass.convert import to_int as mass_to_int, thomson_to_dalton
+from macpepdb.models.peptide import Peptide
+from macpepdb.tasks.digestion import Digestion
+from macpepdb.proteomics.enzymes.digest_enzyme import DigestEnzyme
+from macpepdb.proteomics.file_reader.file_reader import FileReader
+from macpepdb.peptide_mass_validator import PeptideMassValidator
+from macpepdb.proteomics.mass.precursor_range import PrecursorRange
 
 from .abstract_database_test_case import AbstractDatabaseTestCase
 
@@ -166,7 +166,7 @@ class ModifiedPeptideWhereClauseBuilderTestCase(AbstractDatabaseTestCase):
             0
         )
 
-        digestion.digest_to_database(os.getenv("TEST_MACPEP_DB_URL"))
+        digestion.digest_to_database(os.getenv("TEST_MACPEPDB_URL"))
 
         modification_collection = ModificationCollection.read_from_csv_file(modifications_file_path)
         peptide_mass_validator = PeptideMassValidator(modification_collection, VARIABLE_MODIFICATION_LIMIT, PrecursorRange(PRECURSOR, PRECURSOR_TOLERANCE, PRECURSOR_TOLERANCE))
