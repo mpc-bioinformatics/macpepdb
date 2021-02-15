@@ -1,4 +1,4 @@
-# MaCPep DB
+# MaCPepDB - Mass Centric Peptide Database
 
 ## Description
 Creates a peptide databases by digesting proteins stored in FASTA-/Uniprot-Text-files. 
