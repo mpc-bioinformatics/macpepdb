@@ -49,7 +49,7 @@ If you add some new python modules, make sure you update `requirements.txt` by r
 TEST_MACPEPDB_URL=postgresql://postgres:developer@127.0.0.1:5433/macpepdb_test python -m unittest tests/*_test_case.py
 ```
 ### Run the modules CLI
-Run `python -m macpepdb --help` in the root-folderof the repository.
+Run `python -m macpepdb --help` in the root-folder of the repository.
 
 ## Usage
 
