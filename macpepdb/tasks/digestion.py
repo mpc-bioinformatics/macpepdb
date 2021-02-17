@@ -189,11 +189,10 @@ class Digestion:
         If no digestion information were found, it will save the current one.
         @param database_url Database URL
         """
-        INFORMATION_KEY = 'digestion_information'
         engine = create_engine(database_url, pool_size = 1, max_overflow = 0, pool_timeout = 3600)
         session_factory = sessionmaker(bind = engine, autoflush=False)
         session = session_factory()
-        digestion_information = session.query(MaintenanceInformation).filter(MaintenanceInformation.key == INFORMATION_KEY).one_or_none()
+        digestion_information = session.query(MaintenanceInformation).filter(MaintenanceInformation.key == MaintenanceInformation.DIGESTION_PARAMTERS_KEY).one_or_none()
         if digestion_information:
             self.__maximum_number_of_missed_cleavages = digestion_information.values['maximum_number_of_missed_cleavages']
             self.__minimum_peptide_length = digestion_information.values['minimum_peptide_length']
@@ -208,7 +207,7 @@ class Digestion:
                 'minimum_peptide_length': self.__minimum_peptide_length,
                 'maximum_peptide_length': self.__maximum_peptide_length
             }
-            digestion_information = MaintenanceInformation(INFORMATION_KEY, digestion_information_values)
+            digestion_information = MaintenanceInformation(MaintenanceInformation.DIGESTION_PARAMTERS_KEY, digestion_information_values)
             session.add(digestion_information)
             session.commit()
         session.close()
@@ -219,11 +218,10 @@ class Digestion:
         @param is_maintenance_mode Indicate if set to maintenance mode
         @param last_update_timestamp UTC timestamp in seconds
         """
-        INFORMATION_KEY = 'database_status'
         engine = create_engine(database_url, pool_size = 1, max_overflow = 0, pool_timeout = 3600)
         session_factory = sessionmaker(bind = engine, autoflush=False)
         session = session_factory()
-        database_status = session.query(MaintenanceInformation).filter(MaintenanceInformation.key == INFORMATION_KEY).one_or_none()
+        database_status = session.query(MaintenanceInformation).filter(MaintenanceInformation.key == MaintenanceInformation.DATABASE_STATUS_KEY).one_or_none()
         if database_status:
             database_status.values['maintenance_mode'] = is_maintenance_mode
             if last_update_timestamp:
@@ -236,7 +234,7 @@ class Digestion:
                 digestion_information_values['last_update'] = last_update_timestamp
             else:
                 digestion_information_values['last_update'] = 0
-            digestion_information = MaintenanceInformation(INFORMATION_KEY, digestion_information_values)
+            digestion_information = MaintenanceInformation(MaintenanceInformation.DATABASE_STATUS_KEY, digestion_information_values)
             session.add(digestion_information)
         session.commit()
         session.close()

@@ -10,6 +10,7 @@ from macpepdb.proteomics.file_reader.file_reader import FileReader
 from macpepdb.models.peptide import Peptide
 from macpepdb.models.protein import Protein
 from macpepdb.models.protein_merge import ProteinMerge
+from macpepdb.models.maintenance_information import MaintenanceInformation
 
 from .abstract_database_test_case import AbstractDatabaseTestCase
 
@@ -90,7 +91,7 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase):
                     self.assertTrue(merge in protein_merges)
 
             # Check if maintenance mode is false and update timestamp is greater zero
-            database_status = session.query(MaintenanceInformation).filter(MaintenanceInformation.key == 'database_status').one_or_none()
+            database_status = session.query(MaintenanceInformation).filter(MaintenanceInformation.key == MaintenanceInformation.DATABASE_STATUS_KEY).one_or_none()
             self.assertNotEqual(database_status, None)
             self.assertGreater(database_status.values['last_update'], 0)
             self.assertFalse(database_status.values['maintenance_mode'])
