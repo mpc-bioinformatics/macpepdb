@@ -67,7 +67,7 @@ class UniprotTextReader(FileReader):
     def __process_ox(self, line):
         matches = self.TAXONOMY_ID_REGEX.search(line)
         if matches and "taxonomy_id" in matches.groupdict():
-            return matches.group("taxonomy_id")
+            return int(matches.group("taxonomy_id"))
         else:
             return None
 
