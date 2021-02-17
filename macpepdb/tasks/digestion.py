@@ -180,47 +180,34 @@ class Digestion:
             try:
                 # Try to get a protein from the queue, timeout is 2 seconds
                 protein, protein_merges = protein_queue.get(True, 5)
-                # Create peptides
-                peptides = enzyme.digest(protein)
-
+                
                 # Variables for loop control
                 unsolvable_errors = 0
                 try_transaction_again = True
                 while try_transaction_again:
                     session = SessionClass()
+                    number_of_new_peptides = 0
                     try:
                         count_protein = False
-                        # Check if the Protein exists
-                        try:
-                            protein = session.query(Protein).filter(Protein.accession == protein.accession).one()
-                        except NoResultFound: 
-                            # Add the new protein to the session
-                            session.add(protein)
-                            count_protein = True
-
-                        existing_protein_merge_source_accessions = [row[0] for row in session.query(ProteinMerge.source_accession).filter(ProteinMerge.target_accession == protein.accession).all()]
-                        for merge in protein_merges:
-                            if not merge.source_accession in existing_protein_merge_source_accessions:
-                                session.add(merge)
-
-
-                        existing_peptides = session.query(Peptide).filter(Peptide.sequence.in_([peptide.sequence for peptide in peptides])).all()
-                        existing_peptides_dict = {}
-                        for peptide in existing_peptides:
-                            existing_peptides_dict[peptide.sequence] = peptide
-                        for peptide in peptides:
-                            if peptide.sequence in existing_peptides_dict:
-                                protein.peptides.append(existing_peptides_dict[peptide.sequence])
+                        # Check if the Protein exists by its accession or secondary accessions
+                        accessions = [protein.accession] + [protein_merge.source_accession for protein_merge in protein_merges]
+                        existing_protein = session.query(Protein).filter(Protein.accession.in_(accessions)).first()
+                        if existing_protein:
+                            need_commit, number_of_new_peptides = Digestion.update_protein(session, protein, existing_protein, protein_merges, enzyme)
+                            if Digestion.update_protein(session, protein, existing_protein, protein_merges, enzyme):
+                                session.commit()
                             else:
-                                protein.peptides.append(peptide)
-
-                        session.commit()
+                                session.rollback()
+                        else:
+                            number_of_new_peptides = Digestion.create_protein(session, protein, protein_merges, enzyme)
+                            session.commit()
+                            count_protein = True
 
                         # Commit was successfully stop while-loop and add statistics
                         try_transaction_again = False
                         if count_protein:
                             statistics[0] += 1
-                        statistics[1] += len(peptides) - len(existing_peptides)
+                        statistics[1] += number_of_new_peptides
                     except:
                         # Rollback session
                         session.rollback()
@@ -246,6 +233,92 @@ class Digestion:
         log_connection.send("digest worker {} is stopping".format(id))
         log_connection.close()
         unprocessible_log_connection.close()
+
+    @staticmethod
+    def create_protein(session, protein: Protein, protein_merges: list, enzyme: DigestEnzyme) -> int:
+        """
+        Creates a new protein. Does not check if the protein already exists.
+        @param session Open database session, with open transaction.
+        @param protein Protein to digest
+        @param protein_merges List of protein merges for the given protein
+        @param enzyme Digest enzym
+        @return int Number of newly inserted peptides
+        """
+        session.add(protein)
+        peptides = enzyme.digest(protein)
+
+        for merge in protein_merges:
+            session.add(merge)
+
+        existing_peptide_query = session.query(Peptide).filter(Peptide.sequence.in_([peptide.sequence for peptide in peptides]))
+        existing_peptides_dict = {peptide.sequence: peptide for peptide in existing_peptide_query.all()}
+        for peptide in peptides:
+            if peptide.sequence in existing_peptides_dict:
+                protein.peptides.append(existing_peptides_dict[peptide.sequence])
+            else:
+                protein.peptides.append(peptide)
+
+        return len(peptides) - len(existing_peptides_dict)
+
+    @staticmethod
+    def update_protein(session, updated_protein: Protein, existing_protein: Protein, protein_merges: list, enzyme: DigestEnzyme) -> (bool, int):
+        """
+        Creates a new protein. Does not check if the protein already exists.
+        @param session Open database session
+        @param updated_protein Protein with updates from file
+        @param existing_protein Protein from database
+        @param protein_merges List of protein merges for the updated_protein
+        @param enzyme Digest enzym
+        @return tuple (bool, int) First element indicates if the session needs to commit, seconds is the number of newly inserted peptides
+        """
+        needs_commit = False
+        new_peptides_count = 0
+        if updated_protein.accession != existing_protein.accession:
+            # Replace the target accession with the new protein accession
+            session.execute(ProteinMerge.__table__.update().where(ProteinMerge.target_accession == existing_protein.accession).values(target_accession = updated_protein.accession))
+            # Create all missing protein merges
+            for protein_merge in protein_merges:
+                protein_merge_query = session.query(ProteinMerge).filter(ProteinMerge.source_accession == protein_merge.source_accession, ProteinMerge.target_accession == protein_merge.target_accession)
+                if not protein_merge_query.one_or_none():
+                    session.add(protein_merge)
+            existing_protein.accession = updated_protein.accession
+            needs_commit = True
+        if updated_protein.taxonomy_id != existing_protein.taxonomy_id:
+            existing_protein.taxonomy_id = updated_protein.taxonomy_id
+            needs_commit = True
+        if updated_protein.proteome_id != existing_protein.proteome_id:
+            existing_protein.proteome_id = updated_protein.proteome_id
+            needs_commit = True
+        if updated_protein.sequence != existing_protein.sequence:
+            existing_protein.sequence = updated_protein.sequence
+            currently_referenced_peptides = existing_protein.peptides.all()
+            new_peptide_map = {peptide.sequence: peptide for peptide in enzyme.digest(existing_protein)}
+
+            # Check if the referenced peptides are in the new peptide map
+            for peptide in currently_referenced_peptides:
+                if not peptide.sequence in new_peptide_map:
+                    # If not, delete reference, because the peptide is not longer in the sequence
+                    existing_protein.peptides.remove(peptide)
+                else:
+                    # If contained remove them from the new peptides
+                    new_peptide_map.pop(peptide.sequence)
+
+
+            existing_peptide_query = session.query(Peptide).filter(Peptide.sequence.in_([peptide.sequence for peptide in new_peptide_map.values()]))
+            existing_peptides_dict = {peptide.sequence: peptide for peptide in existing_peptide_query.all()}
+            # Iterate over the new peptides 
+            for peptide in new_peptide_map.values():
+                if peptide.sequence in existing_peptides_dict:
+                    # If the peptide exists, create a reference
+                    existing_protein.peptides.append(existing_peptides_dict[peptide.sequence])
+                else:
+                    # If not create it and add reference
+                    existing_protein.peptides.append(peptide)
+            new_peptides_count = len(new_peptide_map) - len(existing_peptides_dict)
+            needs_commit = True
+
+        return needs_commit, new_peptides_count
+
 
     @staticmethod
     def logging_worker(process_connections: list, log_file_path: pathlib.Path):

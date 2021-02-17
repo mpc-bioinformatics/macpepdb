@@ -90,3 +90,96 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase):
                     self.assertTrue(merge in protein_merges)
 
             self.tearDown()
+
+    def test_digestion(self):
+        # Digest the databse
+        test_file_path = pathlib.Path("./test_files/UP000002006.txt")
+
+        digestion = Digestion(
+            [test_file_path],
+            "text",
+            pathlib.Path("./digestion_test.log"),
+            pathlib.Path("./digestion_test.unprocessible_proteins.fasta"),
+            pathlib.Path("./digestion_test.statistics.csv"),
+            5,
+            4,
+            "Trypsin",
+            TRYPSIN_MAX_MISSED_CLEAVAGES,
+            TRYPSIN_MIN_PEPTIDE_LENGTH,
+            TRYPSIN_MAX_PEPTIDE_LENGTH,
+            0
+        )
+
+        digestion.digest_to_database(os.getenv("TEST_MACPEPDB_URL"))
+
+        # Digest the modified B0FIH3. Sequence, accession, taxonomy id and proteome id are updated.
+        test_file_path = pathlib.Path("./test_files/B0FIH3_updated.txt")
+
+        digestion = Digestion(
+            [test_file_path],
+            "text",
+            pathlib.Path("./digestion_test.log"),
+            pathlib.Path("./digestion_test.unprocessible_proteins.fasta"),
+            pathlib.Path("./digestion_test.statistics.csv"),
+            5,
+            4,
+            "Trypsin",
+            TRYPSIN_MAX_MISSED_CLEAVAGES,
+            TRYPSIN_MIN_PEPTIDE_LENGTH,
+            TRYPSIN_MAX_PEPTIDE_LENGTH,
+            0
+        )
+
+        digestion.digest_to_database(os.getenv("TEST_MACPEPDB_URL"))
+
+        EnzymeClass = DigestEnzyme.get_enzyme_by_name("Trypsin")
+        trypsin = EnzymeClass(TRYPSIN_MAX_MISSED_CLEAVAGES, TRYPSIN_MIN_PEPTIDE_LENGTH, TRYPSIN_MAX_PEPTIDE_LENGTH)
+
+        read_protein = None
+        read_protein_merges = []
+        read_protein_peptide_sequences = {}
+        with test_file_path.open("r") as test_file:
+            FileReaderClass = FileReader.get_reader_by_file_format("text")
+            file_reader = FileReaderClass(test_file)
+
+            # Redirects not needed, so use _
+            for protein, protein_merges in file_reader:
+                read_protein = protein
+                read_protein_merges = protein_merges
+        read_protein_peptide_sequences = {peptide.sequence for peptide in trypsin.digest(read_protein)}
+
+
+        session = self.session_factory()
+        # Fetch peptide from database
+        database_protein = session.query(Protein).filter(Protein.accession == read_protein.accession).one_or_none()
+
+        # Test if peptide exists
+        self.assertNotEqual(database_protein, None)
+
+        # Test protein attributes
+        self.assertEqual(read_protein.accession, database_protein.accession)
+        self.assertEqual(read_protein.taxonomy_id, database_protein.taxonomy_id)
+        self.assertEqual(read_protein.proteome_id, database_protein.proteome_id)
+        self.assertEqual(read_protein.sequence, database_protein.sequence)
+
+        # Test peptides
+        databse_protein_peptide_sequences = {peptide.sequence for peptide in database_protein.peptides.all()}
+        for sequence in read_protein_peptide_sequences:
+            self.assertIn(sequence, databse_protein_peptide_sequences)
+
+        for sequence in databse_protein_peptide_sequences:
+            self.assertIn(sequence, read_protein_peptide_sequences)
+
+        # Test protein merges
+        database_protein_merges = session.query(ProteinMerge).filter(ProteinMerge.target_accession == read_protein.accession).all()
+
+        # Convert to sets of source accession
+        read_protein_merges_source_accessions = {merge.source_accession for merge in read_protein_merges}
+        database_protein_merges_source_accessions = {merge.source_accession for merge in database_protein_merges}
+
+        # Crosscheck if each accession from the on set is in the other
+        for accession in read_protein_merges_source_accessions:
+            self.assertIn(accession, database_protein_merges_source_accessions)
+
+        for accession in database_protein_merges_source_accessions:
+            self.assertIn(accession, read_protein_merges_source_accessions)
