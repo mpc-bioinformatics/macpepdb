@@ -7,6 +7,7 @@ import csv
 import random
 import signal
 import os
+import datetime
 
 from multiprocessing import Process, Value, Queue, Array, Event, Pipe, get_context as get_process_context
 from multiprocessing.connection import Connection, wait
@@ -48,6 +49,7 @@ class Digestion:
         self.__start_with_protein = start_with_protein
 
     def digest_to_database(self, database_url: str):
+        self.__set_databse_status(database_url, True)
         self.__load_or_set_digestion_informations(database_url)
 
         # Very important 
@@ -175,6 +177,11 @@ class Digestion:
         log_connection.close()
         logger_process.join()
 
+        now = datetime.datetime.utcnow()
+        epoch = datetime.datetime(1970,1,1)
+        last_update_timestamp = (now - epoch).total_seconds()
+        self.__set_databse_status(database_url, False, last_update_timestamp)
+
 
     def __load_or_set_digestion_informations(self, database_url: str):
         """
@@ -204,6 +211,34 @@ class Digestion:
             digestion_information = MaintenanceInformation(INFORMATION_KEY, digestion_information_values)
             session.add(digestion_information)
             session.commit()
+        session.close()
+
+    def __set_databse_status(self, database_url: str, is_maintenance_mode: bool, last_update_timestamp: int = None):
+        """
+        Sets the database status
+        @param is_maintenance_mode Indicate if set to maintenance mode
+        @param last_update_timestamp UTC timestamp in seconds
+        """
+        INFORMATION_KEY = 'database_status'
+        engine = create_engine(database_url, pool_size = 1, max_overflow = 0, pool_timeout = 3600)
+        session_factory = sessionmaker(bind = engine, autoflush=False)
+        session = session_factory()
+        database_status = session.query(MaintenanceInformation).filter(MaintenanceInformation.key == INFORMATION_KEY).one_or_none()
+        if database_status:
+            database_status.values['maintenance_mode'] = is_maintenance_mode
+            if last_update_timestamp:
+                database_status.values['last_update'] = last_update_timestamp
+        else:
+            digestion_information_values = {
+                'maintenance_mode': is_maintenance_mode
+            }
+            if last_update_timestamp:
+                digestion_information_values['last_update'] = last_update_timestamp
+            else:
+                digestion_information_values['last_update'] = 0
+            digestion_information = MaintenanceInformation(INFORMATION_KEY, digestion_information_values)
+            session.add(digestion_information)
+        session.commit()
         session.close()
 
 

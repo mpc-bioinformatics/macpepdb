@@ -89,6 +89,11 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase):
                 for merge in db_protein_merges:
                     self.assertTrue(merge in protein_merges)
 
+            # Check if maintenance mode is false and update timestamp is greater zero
+            database_status = session.query(MaintenanceInformation).filter(MaintenanceInformation.key == 'database_status').one_or_none()
+            self.assertNotEqual(database_status, None)
+            self.assertGreater(database_status.values['last_update'], 0)
+            self.assertFalse(database_status.values['maintenance_mode'])
             self.tearDown()
 
     def test_digestion(self):
