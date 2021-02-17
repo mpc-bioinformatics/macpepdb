@@ -78,12 +78,15 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase):
             for peptide in db_peptides:
                 self.assertTrue(peptide in peptides)
 
-            # Check if protein merge count in database are equals to set
-            self.assertEqual(len(protein_merges), session.query(func.count(ProteinMerge.source_accession)).scalar())
-            # Check if all protein merges from set exists in database
-            for merge in protein_merges:
-                self.assertTrue(session.query(exists().where(ProteinMerge.source_accession == merge.source_accession and ProteinMerge.target_accession == merge.target_accession)).scalar())
-            # Check if protein merges in db are present in the set
-            db_protein_merges = session.query(ProteinMerge).all()
-            for merge in db_protein_merges:
-                self.assertTrue(merge in protein_merges)
+            if format == "text":
+                # Check if protein merge count in database are equals to set
+                self.assertEqual(len(protein_merges), session.query(func.count(ProteinMerge.source_accession)).scalar())
+                # Check if all protein merges from set exists in database
+                for merge in protein_merges:
+                    self.assertTrue(session.query(exists().where(ProteinMerge.source_accession == merge.source_accession and ProteinMerge.target_accession == merge.target_accession)).scalar())
+                # Check if protein merges in db are present in the set
+                db_protein_merges = session.query(ProteinMerge).all()
+                for merge in db_protein_merges:
+                    self.assertTrue(merge in protein_merges)
+
+            self.tearDown()
