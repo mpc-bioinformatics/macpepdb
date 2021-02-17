@@ -55,6 +55,8 @@ class Protein(DatabaseRecord):
     
     # According to the Python documentation this should be implemented if __hash__() is implemented.
     def __eq__(self, other):
+        if not isinstance(other, Protein):
+            return False
         return self.accession == other.accession
 
     def to_dict(self):
