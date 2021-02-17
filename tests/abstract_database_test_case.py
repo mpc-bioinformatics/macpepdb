@@ -12,6 +12,7 @@ class AbstractDatabaseTestCase(unittest.TestCase):
         """
         self.engine = create_engine(os.getenv("TEST_MACPEPDB_URL"), echo=False)
         self.session_factory = sessionmaker(bind=self.engine)
+        self.tearDown()
 
     def tearDown(self):
         """
