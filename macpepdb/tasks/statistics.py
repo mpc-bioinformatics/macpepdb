@@ -45,6 +45,7 @@ class Statistics:
         for row in rows:
             matches = re.findall(num_regex, row[1])
             partition_boundaries.append((row[0], int(matches[0]), int(matches[1])))
+        partition_boundaries.sort(key=lambda partition_boundary: partition_boundary[1])
         return partition_boundaries
 
     @classmethod
