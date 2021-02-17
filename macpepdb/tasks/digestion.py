@@ -31,7 +31,7 @@ class Digestion:
     STATSTIC_PRINT_MIN_COLUMN_WIDTH = 12
     
 
-    def __init__(self, input_file_paths: list, input_format: str, log_file_path: pathlib.Path, unprocessible_proteins_fasta_file_path: pathlib.Path, statistics_csv_file_path: pathlib.Path, statistics_write_period: int, thread_count: int, enzyme_name: str, maximum_number_of_missed_cleavages: int, minimum_peptide_length: int, maximum_peptide_length: int, start_with_protein: int):
+    def __init__(self, input_file_paths: list, input_format: str, log_file_path: pathlib.Path, unprocessible_proteins_fasta_file_path: pathlib.Path, statistics_csv_file_path: pathlib.Path, statistics_write_period: int, thread_count: int, enzyme_name: str, maximum_number_of_missed_cleavages: int, minimum_peptide_length: int, maximum_peptide_length: int):
         self.__log_file_path = log_file_path
         self.__unprocessible_proteins_fasta_file_path = unprocessible_proteins_fasta_file_path
         self.__thread_count = thread_count
@@ -46,7 +46,6 @@ class Digestion:
         self.__statistics_write_period = statistics_write_period
         self.__statistics_csv_file_path = statistics_csv_file_path
         self.__stop_signal = False
-        self.__start_with_protein = start_with_protein
 
     def digest_to_database(self, database_url: str):
         self.__set_databse_status(database_url, True)
@@ -111,14 +110,7 @@ class Digestion:
         logger_process = process_context.Process(target=self.logging_worker, args=(log_connections, self.__log_file_path,))
         logger_process.start()
 
-        current_input_file = ""
-        # Resets which each input file
-        read_proteins_of_current_file = 0
-        queued_proteins_of_current_file = 0
-
         for input_file_path in self.__input_file_paths:
-            read_proteins_of_current_file = 0
-            current_input_file = str(input_file_path.resolve())
             # Break file loop
             if self.__stop_signal:
                 break
@@ -127,12 +119,9 @@ class Digestion:
 
                 # Enqueue proteins
                 for protein, protein_merges in input_file_reader:
-                    read_proteins_of_current_file += 1
                     # Break protein read loop
                     if self.__stop_signal:
                         break
-                    if read_proteins_of_current_file < self.__start_with_protein:
-                        continue
                     # Retry lopp
                     while True:
                         # Break retry loop
@@ -141,8 +130,6 @@ class Digestion:
                         try:
                             # Try to queue a protein for digestion, wait 5 seconds for a free slot
                             protein_queue.put((protein, protein_merges), True, 5)
-                            # Protein is successfully read, if it is queued
-                            queued_proteins_of_current_file += 1
                             # Continue with the next protein from the file
                             break
                         # Catch timouts of protein_queue.put()
@@ -159,10 +146,6 @@ class Digestion:
         # Wait for all digest workers to stop
         for digest_worker in digest_processes:
             digest_worker.join()
-
-        # Report the protein number
-        if self.__stop_signal:
-            log_connection.send(f"receive stop signal at protein {queued_proteins_of_current_file - protein_queue.qsize()} in file {current_input_file}")
 
         # It is possible that the last statistic is not entirely transfered when the logger stops. So wait a second to make sure all information are transfered.
         time.sleep(1)
@@ -490,8 +473,7 @@ class Digestion:
             args.enzyme_name,
             args.maximum_number_of_missed_cleavages,
             args.minimum_peptide_length,
-            args.maximum_peptide_length,
-            args.start_with_protein
+            args.maximum_peptide_length
         )
         digestion.digest_to_database(args.database_url)
 
@@ -510,7 +492,6 @@ class Digestion:
         parser.add_argument("--minimum-peptide-length", type=int, help="Minimum peptide length (default: 5)", default="5")
         parser.add_argument("--maximum-peptide-length", type=int, help="Maximum peptide length (default: 60)", default="60")
         parser.add_argument("--database-url", "-d", type=str, required=True, help="Database url for postgres")
-        parser.add_argument("--start-with-protein", type=int, default=0, help="In case a previous digestion was gracefully stopped e.g. by shutdown or yourself. You can start where the previous digestion stopped. Look into the log file of the previous digestion to get a clue where it stopped.")
         parser.set_defaults(func=cls.digest_from_command_line)
 
 

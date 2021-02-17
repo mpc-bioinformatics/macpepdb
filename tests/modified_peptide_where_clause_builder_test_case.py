@@ -162,8 +162,7 @@ class ModifiedPeptideWhereClauseBuilderTestCase(AbstractDatabaseTestCase):
             "Trypsin",
             2,
             6   ,
-            50,
-            0
+            50
         )
 
         digestion.digest_to_database(os.getenv("TEST_MACPEPDB_URL"))

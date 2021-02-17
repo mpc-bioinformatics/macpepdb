@@ -39,8 +39,7 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase):
                 "Trypsin",
                 TRYPSIN_MAX_MISSED_CLEAVAGES,
                 TRYPSIN_MIN_PEPTIDE_LENGTH,
-                TRYPSIN_MAX_PEPTIDE_LENGTH,
-                0
+                TRYPSIN_MAX_PEPTIDE_LENGTH
             )
 
             digestion.digest_to_database(os.getenv("TEST_MACPEPDB_URL"))
@@ -112,8 +111,7 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase):
             "Trypsin",
             TRYPSIN_MAX_MISSED_CLEAVAGES,
             TRYPSIN_MIN_PEPTIDE_LENGTH,
-            TRYPSIN_MAX_PEPTIDE_LENGTH,
-            0
+            TRYPSIN_MAX_PEPTIDE_LENGTH
         )
 
         digestion.digest_to_database(os.getenv("TEST_MACPEPDB_URL"))
@@ -133,8 +131,7 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase):
             "Trypsin",
             8,
             6,
-            50,
-            0
+            50
         )
 
         digestion.digest_to_database(os.getenv("TEST_MACPEPDB_URL"))
