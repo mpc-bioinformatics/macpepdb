@@ -23,6 +23,7 @@ from ..proteomics.file_reader.file_reader import FileReader
 from ..models.protein import Protein
 from ..models.peptide import Peptide
 from ..models.protein_merge import ProteinMerge
+from ..models.maintenance_information import MaintenanceInformation
 
 class Digestion:
     STATSTIC_FILE_HEADER = ["seconds", "inserted_proteins", "inserted_peptides", "unsolvable errors", "protein_insert_rate", "peptide_insert_rate", "error_rate"]
@@ -33,8 +34,12 @@ class Digestion:
         self.__log_file_path = log_file_path
         self.__unprocessible_proteins_fasta_file_path = unprocessible_proteins_fasta_file_path
         self.__thread_count = thread_count
+        self.__maximum_number_of_missed_cleavages = maximum_number_of_missed_cleavages
+        self.__minimum_peptide_length = minimum_peptide_length
+        self.__maximum_peptide_length = maximum_peptide_length
+        self.__enzyme_name = enzyme_name
         EnzymeClass = DigestEnzyme.get_enzyme_by_name(enzyme_name)
-        self.__enzyme = EnzymeClass(maximum_number_of_missed_cleavages, minimum_peptide_length, maximum_peptide_length)
+        self.__enzyme = EnzymeClass(self.__maximum_number_of_missed_cleavages, self.__minimum_peptide_length, self.__maximum_peptide_length)
         self.__file_reader_class = FileReader.get_reader_by_file_format(input_format)
         self.__input_file_paths = input_file_paths
         self.__statistics_write_period = statistics_write_period
@@ -43,6 +48,8 @@ class Digestion:
         self.__start_with_protein = start_with_protein
 
     def digest_to_database(self, database_url: str):
+        self.__load_or_set_digestion_informations(database_url)
+
         # Very important 
         process_context = get_process_context("spawn")
 
@@ -168,6 +175,36 @@ class Digestion:
         log_connection.close()
         logger_process.join()
 
+
+    def __load_or_set_digestion_informations(self, database_url: str):
+        """
+        Loads the digestion information from previous digestions from the databsae and overrides the given ones.
+        If no digestion information were found, it will save the current one.
+        @param database_url Database URL
+        """
+        INFORMATION_KEY = 'digestion_information'
+        engine = create_engine(database_url, pool_size = 1, max_overflow = 0, pool_timeout = 3600)
+        session_factory = sessionmaker(bind = engine, autoflush=False)
+        session = session_factory()
+        digestion_information = session.query(MaintenanceInformation).filter(MaintenanceInformation.key == INFORMATION_KEY).one_or_none()
+        if digestion_information:
+            self.__maximum_number_of_missed_cleavages = digestion_information.values['maximum_number_of_missed_cleavages']
+            self.__minimum_peptide_length = digestion_information.values['minimum_peptide_length']
+            self.__maximum_peptide_length = digestion_information.values['maximum_peptide_length']
+            self.__enzyme_name = digestion_information.values['enzyme_name']
+            EnzymeClass = DigestEnzyme.get_enzyme_by_name(self.__enzyme_name)
+            self.__enzyme = EnzymeClass(self.__maximum_number_of_missed_cleavages, self.__minimum_peptide_length, self.__maximum_peptide_length)
+        else:
+            digestion_information_values = {
+                'enzyme_name': self.__enzyme_name,
+                'maximum_number_of_missed_cleavages': self.__maximum_number_of_missed_cleavages,
+                'minimum_peptide_length': self.__minimum_peptide_length,
+                'maximum_peptide_length': self.__maximum_peptide_length
+            }
+            digestion_information = MaintenanceInformation(INFORMATION_KEY, digestion_information_values)
+            session.add(digestion_information)
+            session.commit()
+        session.close()
 
 
     @staticmethod

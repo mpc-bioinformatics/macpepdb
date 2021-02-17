@@ -115,6 +115,7 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase):
         # Digest the modified B0FIH3. Sequence, accession, taxonomy id and proteome id are updated.
         test_file_path = pathlib.Path("./test_files/B0FIH3_updated.txt")
 
+        # Digest with different digest values to see if the digestion uses the values from the database
         digestion = Digestion(
             [test_file_path],
             "text",
@@ -124,9 +125,9 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase):
             5,
             4,
             "Trypsin",
-            TRYPSIN_MAX_MISSED_CLEAVAGES,
-            TRYPSIN_MIN_PEPTIDE_LENGTH,
-            TRYPSIN_MAX_PEPTIDE_LENGTH,
+            8,
+            6,
+            50,
             0
         )
 
