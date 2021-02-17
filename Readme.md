@@ -54,8 +54,10 @@ Run `python -m macpepdb --help` in the root-folder of the repository.
 ## Usage
 
 ### Native installation
-You can follow the development instruction to `pip install -r ./requirements.txt`. Then you can use MacPepDB by running `python -m macpepdb`. 
-Appending `--help` shows the existing command line parmeter.
+For a native installation you need Python 3.7 or higher and the PostgreSQL headers.
+Than update pip with `pip install --upgrade pip` and run `pip install -e git+https://github.com/mpc-bioinformatics/macpepdb.git@<MACPEPDB_GIT_TAG>#egg=MaCPepDB` to install MaCPepDB.
+Then you can use MacPepDB by running `python -m macpepdb`. 
+Appending `--help` shows the available command line parmeter.
 
 ### Docker installation
 To create a Docker image use: `docker build --tag macpepdb-py .` . You can use the image to start a container with
