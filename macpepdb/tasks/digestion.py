@@ -24,7 +24,6 @@ from ..proteomics.enzymes.digest_enzyme import DigestEnzyme
 from ..proteomics.file_reader.uniprot_text_reader import UniprotTextReader
 from ..models.protein import Protein
 from ..models.peptide import Peptide
-from ..models.protein_merge import ProteinMerge
 from ..models.maintenance_information import MaintenanceInformation
 
 class Digestion:
@@ -118,7 +117,7 @@ class Digestion:
                 input_file_reader = UniprotTextReader(input_file)
 
                 # Enqueue proteins
-                for protein, protein_merges in input_file_reader:
+                for protein in input_file_reader:
                     # Break protein read loop
                     if self.__stop_signal:
                         break
@@ -129,7 +128,7 @@ class Digestion:
                             break
                         try:
                             # Try to queue a protein for digestion, wait 5 seconds for a free slot
-                            protein_queue.put((protein, protein_merges), True, 5)
+                            protein_queue.put(protein, True, 5)
                             # Continue with the next protein from the file
                             break
                         # Catch timouts of protein_queue.put()
@@ -234,7 +233,7 @@ class Digestion:
         while (not empty_queue_and_stop_flag.is_set() or not protein_queue.empty()) and not stop_immediately_flag.is_set():
             try:
                 # Try to get a protein from the queue, timeout is 2 seconds
-                protein, protein_merges = protein_queue.get(True, 5)
+                protein = protein_queue.get(True, 5)
                 
                 # Variables for loop control
                 unsolvable_errors = 0
@@ -245,16 +244,16 @@ class Digestion:
                     try:
                         count_protein = False
                         # Check if the Protein exists by its accession or secondary accessions
-                        accessions = [protein.accession] + [protein_merge.source_accession for protein_merge in protein_merges]
+                        accessions = [protein.accession] + protein.secondary_accessions
                         existing_protein = session.query(Protein).filter(Protein.accession.in_(accessions)).first()
                         if existing_protein:
-                            need_commit, number_of_new_peptides = Digestion.update_protein(session, protein, existing_protein, protein_merges, enzyme)
+                            need_commit, number_of_new_peptides = Digestion.update_protein(session, protein, existing_protein, enzyme)
                             if need_commit:
                                 session.commit()
                             else:
                                 session.rollback()
                         else:
-                            number_of_new_peptides = Digestion.create_protein(session, protein, protein_merges, enzyme)
+                            number_of_new_peptides = Digestion.create_protein(session, protein, enzyme)
                             session.commit()
                             count_protein = True
 
@@ -277,7 +276,7 @@ class Digestion:
                         else:
                             exception = sys.exc_info()[1]
                             log_connection.send("Exception on protein {}, see:\n{}".format(protein.accession, exception))
-                            unprocessible_log_connection.send(protein.to_embl_entry(protein_merges))
+                            unprocessible_log_connection.send(protein.to_embl_entry())
                             statistics[2] += 1
                             try_transaction_again = False
                     finally:
@@ -290,20 +289,16 @@ class Digestion:
         unprocessible_log_connection.close()
 
     @staticmethod
-    def create_protein(session, protein: Protein, protein_merges: list, enzyme: DigestEnzyme) -> int:
+    def create_protein(session, protein: Protein, enzyme: DigestEnzyme) -> int:
         """
         Creates a new protein. Does not check if the protein already exists.
         @param session Open database session, with open transaction.
         @param protein Protein to digest
-        @param protein_merges List of protein merges for the given protein
         @param enzyme Digest enzym
         @return int Number of newly inserted peptides
         """
         session.add(protein)
         peptides = enzyme.digest(protein)
-
-        for merge in protein_merges:
-            session.add(merge)
 
         existing_peptide_query = session.query(Peptide).filter(Peptide.sequence.in_([peptide.sequence for peptide in peptides]))
         existing_peptides_dict = {peptide.sequence: peptide for peptide in existing_peptide_query.all()}
@@ -316,27 +311,22 @@ class Digestion:
         return len(peptides) - len(existing_peptides_dict)
 
     @staticmethod
-    def update_protein(session, updated_protein: Protein, existing_protein: Protein, protein_merges: list, enzyme: DigestEnzyme) -> (bool, int):
+    def update_protein(session, updated_protein: Protein, existing_protein: Protein, enzyme: DigestEnzyme) -> (bool, int):
         """
         Creates a new protein. Does not check if the protein already exists.
         @param session Open database session
         @param updated_protein Protein with updates from file
         @param existing_protein Protein from database
-        @param protein_merges List of protein merges for the updated_protein
         @param enzyme Digest enzym
         @return tuple (bool, int) First element indicates if the session needs to commit, seconds is the number of newly inserted peptides
         """
         needs_commit = False
         new_peptides_count = 0
         if updated_protein.accession != existing_protein.accession:
-            # Replace the target accession with the new protein accession
-            session.execute(ProteinMerge.__table__.update().where(ProteinMerge.target_accession == existing_protein.accession).values(target_accession = updated_protein.accession))
-            # Create all missing protein merges
-            for protein_merge in protein_merges:
-                protein_merge_query = session.query(ProteinMerge).filter(ProteinMerge.source_accession == protein_merge.source_accession, ProteinMerge.target_accession == protein_merge.target_accession)
-                if not protein_merge_query.one_or_none():
-                    session.add(protein_merge)
             existing_protein.accession = updated_protein.accession
+            needs_commit = True
+        if updated_protein.secondary_accessions != existing_protein.secondary_accessions:
+            existing_protein.secondary_accessions = updated_protein.secondary_accessions
             needs_commit = True
         if updated_protein.taxonomy_id != existing_protein.taxonomy_id:
             existing_protein.taxonomy_id = updated_protein.taxonomy_id

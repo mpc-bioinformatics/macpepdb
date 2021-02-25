@@ -1,5 +1,6 @@
 import re
 from sqlalchemy import Column, BigInteger, String, VARCHAR, Boolean, Integer
+from sqlalchemy.dialects.postgresql import ARRAY as psql_array
 from sqlalchemy.orm import relationship
 
 from .database_record import DatabaseRecord
@@ -16,6 +17,7 @@ class Protein(DatabaseRecord):
     # Attentions: Do not change the accession if the protein is stored in a hashabale collection, because accession is used as hash-key,
     # therefore a change of the accession will result in undetectability of this protein within the collection.
     accession = Column(VARCHAR(10))
+    secondary_accessions = Column(psql_array(VARCHAR(10)), nullable=False)
     entry_name = Column(VARCHAR(16))
     name = Column(String)
     sequence = Column(String)
@@ -29,8 +31,9 @@ class Protein(DatabaseRecord):
     peptides = relationship('Peptide', secondary=proteins_peptides, secondaryjoin="Peptide.id == proteins_peptides.c.peptide_id", back_populates='proteins', lazy='dynamic')
 
 
-    def __init__(self, accession: str, entry_name: str, name: str, sequence: str, taxonomy_id: int, proteome_id: str, is_reviewed: bool):
+    def __init__(self, accession: str, secondary_accessions: list, entry_name: str, name: str, sequence: str, taxonomy_id: int, proteome_id: str, is_reviewed: bool):
         self.accession = accession
+        self.secondary_accessions = secondary_accessions
         self.entry_name = entry_name
         self.name = name
         self.sequence = sequence
@@ -38,10 +41,10 @@ class Protein(DatabaseRecord):
         self.proteome_id = proteome_id
         self.is_reviewed = is_reviewed
 
-    def to_embl_entry(self, protein_merges: list) -> str:
+    def to_embl_entry(self) -> str:
         embl_entry = f"ID   {self.entry_name}    {'Reviewed' if self.is_reviewed else 'Unreviewed'};    {len(self.sequence)}\n"
 
-        embl_accessions = [self.accession] + [protein_merge.source_accession for protein_merge in protein_merges]
+        embl_accessions = [self.accession] + self.secondary_accessions
         embl_accessions_start = 0
         while embl_accessions_start < len(embl_accessions):
             # Add only 1 whitespace after AC, because each accession will be prepended by one whitespace

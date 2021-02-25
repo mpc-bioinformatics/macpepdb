@@ -21,6 +21,7 @@ def upgrade():
         'proteins',
         sa.Column('id', sa.BigInteger, primary_key=True),
         sa.Column('accession', sa.VARCHAR(10), nullable=False, unique=True),
+        sa.Column('secondary_accessions', sa.dialects.postgresql.ARRAY(sa.VARCHAR(10)), nullable=False),
         sa.Column('entry_name', sa.VARCHAR(16), nullable=False),
         sa.Column('name', sa.Text),
         sa.Column('sequence', sa.Text, nullable=False),
@@ -29,16 +30,7 @@ def upgrade():
         sa.Column('is_reviewed', sa.Boolean, nullable=False)
     )
     op.create_index('protein_accession_idx', 'proteins', ['accession'])
-
-    op.create_table(
-        'protein_merges',
-        sa.Column('source_accession', sa.VARCHAR(10), nullable=False),
-        sa.Column('target_accession', sa.VARCHAR(10), nullable=False),
-        sa.PrimaryKeyConstraint('source_accession', 'target_accession')
-    )
-    op.create_index('protein_merges_target_accession_idx', 'protein_merges', ['target_accession'])
-
+    op.create_index('protein_secondary_accessions_idx', 'proteins', ['secondary_accessions'], postgresql_using='gin')
 
 def downgrade():
     op.drop_table('proteins')
-    op.drop_table('protein_merges')

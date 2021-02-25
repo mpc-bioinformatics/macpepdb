@@ -1,7 +1,6 @@
 import re
 
 from macpepdb.models.protein import Protein
-from macpepdb.models.protein_merge import ProteinMerge
 
 class UniprotTextReader():
     TAXONOMY_ID_REGEX = re.compile(r".*=(?P<taxonomy_id>\d+)")
@@ -46,8 +45,8 @@ class UniprotTextReader():
                 if name == "" and line[5:].startswith("RecName") or line[5:].startswith("AltName") or line[5:].startswith("Sub"):
                     name = self.__process_de_name(line[5:])
             elif line.startswith("//"):
-                accession = accessions.pop(0)
-                return Protein(accession, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed), self.__create_protein_merges(accessions, accession)
+                primary_accession = accessions.pop(0)
+                return Protein(primary_accession, accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed)
 
 
     # Returns the the uniprot entry name and the review status (ture|false)
@@ -84,6 +83,3 @@ class UniprotTextReader():
         if matches:
             return matches["name"].strip()
         return ""
-            
-    def __create_protein_merges(self, source_accessions, target_accession):
-        return [ProteinMerge(source_accession, target_accession) for source_accession in source_accessions]

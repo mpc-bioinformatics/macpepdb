@@ -9,7 +9,6 @@ from macpepdb.proteomics.enzymes.digest_enzyme import DigestEnzyme
 from macpepdb.proteomics.file_reader.uniprot_text_reader import UniprotTextReader
 from macpepdb.models.peptide import Peptide
 from macpepdb.models.protein import Protein
-from macpepdb.models.protein_merge import ProteinMerge
 from macpepdb.models.maintenance_information import MaintenanceInformation
 
 from .abstract_database_test_case import AbstractDatabaseTestCase
@@ -41,18 +40,14 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase):
         trypsin = EnzymeClass(TRYPSIN_MAX_MISSED_CLEAVAGES, TRYPSIN_MIN_PEPTIDE_LENGTH, TRYPSIN_MAX_PEPTIDE_LENGTH)
 
         proteins = []
-        protein_merges = []
         peptides = set()
 
         with test_file_path.open("r") as test_file:
             protein_file_reader = UniprotTextReader(test_file)
 
-            # Redirects not needed, so use _
-            for protein, read_protein_merges in protein_file_reader:
+            for protein in protein_file_reader:
                 for peptide in trypsin.digest(protein):
                     peptides.add(peptide)
-                for merge in read_protein_merges:
-                    protein_merges.append(merge)
                 proteins.append(protein)
 
         session = self.session_factory()
@@ -69,16 +64,6 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase):
         db_peptides = session.query(Peptide).all()
         for peptide in db_peptides:
             self.assertTrue(peptide in peptides)
-
-        # Check if protein merge count in database are equals to set
-        self.assertEqual(len(protein_merges), session.query(func.count(ProteinMerge.source_accession)).scalar())
-        # Check if all protein merges from set exists in database
-        for merge in protein_merges:
-            self.assertTrue(session.query(exists().where(ProteinMerge.source_accession == merge.source_accession and ProteinMerge.target_accession == merge.target_accession)).scalar())
-        # Check if protein merges in db are present in the set
-        db_protein_merges = session.query(ProteinMerge).all()
-        for merge in db_protein_merges:
-            self.assertTrue(merge in protein_merges)
 
         # Check if maintenance mode is false and update timestamp is greater zero
         database_status = session.query(MaintenanceInformation).filter(MaintenanceInformation.key == MaintenanceInformation.DATABASE_STATUS_KEY).one_or_none()
@@ -129,15 +114,12 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase):
         trypsin = EnzymeClass(TRYPSIN_MAX_MISSED_CLEAVAGES, TRYPSIN_MIN_PEPTIDE_LENGTH, TRYPSIN_MAX_PEPTIDE_LENGTH)
 
         read_protein = None
-        read_protein_merges = []
         read_protein_peptide_sequences = {}
         with test_file_path.open("r") as test_file:
             file_reader = UniprotTextReader(test_file)
 
-            # Redirects not needed, so use _
-            for protein, protein_merges in file_reader:
+            for protein in file_reader:
                 read_protein = protein
-                read_protein_merges = protein_merges
         read_protein_peptide_sequences = {peptide.sequence for peptide in trypsin.digest(read_protein)}
 
 
@@ -162,16 +144,14 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase):
         for sequence in databse_protein_peptide_sequences:
             self.assertIn(sequence, read_protein_peptide_sequences)
 
-        # Test protein merges
-        database_protein_merges = session.query(ProteinMerge).filter(ProteinMerge.target_accession == read_protein.accession).all()
-
+        # Test secondary accessions
         # Convert to sets of source accession
-        read_protein_merges_source_accessions = {merge.source_accession for merge in read_protein_merges}
-        database_protein_merges_source_accessions = {merge.source_accession for merge in database_protein_merges}
+        read_protein_secondary_accessions = set(read_protein.secondary_accessions)
+        database_protein_secondary_accessions = set(database_protein.secondary_accessions)
 
         # Crosscheck if each accession from the on set is in the other
-        for accession in read_protein_merges_source_accessions:
-            self.assertIn(accession, database_protein_merges_source_accessions)
+        for accession in read_protein_secondary_accessions:
+            self.assertIn(accession, database_protein_secondary_accessions)
 
-        for accession in database_protein_merges_source_accessions:
-            self.assertIn(accession, read_protein_merges_source_accessions)
+        for accession in database_protein_secondary_accessions:
+            self.assertIn(accession, read_protein_secondary_accessions)
