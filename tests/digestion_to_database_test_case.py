@@ -96,7 +96,7 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase):
             self.assertFalse(database_status.values['maintenance_mode'])
             self.tearDown()
 
-    def test_digestion(self):
+    def test_digest_with_protein(self):
         # Digest the databse
         test_file_path = pathlib.Path("./test_files/UP000002006.txt")
 

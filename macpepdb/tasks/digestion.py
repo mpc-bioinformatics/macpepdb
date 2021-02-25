@@ -15,6 +15,7 @@ from ctypes import c_bool, c_ulonglong
 from queue import Empty, Full
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.sql import exists
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm.exc import NoResultFound
@@ -209,6 +210,8 @@ class Digestion:
             database_status.values['maintenance_mode'] = is_maintenance_mode
             if last_update_timestamp:
                 database_status.values['last_update'] = last_update_timestamp
+            # SQL-Achemy does not register changes to a JSON-column, unless we flag it as modified
+            flag_modified(database_status, 'values')
         else:
             digestion_information_values = {
                 'maintenance_mode': is_maintenance_mode
