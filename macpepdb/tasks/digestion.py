@@ -247,7 +247,7 @@ class Digestion:
                         existing_protein = session.query(Protein).filter(Protein.accession.in_(accessions)).first()
                         if existing_protein:
                             need_commit, number_of_new_peptides = Digestion.update_protein(session, protein, existing_protein, protein_merges, enzyme)
-                            if Digestion.update_protein(session, protein, existing_protein, protein_merges, enzyme):
+                            if need_commit:
                                 session.commit()
                             else:
                                 session.rollback()
