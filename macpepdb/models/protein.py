@@ -6,6 +6,10 @@ from .database_record import DatabaseRecord
 from .associacions import proteins_peptides
 
 class Protein(DatabaseRecord):
+    EMBL_AMINO_ACID_GROUPS_PER_LINE = 6
+    EMBL_AMINO_ACID_GROUP_LEN = 10
+    EMBL_ACCESSIONS_PER_LINE = 8
+
     __tablename__ = "proteins"
 
     id = Column(BigInteger, primary_key = True)
@@ -34,20 +38,41 @@ class Protein(DatabaseRecord):
         self.proteome_id = proteome_id
         self.is_reviewed = is_reviewed
 
-    def to_fasta_entry(self, protein_merges: list) -> str:
-        review_type = "sp" if self.is_reviewed else "tr"
-        non_fasta_attributes = []
-        if self.proteome_id:
-            non_fasta_attributes.append(f"TDBPI={self.proteome_id}")
-        if len(protein_merges):
-            accessions = ",".join([merge.source_accession for merge in protein_merges])
-            non_fasta_attributes.append(f"TDBPM={accessions}")
-        if len(non_fasta_attributes):
-            non_fasta_attributes.insert(0, "")
-            non_fasta_attributes = " ".join(non_fasta_attributes)
-        else:
-            non_fasta_attributes = ""
-        return f">{review_type}|{self.accession}|{self.entry_name} {self.name} OX={self.taxonomy_id}{non_fasta_attributes}\n{self.sequence}"
+    def to_embl_entry(self, protein_merges: list) -> str:
+        embl_entry = f"ID   {self.entry_name}    {'Reviewed' if self.is_reviewed else 'Unreviewed'};    {len(self.sequence)}\n"
+
+        embl_accessions = [self.accession] + [protein_merge.source_accession for protein_merge in protein_merges]
+        embl_accessions_start = 0
+        while embl_accessions_start < len(embl_accessions):
+            # Add only 1 whitespace after AC, because each accession will be prepended by one whitespace
+            embl_entry += "AC  "
+            for accession in embl_accessions[embl_accessions_start:embl_accessions_start+Protein.EMBL_ACCESSIONS_PER_LINE]:
+                embl_entry += f" {accession};"
+            embl_entry += "\n"
+            embl_accessions_start += Protein.EMBL_ACCESSIONS_PER_LINE
+
+        embl_entry += f"OX   NCBI_TaxID={self.taxonomy_id};\n"
+        embl_entry += f"DR   Proteomes; {self.proteome_id};\n"
+        embl_entry += f"DE   RecName: Full={self.name};\n"
+        embl_entry += f"SQ   SEQUENCE\n"
+
+        sequence_chunk_size = Protein.EMBL_AMINO_ACID_GROUP_LEN * Protein.EMBL_AMINO_ACID_GROUPS_PER_LINE
+        seq_group_start = 0
+        while seq_group_start < len(self.sequence):
+            embl_entry += ' ' * 5
+            for idx, amino_acid in enumerate(self.sequence[seq_group_start:seq_group_start+sequence_chunk_size]):
+                if (idx + 1) % Protein.EMBL_AMINO_ACID_GROUP_LEN:
+                    # If this is not the last  amino acid of this group add only the amino acid
+                    embl_entry += amino_acid
+                else:
+                    # If this is the last amino acid of this group add the amino acid and a whitespace
+                    embl_entry += f"{amino_acid} "
+            embl_entry += "\n"
+            seq_group_start += sequence_chunk_size
+
+        embl_entry += "//"
+            
+        return embl_entry
 
     # This method is implemented to make sure only the accession is used as hash when a protein is stored in a hashable collection (Set, Dictionary, ...)
     def __hash__(self):

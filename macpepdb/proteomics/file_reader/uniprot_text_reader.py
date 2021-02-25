@@ -3,9 +3,7 @@ import re
 from macpepdb.models.protein import Protein
 from macpepdb.models.protein_merge import ProteinMerge
 
-from .file_reader import FileReader
-
-class UniprotTextReader(FileReader):
+class UniprotTextReader():
     TAXONOMY_ID_REGEX = re.compile(r".*=(?P<taxonomy_id>\d+)")
     NAME_REGEX = re.compile(r"Full=(?P<name>.*?)(\{|;)")
     WHITESPACE_REGEX = re.compile(r"\s")
@@ -13,10 +11,10 @@ class UniprotTextReader(FileReader):
 
 
     def __init__(self, file):
-        super().__init__(file)
+        self.__file = file
 
     def __iter__(self):
-        self.__file_iter = iter(self.file)
+        self.__file_iter = iter(self.__file)
         return self
 
     def __next__(self):

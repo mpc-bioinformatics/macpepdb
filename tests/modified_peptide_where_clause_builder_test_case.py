@@ -9,7 +9,6 @@ from macpepdb.proteomics.mass.convert import to_int as mass_to_int, thomson_to_d
 from macpepdb.models.peptide import Peptide
 from macpepdb.tasks.digestion import Digestion
 from macpepdb.proteomics.enzymes.digest_enzyme import DigestEnzyme
-from macpepdb.proteomics.file_reader.file_reader import FileReader
 from macpepdb.peptide_mass_validator import PeptideMassValidator
 from macpepdb.proteomics.mass.precursor_range import PrecursorRange
 
@@ -153,9 +152,8 @@ class ModifiedPeptideWhereClauseBuilderTestCase(AbstractDatabaseTestCase):
 
         digestion = Digestion(
             [protein_file_path],
-            'text',
             pathlib.Path("./digestion_test.log"),
-            pathlib.Path("./digestion_test.unprocessible_proteins.fasta"),
+            pathlib.Path("./digestion_test.unprocessible_proteins.txt"),
             pathlib.Path("./digestion_test.statistics.csv"),
             5,
             4,

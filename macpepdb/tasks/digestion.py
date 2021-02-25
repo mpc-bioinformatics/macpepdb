@@ -21,7 +21,7 @@ from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm.exc import NoResultFound
 
 from ..proteomics.enzymes.digest_enzyme import DigestEnzyme
-from ..proteomics.file_reader.file_reader import FileReader
+from ..proteomics.file_reader.uniprot_text_reader import UniprotTextReader
 from ..models.protein import Protein
 from ..models.peptide import Peptide
 from ..models.protein_merge import ProteinMerge
@@ -32,9 +32,9 @@ class Digestion:
     STATSTIC_PRINT_MIN_COLUMN_WIDTH = 12
     
 
-    def __init__(self, input_file_paths: list, input_format: str, log_file_path: pathlib.Path, unprocessible_proteins_fasta_file_path: pathlib.Path, statistics_csv_file_path: pathlib.Path, statistics_write_period: int, thread_count: int, enzyme_name: str, maximum_number_of_missed_cleavages: int, minimum_peptide_length: int, maximum_peptide_length: int):
+    def __init__(self, input_file_paths: list, log_file_path: pathlib.Path, unprocessible_proteins_file_path: pathlib.Path, statistics_csv_file_path: pathlib.Path, statistics_write_period: int, thread_count: int, enzyme_name: str, maximum_number_of_missed_cleavages: int, minimum_peptide_length: int, maximum_peptide_length: int):
         self.__log_file_path = log_file_path
-        self.__unprocessible_proteins_fasta_file_path = unprocessible_proteins_fasta_file_path
+        self.__unprocessible_proteins_file_path = unprocessible_proteins_file_path
         self.__thread_count = thread_count
         self.__maximum_number_of_missed_cleavages = maximum_number_of_missed_cleavages
         self.__minimum_peptide_length = minimum_peptide_length
@@ -42,7 +42,6 @@ class Digestion:
         self.__enzyme_name = enzyme_name
         EnzymeClass = DigestEnzyme.get_enzyme_by_name(enzyme_name)
         self.__enzyme = EnzymeClass(self.__maximum_number_of_missed_cleavages, self.__minimum_peptide_length, self.__maximum_peptide_length)
-        self.__file_reader_class = FileReader.get_reader_by_file_format(input_format)
         self.__input_file_paths = input_file_paths
         self.__statistics_write_period = statistics_write_period
         self.__statistics_csv_file_path = statistics_csv_file_path
@@ -94,7 +93,7 @@ class Digestion:
 
         # Start logger for unprocessible proteins
         log_connection_read, log_connection_write = process_context.Pipe(duplex=False)
-        unprocessible_proteins_process = process_context.Process(target=self.unprocessible_proteins_worker, args=(unprocessible_channels, self.__unprocessible_proteins_fasta_file_path, log_connection_write,))
+        unprocessible_proteins_process = process_context.Process(target=self.unprocessible_proteins_worker, args=(unprocessible_channels, self.__unprocessible_proteins_file_path, log_connection_write,))
         unprocessible_proteins_process.start()
         log_connections.append(log_connection_read)
         # Close this copy
@@ -116,7 +115,7 @@ class Digestion:
             if self.__stop_signal:
                 break
             with input_file_path.open("r") as input_file:
-                input_file_reader = self.__file_reader_class(input_file)
+                input_file_reader = UniprotTextReader(input_file)
 
                 # Enqueue proteins
                 for protein, protein_merges in input_file_reader:
@@ -278,7 +277,7 @@ class Digestion:
                         else:
                             exception = sys.exc_info()[1]
                             log_connection.send("Exception on protein {}, see:\n{}".format(protein.accession, exception))
-                            unprocessible_log_connection.send(protein.to_fasta_entry(protein_merges))
+                            unprocessible_log_connection.send(protein.to_embl_entry(protein_merges))
                             statistics[2] += 1
                             try_transaction_again = False
                     finally:
@@ -394,18 +393,18 @@ class Digestion:
             # will be flushed on file close
     
     @staticmethod
-    def unprocessible_proteins_worker(process_connections: list, unprocessible_proteins_fasta_path: pathlib.Path, log_connection: Connection):
+    def unprocessible_proteins_worker(process_connections: list, unprocessible_proteins_file_path: pathlib.Path, log_connection: Connection):
         log_connection.send("unprocessible proteins logger is online")
-        with unprocessible_proteins_fasta_path.open("w") as fasta_file:
+        with unprocessible_proteins_file_path.open("w") as unprocessible_proteins_file:
             while process_connections:
                 for conn in wait(process_connections):
                     try:
-                        fasta_entry = conn.recv()
+                        embl_entry = conn.recv()
                     except EOFError:
                         process_connections.remove(conn)
                     else:
-                        fasta_file.write(fasta_entry + "\n")
-                        fasta_file.flush()
+                        unprocessible_proteins_file.write(embl_entry + "\n")
+                        unprocessible_proteins_file.flush()
         log_connection.send("unprocessible proteins logger is stopping")
         log_connection.close()
 
@@ -467,9 +466,8 @@ class Digestion:
     def digest_from_command_line(cls, args):
         digestion = cls(
             [pathlib.Path(input_file_path) for input_file_path in args.input_file_paths],
-            args.input_format,
             pathlib.Path(args.log_file_path),
-            pathlib.Path(args.unprocessible_proteins_fasta_file_path),
+            pathlib.Path(args.unprocessible_proteins_file_path),
             pathlib.Path(args.statistics_csv_file_path),
             args.statistics_write_period,
             args.thread_count,
@@ -483,10 +481,9 @@ class Digestion:
     @classmethod
     def comand_line_arguments(cls, subparsers):
         parser = subparsers.add_parser('digestion', help="Digest proteins from a file and store the resulting peptides in a PostgreSQL-database.")
-        parser.add_argument("--input-file-paths", "-i", required=True, help="Protein file (can be used multiple times)", action='append')
-        parser.add_argument("--input-format",  "-f", type=str, required=True, help="Format of the input files", choices=["fasta", "text"])
+        parser.add_argument("--input-file-paths", "-i", required=True, help="Protein file (UniProt text format. Parameter can be used multiple times)", action='append')
         parser.add_argument("--log-file-path", "-l", type=str, required=True, help="Log file")
-        parser.add_argument("--unprocessible-proteins-fasta-file-path", "-u", type=str, required=True, help="File for unprocessible proteins")
+        parser.add_argument("--unprocessible-proteins-file-path", "-u", type=str, required=True, help="File for unprocessible proteins")
         parser.add_argument("--statistics-csv-file-path", "-s", type=str, required=True, help="File for digest statistics")
         parser.add_argument("--statistics-write-period", type=int, help="Seconds between writes to the statistics file (default: 900)", default=900)
         parser.add_argument("--thread-count", "-t", type=int, required=True, help="Number of concurrent digestions and inserts to the database")

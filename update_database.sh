@@ -82,16 +82,16 @@ gunzip uniprot_trembl.dat.gz
 mkdir ./logs
 
 # The digestion paramter are saved in the database from the first manually digestion, they will override the ones set by the CLI so no need to set the correct parameter here. 
-python -m macpepdb digestion -i ./uniprot_sprot.dat -i ./uniprot_trembl.dat -f text -l ./logs/uniprot_0.log -u ./logs/uniprot_unprocessible_0.fasta -s ./logs/uniprot_statistics_0.csv -e trypsin -c 1  -t $THREADS -d $DATABASE_URL
+python -m macpepdb digestion -i ./uniprot_sprot.dat -i ./uniprot_trembl.dat -f text -l ./logs/uniprot_0.log -u ./logs/uniprot_unprocessible_0.txt -s ./logs/uniprot_statistics_0.csv -e trypsin -c 1  -t $THREADS -d $DATABASE_URL
 echo "Check if there were unprocessible proteins ..."
-NUMBER_OF_UNPROCESSIBLE_PROTEINS=$(grep -c ">" ./logs/uniprot_unprocessible_0.fasta)
+NUMBER_OF_UNPROCESSIBLE_PROTEINS=$(grep -c ">" ./logs/uniprot_unprocessible_0.txt)
 if [ "$NUMBER_OF_UNPROCESSIBLE_PROTEINS" == "0" ]
 then
     echo "No unprocessible proteins found."
 else
     echo "Found unprocessible proteins, digest them a single thread only."
-    python -m macpepdb digestion -i ./logs/uniprot_unprocessible_0.fasta -f fasta -l ./logs/uniprot_1.log -u ./logs/uniprot_unprocessible_1.fasta -s ./logs/uniprot_statistics_1.csv -e trypsin -c 1 -t 1 -d $DATABASE_URL
-    NUMBER_OF_UNPROCESSIBLE_PROTEINS=$(grep -c ">" ./logs/uniprot_unprocessible_1.fasta)
+    python -m macpepdb digestion -i ./logs/uniprot_unprocessible_0.txt -f fasta -l ./logs/uniprot_1.log -u ./logs/uniprot_unprocessible_1.txt -s ./logs/uniprot_statistics_1.csv -e trypsin -c 1 -t 1 -d $DATABASE_URL
+    NUMBER_OF_UNPROCESSIBLE_PROTEINS=$(grep -c ">" ./logs/uniprot_unprocessible_1.txt)
     if [ "$NUMBER_OF_UNPROCESSIBLE_PROTEINS" == "0" ]
     then
         echo "All former unprocessible proteins were processed."
