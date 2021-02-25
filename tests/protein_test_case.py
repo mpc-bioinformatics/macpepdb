@@ -3,11 +3,6 @@ from macpepdb.models.protein import Protein
 from .abstract_database_test_case import AbstractDatabaseTestCase
 
 class ProteinTestCase(AbstractDatabaseTestCase):
-    def test_accession_regex(self):
-        # Using Leptin (UniProt  accession: Q257X2)
-        leptin = Protein('Q257X2', 'LEP_CAPHI', 'Leptin', 'MRCGPLYRFLWLWPYLSYVEAVPIRKVQDDTKTLIKTIVTRINDISHTQSVSSKQRVTGLDFIPGLHPLLSLSKMDQTLAIYQQILASLPSRNVIQISNDLENLRDLLHLLAASKSCPLPQVRALESLESLGVVLEASLYSTEVVALSRLQGSLQDMLRQLDLSPGC', 9925, 'UP000291000', True)
-        self.assertEqual("Q257X2", leptin.accession)
-
     def test_create_read_update_delete_cycle(self):
         # Using Leptin (UniProt  accession: Q257X2)
         leptin = Protein('Q257X2', 'LEP_CAPHI', 'Leptin', 'MRCGPLYRFLWLWPYLSYVEAVPIRKVQDDTKTLIKTIVTRINDISHTQSVSSKQRVTGLDFIPGLHPLLSLSKMDQTLAIYQQILASLPSRNVIQISNDLENLRDLLHLLAASKSCPLPQVRALESLESLGVVLEASLYSTEVVALSRLQGSLQDMLRQLDLSPGC', 9925, 'UP000291000', True)
