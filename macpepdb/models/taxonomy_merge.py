@@ -1,13 +1,7 @@
-from .database_record import DatabaseRecord
+from __future__ import annotations
 
-from sqlalchemy import Column, Integer, Text, ForeignKey
-from sqlalchemy.orm import relationship
-
-class TaxonomyMerge(DatabaseRecord):
-    __tablename__ = "taxonomy_merges"
-
-    source_id = Column(Integer, primary_key=True)
-    target_id = Column(Integer, primary_key=True)
+class TaxonomyMerge:
+    TABLE_NAME = "taxonomy_merges"
 
     def __init__(self, source_id: int, target_id: int):
         self.source_id = source_id
@@ -20,3 +14,15 @@ class TaxonomyMerge(DatabaseRecord):
     # According to the Python documentation this should be implemented if __hash__() is implemented.
     def __eq__(self, other):
         return self.source_id == other.source_id and self.source_id == other.source_id
+
+    @staticmethod
+    def insert(database_cursor, taxonomy_merge: TaxonomyMerge):
+        """
+        @param database_cursor Database cursor
+        @param taxonomy_merges TaxonomyMerge to insert
+        """
+        INSERT_QUERY = f"INSERT INTO {TaxonomyMerge.TABLE_NAME} (source_id, target_id) VALUES (%s, %s);"
+        database_cursor.execute(
+            INSERT_QUERY,
+            (taxonomy_merge.source_id, taxonomy_merge.target_id)
+        )

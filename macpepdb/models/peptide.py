@@ -1,16 +1,22 @@
-from sqlalchemy.orm import relationship
-
-from .database_record import DatabaseRecord
 from .peptide_base import PeptideBase
-from .associacions import proteins_peptides
+from .protein_peptide_association import ProteinPeptideAssociation
+from . import protein
 
-class Peptide(PeptideBase, DatabaseRecord):
-    __tablename__ = "peptides"
-    # It is sufficient to join Peptide.id with proteins_peptides.c.peptide_id without considering the weight, because weight is contained in the primary for partitioning only. This reduces time consumption for the join by over 50 %
-    proteins = relationship('Protein', secondary=proteins_peptides, primaryjoin="Peptide.id == proteins_peptides.c.peptide_id", back_populates='peptides', lazy='dynamic')
+class Peptide(PeptideBase):
+    TABLE_NAME = 'peptides'
+    
+    def __init__(self, sequence: str, number_of_missed_cleavages: int, id = None):
+        PeptideBase.__init__(self, sequence, number_of_missed_cleavages, id)
 
-    def __init__(self, sequence: str, number_of_missed_cleavages: int):
-        PeptideBase.__init__(self, sequence, number_of_missed_cleavages)
-
-# Prevent circular import problem by SQLAlchemy relation() by put this import after the Peptide definition
-from .protein import Protein
+    def proteins(self, database_cursor):
+        if not self.__id:
+            return []
+        PROTEIN_QUERY = (
+            f"SELECT id, accession, secondary_accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed FROM {protein.Protein.TABLE_NAME} "
+            f"WHERE id = ANY(SELECT protein_id FROM {ProteinPeptideAssociation.TABLE_NAME} WHERE peptide_id = %s);"
+        )
+        database_cursor.execute(
+            PROTEIN_QUERY,
+            (self.__id)
+        )
+        return [protein.Protein.from_sql_row(row) for row in database_cursor.fetchall()]

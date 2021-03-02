@@ -1,37 +1,17 @@
 import re
-from sqlalchemy import Column, BigInteger, String, VARCHAR, Boolean, Integer
-from sqlalchemy.dialects.postgresql import ARRAY as psql_array
-from sqlalchemy.orm import relationship
 
-from .database_record import DatabaseRecord
-from .associacions import proteins_peptides
+from .protein_peptide_association import ProteinPeptideAssociation
+from ..proteomics.enzymes import digest_enzyme
+from . import peptide
 
-class Protein(DatabaseRecord):
+class Protein:
     EMBL_AMINO_ACID_GROUPS_PER_LINE = 6
     EMBL_AMINO_ACID_GROUP_LEN = 10
     EMBL_ACCESSIONS_PER_LINE = 8
 
-    __tablename__ = "proteins"
+    TABLE_NAME = 'proteins'
 
-    id = Column(BigInteger, primary_key = True)
-    # Attentions: Do not change the accession if the protein is stored in a hashabale collection, because accession is used as hash-key,
-    # therefore a change of the accession will result in undetectability of this protein within the collection.
-    accession = Column(VARCHAR(10))
-    secondary_accessions = Column(psql_array(VARCHAR(10)), nullable=False)
-    entry_name = Column(VARCHAR(16))
-    name = Column(String)
-    sequence = Column(String)
-    # https://www.uniprot.org/help/taxonomic_identifier
-    taxonomy_id = Column(Integer)
-    # https://www.uniprot.org/help/proteome_id
-    proteome_id = Column(VARCHAR(11))
-    is_reviewed = Column(Boolean)
-
-    # It is sufficient to join Peptide.id with proteins_peptides.c.peptide_id without considering the weight, because weight is contained in the primary for partitioning only. This reduces time consumption for the join by over 50 %
-    peptides = relationship('Peptide', secondary=proteins_peptides, secondaryjoin="Peptide.id == proteins_peptides.c.peptide_id", back_populates='proteins', lazy='dynamic')
-
-
-    def __init__(self, accession: str, secondary_accessions: list, entry_name: str, name: str, sequence: str, taxonomy_id: int, proteome_id: str, is_reviewed: bool):
+    def __init__(self, accession: str, secondary_accessions: list, entry_name: str, name: str, sequence: str, taxonomy_id: int, proteome_id: str, is_reviewed: bool, id = None):
         self.accession = accession
         self.secondary_accessions = secondary_accessions
         self.entry_name = entry_name
@@ -40,6 +20,16 @@ class Protein(DatabaseRecord):
         self.taxonomy_id = taxonomy_id
         self.proteome_id = proteome_id
         self.is_reviewed = is_reviewed
+        self.__id = id
+
+    @property
+    def id(self):
+        return self.__id
+
+    @id.setter
+    def id(self, value):
+        if self.__id == None:
+            self.__id = value
 
     def to_embl_entry(self) -> str:
         embl_entry = f"ID   {self.entry_name}    {'Reviewed' if self.is_reviewed else 'Unreviewed'};    {len(self.sequence)}\n"
@@ -99,5 +89,219 @@ class Protein(DatabaseRecord):
             "is_reviewed": self.is_reviewed
         }
 
-# Prevent circular import problem by SQLAlchemy relation() by put this import after the Protein definition
-from .peptide import Peptide
+    def peptides(self, database_cursor):
+        if not self.__id:
+            return []
+        PROTEIN_QUERY = (
+            f"SELECT {peptide.Peptide.TABLE_NAME}.id, {peptide.Peptide.TABLE_NAME}.sequence, {peptide.Peptide.TABLE_NAME}.number_of_missed_cleavages " f"FROM {peptide.Peptide.TABLE_NAME}, {ProteinPeptideAssociation.TABLE_NAME} "
+            f"WHERE {ProteinPeptideAssociation.TABLE_NAME}.protein_id = %s AND {ProteinPeptideAssociation.TABLE_NAME}.peptide_id = {peptide.Peptide.TABLE_NAME}.id"
+        )
+        database_cursor.execute(
+            PROTEIN_QUERY,
+            (self.__id,)
+        )
+        return [
+            peptide.Peptide(
+                row[1],
+                row[2],
+                row[0]
+            ) for row in database_cursor.fetchall()
+        ]
+
+    @staticmethod
+    def select(database_cursor, select_conditions: tuple = ("", []), fetchall: bool = False):
+        """
+        @param database_cursor
+        @param select_conditions A tupel with the where statement (without WHERE) and a list of parameters, e.g. ("accession = %s AND taxonomy_id = %s",["Q257X2", 6909])
+        @param fetchall Indicates if multiple rows should be fetched
+        @return Protein or list of proteins
+        """
+        select_query = f"SELECT id, accession, secondary_accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed FROM {Protein.TABLE_NAME}"
+        if len(select_conditions) == 2 and len(select_conditions[0]):
+            select_query += f" WHERE {select_conditions[0]}"
+        select_query += ";"
+        database_cursor.execute(select_query, select_conditions[1])
+        if fetchall:
+            return [Protein.from_sql_row(row) for row in database_cursor.fetchall()]
+        else:
+            row = database_cursor.fetchone()
+            if row:
+                return Protein.from_sql_row(row)
+            else:
+                return None
+
+    @staticmethod
+    def from_sql_row(sql_row):
+        """
+        @param sql_row Contains the protein columns in the following order: id, accession, secondary_accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed
+        @return Protein
+        """
+        return Protein(
+            sql_row[1],
+            sql_row[2],
+            sql_row[3],
+            sql_row[4],
+            sql_row[5],
+            sql_row[6],
+            sql_row[7],
+            sql_row[8],
+            sql_row[0]
+        )
+
+    @staticmethod
+    def insert(database_cursor, protein) -> int:
+        INSERT_QUERY = f"INSERT INTO {Protein.TABLE_NAME} (accession, secondary_accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id;"
+        database_cursor.execute(
+            INSERT_QUERY,
+            (
+                protein.accession,
+                protein.secondary_accessions,
+                protein.entry_name,
+                protein.name,
+                protein.sequence,
+                protein.taxonomy_id,
+                protein.proteome_id,
+                protein.is_reviewed
+            )
+        )
+        return database_cursor.fetchone()[0]
+
+    @staticmethod
+    def delete(database_cursor, protein):
+        if not protein.id:
+            return
+        DELETE_QUERY = f"DELETE FROM {Protein.TABLE_NAME} WHERE id = %s;"
+        ProteinPeptideAssociation.delete(
+            database_cursor,
+            [
+                ("protein_id = %s", protein.id)
+            ]
+        )
+        database_cursor.execute(DELETE_QUERY, (protein.id,))
+
+    @staticmethod
+    def create(database_cursor, protein, enzyme) -> int:
+        """
+        Creates a new protein, by storing insert it and its peptides to the database. Make sure the protein does not already exists
+        @param database_cursor Database cursor with open transaction.
+        @param protein Protein to digest
+        @param enzyme Digest enzym
+        @return int Number of newly inserted peptides
+        """
+        # Create protein and get protein ID
+        protein.id = Protein.insert(database_cursor, protein)
+        
+
+        # Digest protein and create sequence => peptide map
+        new_peptides = {peptide.sequence: peptide for peptide in enzyme.digest(protein)}
+
+        database_cursor.execute("SELECT id, sequence FROM peptides WHERE sequence = ANY(%s);", (list(new_peptides.keys()),))
+        # Create sequence => id map
+        stored_peptides = {row[1]: row[0] for row in database_cursor.fetchall()}
+
+        # Remove already existing peptides form new peptides
+        for sequence in stored_peptides.keys():
+            new_peptides.pop(sequence, None)
+
+        # Convert sequence => peptide map to peptide list
+        new_peptides = list(new_peptides.values())
+
+        new_peptide_ids = peptide.Peptide.bulk_insert(database_cursor, new_peptides)
+
+        protein_peptide_associations = []
+        for new_peptide_id in new_peptide_ids:
+            protein_peptide_associations.append(ProteinPeptideAssociation(protein.id, new_peptide_id))
+
+        for peptide_id in stored_peptides.values():
+            protein_peptide_associations.append(ProteinPeptideAssociation(protein.id, peptide_id))
+
+        ProteinPeptideAssociation.bulk_insert(database_cursor, protein_peptide_associations)
+
+        return len(new_peptides)
+
+    def update(self, database_cursor, updated_protein: 'Protein', enzyme) -> int:
+        """
+        Updates the stored_protein with the updated_protein by comparing its attributes.
+        @param database_cursor Database cursor with open transaction.
+        @param updated_protein Protein with updates from file
+        @param stored_protein Protein from database
+        @param enzyme Digest enzym
+        @return int First element indicates if the session needs to commit, seconds is the number of newly inserted peptides
+        """
+        number_of_new_peptides = 0
+
+        update_columns = []
+        update_values = []
+
+        if updated_protein.accession != self.accession:
+            update_columns.append('accession = %s')
+            update_values.append(updated_protein.accession)
+        if updated_protein.secondary_accessions != self.secondary_accessions:
+            update_columns.append('secondary_accessions = %s')
+            update_values.append(updated_protein.secondary_accessions)
+        if updated_protein.taxonomy_id != self.taxonomy_id:
+            update_columns.append('taxonomy_id = %s')
+            update_values.append(updated_protein.taxonomy_id)
+        if updated_protein.proteome_id != self.proteome_id:
+            update_columns.append('proteome_id = %s')
+            update_values.append(updated_protein.proteome_id)
+        if updated_protein.sequence != self.sequence:
+            update_columns.append('sequence = %s')
+            update_values.append(updated_protein.sequence)
+
+            # Create sequence => peptide map
+            new_peptides = {peptide.sequence: peptide for peptide in enzyme.digest(updated_protein)}
+
+            ### Remove already referenced peptides from new_peptides and dereference peptides which no longer part of the protein
+            database_cursor.execute("SELECT id, sequence FROM peptides WHERE id = ANY(SELECT peptide_id FROM proteins_peptides WHERE protein_id = %s);", (self.id,))
+            # Create sequence => id map
+            currently_referenced_peptides = {row[1]: row[0] for row in database_cursor.fetchall()}
+            
+            peptides_ids_to_unreference = []
+            # Check if the referenced peptides are in the map of new peptides
+            for peptide_sequence, peptide_id in currently_referenced_peptides.items():
+                if not peptide_sequence in new_peptides:
+                    # If this peptide is no longer in the peptide list of the protein, delete the reference
+                    peptides_ids_to_unreference.append(peptide_id)
+                else:
+                    # Remove it from new peptides, because it already exists and is associated with this protein
+                    new_peptides.pop(peptide_sequence, None)
+            if len(peptides_ids_to_unreference):
+                database_cursor.execute("DELETE FROM proteins_peptides WHERE protein_id = %s AND peptide_id IN %s;", (self.id, tuple(peptides_ids_to_unreference)))
+            ### At this point new_peptides contain new and not referenced peptides
+
+            ### Remove already existing peptides from new peptides and create association value
+            # Fetch already existing
+            database_cursor.execute("SELECT id, sequence FROM peptides WHERE sequence = ANY(%s);", ([peptide.sequence for peptide in new_peptides.values()],))
+            # Create sequence => id map
+            stored_peptides = {row[1]: row[0] for row in database_cursor.fetchall()}
+
+            protein_peptide_associations = []
+
+            # Remove existing peptides from new_peptides and create association value
+            for peptide_sequence, peptide_id in stored_peptides.items():
+                # Remove the peptide from new peptides and create association values
+                if peptide_sequence in new_peptides:
+                    new_peptides.pop(peptide_sequence, None)
+                    protein_peptide_associations.append(ProteinPeptideAssociation(self.id, peptide_id))
+
+            ### At this point new_peptides should only contain peptides which not exist in the database
+            number_of_new_peptides = len(new_peptides)
+
+            # Insert new peptides
+            new_peptide_ids = peptide.Peptide.bulk_insert(database_cursor, new_peptides.values())
+
+            # Create association values for new peptides
+            for new_peptide_id in new_peptide_ids:
+                protein_peptide_associations.append(ProteinPeptideAssociation(self.id, new_peptide_id))
+
+            # Bulk insert new peptides
+            ProteinPeptideAssociation.bulk_insert(database_cursor, protein_peptide_associations)
+
+        # Update protein
+        if len(update_columns):
+            update_columns = ", ".join(update_columns)
+            update_values.append(self.id)
+            database_cursor.execute(f"UPDATE proteins SET {update_columns} WHERE id = %s", update_values)
+
+        return number_of_new_peptides

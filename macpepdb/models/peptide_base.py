@@ -1,56 +1,23 @@
-from sqlalchemy import Column, BigInteger, String, Integer, SmallInteger, CHAR
-from sqlalchemy import orm
+from psycopg2.extras import execute_values
 
 from ..proteomics.neutral_loss import NeutralLoss
 from ..proteomics.amino_acid import AminoAcid
 from ..proteomics.amino_acid import AMINO_ACIDS_FOR_COUNTING
 
 # This class is only a super class acutal peptide classes e.g. Peptide
-class PeptideBase(object):
+class PeptideBase:
+    TABLE_NAME = 'peptide_base'
     FASTA_HEADER_PREFIX = ">PEPTIDE_"
 
-
-    id = Column(BigInteger, primary_key = True)
-    # Attentions: Do not change the sequence if the peptide is stored in a hashabale collection, because sequence is used as hash-key,
-    # therefore a change of the sequence will result in undetectability of the peptide within the collection.
-    sequence = Column(String)
-    length = Column(SmallInteger)
-    number_of_missed_cleavages = Column(SmallInteger)
-    weight = Column(Integer)
-    a_count = Column(SmallInteger)
-    c_count = Column(SmallInteger)
-    d_count = Column(SmallInteger)
-    e_count = Column(SmallInteger)
-    f_count = Column(SmallInteger)
-    g_count = Column(SmallInteger)
-    h_count = Column(SmallInteger)
-    i_count = Column(SmallInteger)
-    k_count = Column(SmallInteger)
-    l_count = Column(SmallInteger)
-    m_count = Column(SmallInteger)
-    n_count = Column(SmallInteger)
-    o_count = Column(SmallInteger)
-    p_count = Column(SmallInteger)
-    q_count = Column(SmallInteger)
-    r_count = Column(SmallInteger)
-    s_count = Column(SmallInteger)
-    t_count = Column(SmallInteger)
-    u_count = Column(SmallInteger)
-    v_count = Column(SmallInteger)
-    w_count = Column(SmallInteger)
-    y_count = Column(SmallInteger)
-    n_terminus = Column(CHAR(1))
-    c_terminus = Column(CHAR(1))
-
-
-    def __init__(self, sequence: str, number_of_missed_cleavages: int):
+    def __init__(self, sequence: str, number_of_missed_cleavages: int, id = None):
+        self.__id = None
         self.peff_notation_of_modifications = ""
         if len(sequence):
             self.set_sequence(sequence, number_of_missed_cleavages)
 
-    @orm.reconstructor
-    def init_on_load(self):
-        self.peff_notation_of_modifications = ""
+    @property
+    def id(self):
+        return self.__id;
 
     # Sets new sequence and missed cleavages and sets new weight, length, amino acid counts and termini according to the new sequence
     def set_sequence(self, sequence: str, number_of_missed_cleavages: int):
@@ -58,6 +25,28 @@ class PeptideBase(object):
         self.length = len(self.sequence)
         self.number_of_missed_cleavages = number_of_missed_cleavages
         self.weight = self.__class__.calculate_weight(self.sequence)
+        self.a_count = 0
+        self.c_count = 0
+        self.d_count = 0
+        self.e_count = 0
+        self.f_count = 0
+        self.g_count = 0
+        self.h_count = 0
+        self.i_count = 0
+        self.k_count = 0
+        self.l_count = 0
+        self.m_count = 0
+        self.n_count = 0
+        self.o_count = 0
+        self.p_count = 0
+        self.q_count = 0
+        self.r_count = 0
+        self.s_count = 0
+        self.t_count = 0
+        self.u_count = 0
+        self.v_count = 0
+        self.w_count = 0
+        self.y_count = 0
         self.__count_amino_acids()
         self.n_terminus = self.sequence[0]
         self.c_terminus = self.sequence[len(self.sequence) - 1]
@@ -208,3 +197,124 @@ class PeptideBase(object):
         peptide.c_terminus = attributes["c_terminus"]
         peptide.peff_notation_of_modifications = attributes["peff_notation_of_modifications"]
         return peptide
+
+    @classmethod
+    def select(cls, database_cursor, select_conditions: tuple = ("", []), fetchall: bool = False):
+        """
+        @param database_cursor
+        @param select_conditions A tupel with the where statement (without WHERE) and a list of parameters, e.g. ("accession = %s AND taxonomy_id = %s",["Q257X2", 6909])
+        @param fetchall Indicates if multiple rows should be fetched
+        @return Ppetide or list of proteins
+        """
+        select_query = f"SELECT id, sequence, number_of_missed_cleavages FROM {cls.TABLE_NAME}"
+        if len(select_conditions) == 2 and len(select_conditions[0]):
+            select_query += f" WHERE {select_conditions[0]}"
+        select_query += ";"
+        database_cursor.execute(select_query, select_conditions[1])
+        
+        if fetchall:
+            return [cls(row[1], row[2], row[0]) for row in database_cursor.fetchall()]
+        else:
+            row = database_cursor.fetchall()
+            if row:
+                return cls(row[1], row[2], row[0])
+            else:
+                return None
+
+    @classmethod
+    def insert(cls, database_cursor, peptide) -> int:
+        """
+        @param database_cursor Database cursor with open transaction.
+        @param peptide Peptide to insert
+        @return int ID of inserted peptide
+        """
+        INSERT_QUERY = (
+            f"INSERT INTO {cls.TABLE_NAME} (sequence, length, number_of_missed_cleavages, weight, a_count, c_count, d_count, e_count, f_count, g_count, h_count, i_count, k_count, l_count, m_count, n_count, o_count, p_count, q_count, r_count, s_count, t_count, u_count, v_count, w_count, y_count, n_terminus, c_terminus) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
+            "RETURNING id;"
+        )
+        database_cursor.execute(
+            INSERT_QUERY,
+            (
+                peptide.sequence,
+                peptide.length,
+                peptide.number_of_missed_cleavages,
+                peptide.weight,
+                peptide.a_count,
+                peptide.c_count,
+                peptide.d_count,
+                peptide.e_count,
+                peptide.f_count,
+                peptide.g_count,
+                peptide.h_count,
+                peptide.i_count,
+                peptide.k_count,
+                peptide.l_count,
+                peptide.m_count,
+                peptide.n_count,
+                peptide.o_count,
+                peptide.p_count,
+                peptide.q_count,
+                peptide.r_count,
+                peptide.s_count,
+                peptide.t_count,
+                peptide.u_count,
+                peptide.v_count,
+                peptide.w_count,
+                peptide.y_count,
+                peptide.n_terminus,
+                peptide.c_terminus
+            )
+        )
+
+    @classmethod
+    def bulk_insert(cls, database_cursor, peptides: list) -> list:
+        """
+        @param database_cursor Database cursor with open transaction.
+        @param peptides Peptides for bulk insert. Make sure they do not exitst before.
+        @return list List of the new peptide IDs in the same order as the peptides where inserted.
+        """
+        BULK_INSERT_QUERY = (
+            f"INSERT INTO {cls.TABLE_NAME} (sequence, length, number_of_missed_cleavages, weight, a_count, c_count, d_count, e_count, f_count, g_count, h_count, i_count, k_count, l_count, m_count, n_count, o_count, p_count, q_count, r_count, s_count, t_count, u_count, v_count, w_count, y_count, n_terminus, c_terminus) "
+            "VALUES %s "
+            "RETURNING id;"
+        )
+        # Bulk insert the new peptides
+        id_rows = execute_values(
+            database_cursor,
+            BULK_INSERT_QUERY,
+            [
+                (
+                    peptide.sequence,
+                    peptide.length,
+                    peptide.number_of_missed_cleavages,
+                    peptide.weight,
+                    peptide.a_count,
+                    peptide.c_count,
+                    peptide.d_count,
+                    peptide.e_count,
+                    peptide.f_count,
+                    peptide.g_count,
+                    peptide.h_count,
+                    peptide.i_count,
+                    peptide.k_count,
+                    peptide.l_count,
+                    peptide.m_count,
+                    peptide.n_count,
+                    peptide.o_count,
+                    peptide.p_count,
+                    peptide.q_count,
+                    peptide.r_count,
+                    peptide.s_count,
+                    peptide.t_count,
+                    peptide.u_count,
+                    peptide.v_count,
+                    peptide.w_count,
+                    peptide.y_count,
+                    peptide.n_terminus,
+                    peptide.c_terminus
+                ) for peptide in peptides
+            ],
+            fetch=True
+        )
+        return [row[0] for row in id_rows]

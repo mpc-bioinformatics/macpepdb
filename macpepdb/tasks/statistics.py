@@ -1,8 +1,6 @@
 import re
+import psycopg2
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import StaticPool
 from ..models.peptide import Peptide
 
 class Statistics:
@@ -10,36 +8,38 @@ class Statistics:
     peptide_class=Peptide
 
     @classmethod
-    def estimate_peptide_partition_utilizations(cls, session: Session) -> list:
+    def estimate_peptide_partition_utilizations(cls, database_cursor) -> list:
         """
         Estimates the parititon utilization. Counting peptides need to much time, so we can estimate it with help of the pg_class view.
         The estimation changes a bit after each VACUUM or ANALYZE but is very fast.
-        @param session Open database session
+        @param database_cursor
         @return List of tupels [(parition_count, partition_name), ...]
         """
-        return session.execute(f"SELECT relname, reltuples::BIGINT FROM pg_class WHERE relname SIMILAR TO '{cls.peptide_class.__tablename__}_[0-9]{{3}}';").fetchall()
+        database_cursor.execute(f"SELECT relname, reltuples::BIGINT FROM pg_class WHERE relname SIMILAR TO '{cls.peptide_class.TABLE_NAME}_[0-9]{{3}}';")
+        return database_cursor.fetchall()
 
     @classmethod
-    def estimate_peptide_count(cls, session: Session) -> int:
+    def estimate_peptide_count(cls, database_cursor) -> int:
         """
         Estimates the peptide count, by using the partition utilizaton.
         The estimation changes a bit after each VACUUM or ANALYZE but is very fast.
-        @param session Open database session
+        @param database_cursor
         @return Estimated peptide count
         """
         sum = 0
-        for partition_estimation in cls.estimate_peptide_partition_utilizations(session):
+        for partition_estimation in cls.estimate_peptide_partition_utilizations(database_cursor):
             sum += partition_estimation[1]
         return sum
 
     @classmethod
-    def get_partition_boundaries(cls, session: Session):
+    def get_partition_boundaries(cls, database_cursor):
         """
         This return the peptide partition boundaries.
-        @param session Open database session
+        @param database_cursor
         @return List of tupel [(partition_name, from, to), ...]
         """
-        rows = session.execute(f"select pg_class.relname, pg_get_expr(pg_class.relpartbound, pg_class.oid, true) from pg_class where relname SIMILAR TO '{cls.peptide_class.__tablename__}_[0-9]{{3}}';").fetchall()
+        database_cursor.execute(f"select pg_class.relname, pg_get_expr(pg_class.relpartbound, pg_class.oid, true) from pg_class where relname SIMILAR TO '{cls.peptide_class.TABLE_NAME}_[0-9]{{3}}';")
+        rows = database_cursor.fetchall()
         num_regex = re.compile(r"\d+")
         partition_boundaries = []
         for row in rows:
@@ -50,17 +50,18 @@ class Statistics:
 
     @classmethod
     def get_partition_boundaries_from_command_line(cls, args):
-        engine = create_engine(args.database_url, poolclass=StaticPool)
-        session_factoy = sessionmaker(bind=engine)
-        session = session_factoy()
-        partition_boundaries = cls.get_partition_boundaries(session)
-        if not args.csv:
-            for partition in partition_boundaries:
-                print(f"{partition[0]:<15}\t{partition[1]:<15}\t{partition[2]:<15}")
-        else:
-            print("\"parition name\", \"lower boundary\", \"upper boundary\"")
-            for partition in partition_boundaries:
-                print(f"\"{partition[0]}\", {partition[1]}, {partition[2]}")
+        database_connection = psycopg2.connect(args.database_url)
+        with database_connection:
+            with database_connection.cursor() as database_cursor:
+                partition_boundaries = cls.get_partition_boundaries(database_cursor)
+                if not args.csv:
+                    for partition in partition_boundaries:
+                        print(f"{partition[0]:<15}\t{partition[1]:<15}\t{partition[2]:<15}")
+                else:
+                    print("\"parition name\", \"lower boundary\", \"upper boundary\"")
+                    for partition in partition_boundaries:
+                        print(f"\"{partition[0]}\", {partition[1]}, {partition[2]}")
+        database_connection.close()
 
 
 
@@ -72,17 +73,18 @@ class Statistics:
 
     @classmethod
     def estimate_partition_usage_from_comand_line(cls, args):
-        engine = create_engine(args.database_url, poolclass=StaticPool)
-        session_factoy = sessionmaker(bind=engine)
-        session = session_factoy()
-        parition_estimations = cls.estimate_peptide_partition_utilizations(session)
-        if not args.csv:
-            for parition_estimation in parition_estimations:
-                print(f"{parition_estimation[0]:<15}\t{parition_estimation[1]:<15}")
-        else:
-            print("\"parition name\", \"count\"")
-            for parition_estimation in parition_estimations:
-                print(f"\"{parition_estimation[0]}\", {parition_estimation[1]}")
+        database_connection = psycopg2.connect(args.database_url)
+        with database_connection:
+            with database_connection.cursor() as database_cursor:
+                parition_estimations = cls.estimate_peptide_partition_utilizations(database_cursor)
+                if not args.csv:
+                    for parition_estimation in parition_estimations:
+                        print(f"{parition_estimation[0]:<15}\t{parition_estimation[1]:<15}")
+                else:
+                    print("\"parition name\", \"count\"")
+                    for parition_estimation in parition_estimations:
+                        print(f"\"{parition_estimation[0]}\", {parition_estimation[1]}")
+        database_connection.close()
 
     @classmethod
     def __comand_line_arguments_for_patition_usage(cls, subparsers):
@@ -92,10 +94,11 @@ class Statistics:
 
     @classmethod
     def count_peptides_from_command_line(cls, args):
-        engine = create_engine(args.database_url, poolclass=StaticPool)
-        session_factoy = sessionmaker(bind=engine)
-        session = session_factoy()
-        print(cls.estimate_peptide_count(session))
+        database_connection = psycopg2.connect(args.database_url)
+        with database_connection:
+            with database_connection.cursor() as database_cursor:
+                print(cls.estimate_peptide_count(database_cursor))
+        database_connection.close()
 
     @classmethod
     def __comand_line_arguments_peptide_counts(cls, subparsers):

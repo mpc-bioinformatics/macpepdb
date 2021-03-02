@@ -8,21 +8,20 @@ import random
 import signal
 import os
 import datetime
+import json
+
+import psycopg2
+from psycopg2.extras import execute_values
 
 from multiprocessing import Process, Value, Queue, Array, Event, Pipe, get_context as get_process_context
 from multiprocessing.connection import Connection, wait
 from ctypes import c_bool, c_ulonglong
 from queue import Empty, Full
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy.sql import exists
-from sqlalchemy.exc import DBAPIError
-from sqlalchemy.orm.exc import NoResultFound
 
 from ..proteomics.enzymes.digest_enzyme import DigestEnzyme
 from ..proteomics.file_reader.uniprot_text_reader import UniprotTextReader
 from ..models.protein import Protein
+from ..models.protein_peptide_association import ProteinPeptideAssociation
 from ..models.peptide import Peptide
 from ..models.maintenance_information import MaintenanceInformation
 
@@ -171,28 +170,28 @@ class Digestion:
         If no digestion information were found, it will save the current one.
         @param database_url Database URL
         """
-        engine = create_engine(database_url, pool_size = 1, max_overflow = 0, pool_timeout = 3600)
-        session_factory = sessionmaker(bind = engine, autoflush=False)
-        session = session_factory()
-        digestion_information = session.query(MaintenanceInformation).filter(MaintenanceInformation.key == MaintenanceInformation.DIGESTION_PARAMTERS_KEY).one_or_none()
-        if digestion_information:
-            self.__maximum_number_of_missed_cleavages = digestion_information.values['maximum_number_of_missed_cleavages']
-            self.__minimum_peptide_length = digestion_information.values['minimum_peptide_length']
-            self.__maximum_peptide_length = digestion_information.values['maximum_peptide_length']
-            self.__enzyme_name = digestion_information.values['enzyme_name']
-            EnzymeClass = DigestEnzyme.get_enzyme_by_name(self.__enzyme_name)
-            self.__enzyme = EnzymeClass(self.__maximum_number_of_missed_cleavages, self.__minimum_peptide_length, self.__maximum_peptide_length)
-        else:
-            digestion_information_values = {
-                'enzyme_name': self.__enzyme_name,
-                'maximum_number_of_missed_cleavages': self.__maximum_number_of_missed_cleavages,
-                'minimum_peptide_length': self.__minimum_peptide_length,
-                'maximum_peptide_length': self.__maximum_peptide_length
-            }
-            digestion_information = MaintenanceInformation(MaintenanceInformation.DIGESTION_PARAMTERS_KEY, digestion_information_values)
-            session.add(digestion_information)
-            session.commit()
-        session.close()
+        database_connection = psycopg2.connect(database_url)
+        with database_connection.cursor() as database_cursor:
+            database_cursor.execute("SELECT values FROM maintenance_information WHERE key = %s;", (MaintenanceInformation.DIGESTION_PARAMTERS_KEY,))
+            digestion_information_row = database_cursor.fetchone()
+            if digestion_information_row:
+                digestion_information_values = digestion_information_row[0]
+                self.__maximum_number_of_missed_cleavages = digestion_information_values['maximum_number_of_missed_cleavages']
+                self.__minimum_peptide_length = digestion_information_values['minimum_peptide_length']
+                self.__maximum_peptide_length = digestion_information_values['maximum_peptide_length']
+                self.__enzyme_name = digestion_information_values['enzyme_name']
+                EnzymeClass = DigestEnzyme.get_enzyme_by_name(self.__enzyme_name)
+                self.__enzyme = EnzymeClass(self.__maximum_number_of_missed_cleavages, self.__minimum_peptide_length, self.__maximum_peptide_length)
+            else:
+                digestion_information_values = {
+                    'enzyme_name': self.__enzyme_name,
+                    'maximum_number_of_missed_cleavages': self.__maximum_number_of_missed_cleavages,
+                    'minimum_peptide_length': self.__minimum_peptide_length,
+                    'maximum_peptide_length': self.__maximum_peptide_length
+                }
+                database_cursor.execute("INSERT INTO maintenance_information (key, values) VALUES (%s, %s);", (MaintenanceInformation.DIGESTION_PARAMTERS_KEY, json.dumps(digestion_information_values)))
+                database_connection.commit()
+        database_connection.close()
 
     def __set_databse_status(self, database_url: str, is_maintenance_mode: bool, last_update_timestamp: int = None):
         """
@@ -200,38 +199,41 @@ class Digestion:
         @param is_maintenance_mode Indicate if set to maintenance mode
         @param last_update_timestamp UTC timestamp in seconds
         """
-        engine = create_engine(database_url, pool_size = 1, max_overflow = 0, pool_timeout = 3600)
-        session_factory = sessionmaker(bind = engine, autoflush=False)
-        session = session_factory()
-        database_status = session.query(MaintenanceInformation).filter(MaintenanceInformation.key == MaintenanceInformation.DATABASE_STATUS_KEY).one_or_none()
-        if database_status:
-            database_status.values['maintenance_mode'] = is_maintenance_mode
-            if last_update_timestamp:
-                database_status.values['last_update'] = last_update_timestamp
-            # SQL-Achemy does not register changes to a JSON-column, unless we flag it as modified
-            flag_modified(database_status, 'values')
-        else:
-            digestion_information_values = {
-                'maintenance_mode': is_maintenance_mode
-            }
-            if last_update_timestamp:
-                digestion_information_values['last_update'] = last_update_timestamp
+        database_connection = psycopg2.connect(database_url)
+        with database_connection.cursor() as database_cursor:
+            database_cursor.execute("SELECT values FROM maintenance_information WHERE key = %s;", (MaintenanceInformation.DATABASE_STATUS_KEY,))
+            database_status_row = database_cursor.fetchone()
+            if database_status_row:
+                database_status_values = database_status_row[0]
+                database_status_values['maintenance_mode'] = is_maintenance_mode
+                if last_update_timestamp:
+                    database_status_values['last_update'] = last_update_timestamp
+                database_cursor.execute("UPDATE maintenance_information SET values = %s WHERE key = %s;", (json.dumps(database_status_values), MaintenanceInformation.DATABASE_STATUS_KEY))
             else:
-                digestion_information_values['last_update'] = 0
-            digestion_information = MaintenanceInformation(MaintenanceInformation.DATABASE_STATUS_KEY, digestion_information_values)
-            session.add(digestion_information)
-        session.commit()
-        session.close()
+                database_status_values = {
+                    'maintenance_mode': is_maintenance_mode
+                }
+                if last_update_timestamp:
+                    database_status_values['last_update'] = last_update_timestamp
+                else:
+                    database_status_values['last_update'] = 0
+                database_cursor.execute("INSERT INTO maintenance_information (key, values) VALUES (%s, %s);", (MaintenanceInformation.DATABASE_STATUS_KEY, json.dumps(database_status_values)))
+            database_connection.commit()
+        database_connection.close()
 
 
     @staticmethod
     def digest_worker(id: int, empty_queue_and_stop_flag: Event, stop_immediately_flag: Event, protein_queue: Queue, log_connection: Connection, unprocessible_log_connection: Connection, statistics: Array, enzyme: DigestEnzyme, database_url: str):
         log_connection.send("digest worker {} is online".format(id))
-        engine = create_engine(database_url, pool_size = 1, max_overflow = 0, pool_timeout = 3600)
-        SessionClass = sessionmaker(bind = engine, autoflush=False)
+        database_connection = None
+
         # Let the process run until empty_queue_and_stop_flag is true and protein_queue is empty or stop_immediately_flag is true.
         while (not empty_queue_and_stop_flag.is_set() or not protein_queue.empty()) and not stop_immediately_flag.is_set():
             try:
+                # Open/reopen database connection
+                if not database_connection or (database_connection and database_connection.closed != 0):
+                    database_connection = psycopg2.connect(database_url)
+
                 # Try to get a protein from the queue, timeout is 2 seconds
                 protein = protein_queue.get(True, 5)
                 
@@ -239,32 +241,31 @@ class Digestion:
                 unsolvable_errors = 0
                 try_transaction_again = True
                 while try_transaction_again:
-                    session = SessionClass()
                     number_of_new_peptides = 0
                     try:
                         count_protein = False
-                        # Check if the Protein exists by its accession or secondary accessions
-                        accessions = [protein.accession] + protein.secondary_accessions
-                        existing_protein = session.query(Protein).filter(Protein.accession.in_(accessions)).first()
-                        if existing_protein:
-                            need_commit, number_of_new_peptides = Digestion.update_protein(session, protein, existing_protein, enzyme)
-                            if need_commit:
-                                session.commit()
-                            else:
-                                session.rollback()
-                        else:
-                            number_of_new_peptides = Digestion.create_protein(session, protein, enzyme)
-                            session.commit()
-                            count_protein = True
+                        number_of_new_peptides = 0
+                        with database_connection:
+                            with database_connection.cursor() as database_cursor:
+                                # Check if the Protein exists by its accession or secondary accessions
+                                accessions = [protein.accession] + protein.secondary_accessions
+                                stored_protein = Protein.select(database_cursor, ("accession = ANY(%s)", [accessions]))
+                                if stored_protein:
+                                    number_of_new_peptides = stored_protein.update(database_cursor, protein, enzyme)
+                                else:
+                                    number_of_new_peptides = Protein.create(database_cursor, protein, enzyme)
+                                    count_protein = True
 
                         # Commit was successfully stop while-loop and add statistics
                         try_transaction_again = False
+                        statistics.acquire()
                         if count_protein:
                             statistics[0] += 1
                         statistics[1] += number_of_new_peptides
-                    except:
-                        # Rollback session
-                        session.rollback()
+                        statistics.release()
+                    # Catch all transaction errors
+                    except psycopg2.Error as error:
+                        # Rollback is done implcit by `with database_connection`
                         # Remove all peptides from protein
                         protein.peptides = []
                         # Try again after 5 (first try) and 10 (second try) + a random number between 0 and 5 (both including) seconds maybe some blocking transactions can pass so this transaction will successfully finish on the next try.
@@ -274,96 +275,24 @@ class Digestion:
                             time.sleep(5 * unsolvable_errors + random.randint(0, 5))
                         # Log the error on the third try and put the protein in unprocessible queue
                         else:
-                            exception = sys.exc_info()[1]
-                            log_connection.send("Exception on protein {}, see:\n{}".format(protein.accession, exception))
+                            log_connection.send("Exception on protein {}, see:\n{}".format(protein.accession, error))
                             unprocessible_log_connection.send(protein.to_embl_entry())
+                            statistics.acquire()
                             statistics[2] += 1
+                            statistics.release()
                             try_transaction_again = False
-                    finally:
-                        session.close()
+            # Catch errors which occure during databse connect
+            except psycopg2.Error as error:
+                log_connection.send("Error when opening the database connection, see:\n{}".format(error))
             # Catch queue.Empty which is thrown when protein_queue.get() timed out
             except Empty:
                 pass
+        # Close database connection
+        if database_connection and database_connection.closed == 0:
+            database_connection.close()
         log_connection.send("digest worker {} is stopping".format(id))
         log_connection.close()
         unprocessible_log_connection.close()
-
-    @staticmethod
-    def create_protein(session, protein: Protein, enzyme: DigestEnzyme) -> int:
-        """
-        Creates a new protein. Does not check if the protein already exists.
-        @param session Open database session, with open transaction.
-        @param protein Protein to digest
-        @param enzyme Digest enzym
-        @return int Number of newly inserted peptides
-        """
-        session.add(protein)
-        peptides = enzyme.digest(protein)
-
-        existing_peptide_query = session.query(Peptide).filter(Peptide.sequence.in_([peptide.sequence for peptide in peptides]))
-        existing_peptides_dict = {peptide.sequence: peptide for peptide in existing_peptide_query.all()}
-        for peptide in peptides:
-            if peptide.sequence in existing_peptides_dict:
-                protein.peptides.append(existing_peptides_dict[peptide.sequence])
-            else:
-                protein.peptides.append(peptide)
-
-        return len(peptides) - len(existing_peptides_dict)
-
-    @staticmethod
-    def update_protein(session, updated_protein: Protein, existing_protein: Protein, enzyme: DigestEnzyme) -> (bool, int):
-        """
-        Creates a new protein. Does not check if the protein already exists.
-        @param session Open database session
-        @param updated_protein Protein with updates from file
-        @param existing_protein Protein from database
-        @param enzyme Digest enzym
-        @return tuple (bool, int) First element indicates if the session needs to commit, seconds is the number of newly inserted peptides
-        """
-        needs_commit = False
-        new_peptides_count = 0
-        if updated_protein.accession != existing_protein.accession:
-            existing_protein.accession = updated_protein.accession
-            needs_commit = True
-        if updated_protein.secondary_accessions != existing_protein.secondary_accessions:
-            existing_protein.secondary_accessions = updated_protein.secondary_accessions
-            needs_commit = True
-        if updated_protein.taxonomy_id != existing_protein.taxonomy_id:
-            existing_protein.taxonomy_id = updated_protein.taxonomy_id
-            needs_commit = True
-        if updated_protein.proteome_id != existing_protein.proteome_id:
-            existing_protein.proteome_id = updated_protein.proteome_id
-            needs_commit = True
-        if updated_protein.sequence != existing_protein.sequence:
-            existing_protein.sequence = updated_protein.sequence
-            currently_referenced_peptides = existing_protein.peptides.all()
-            new_peptide_map = {peptide.sequence: peptide for peptide in enzyme.digest(existing_protein)}
-
-            # Check if the referenced peptides are in the new peptide map
-            for peptide in currently_referenced_peptides:
-                if not peptide.sequence in new_peptide_map:
-                    # If not, delete reference, because the peptide is not longer in the sequence
-                    existing_protein.peptides.remove(peptide)
-                else:
-                    # If contained remove them from the new peptides
-                    new_peptide_map.pop(peptide.sequence)
-
-
-            existing_peptide_query = session.query(Peptide).filter(Peptide.sequence.in_([peptide.sequence for peptide in new_peptide_map.values()]))
-            existing_peptides_dict = {peptide.sequence: peptide for peptide in existing_peptide_query.all()}
-            # Iterate over the new peptides 
-            for peptide in new_peptide_map.values():
-                if peptide.sequence in existing_peptides_dict:
-                    # If the peptide exists, create a reference
-                    existing_protein.peptides.append(existing_peptides_dict[peptide.sequence])
-                else:
-                    # If not create it and add reference
-                    existing_protein.peptides.append(peptide)
-            new_peptides_count = len(new_peptide_map) - len(existing_peptides_dict)
-            needs_commit = True
-
-        return needs_commit, new_peptides_count
-
 
     @staticmethod
     def logging_worker(process_connections: list, log_file_path: pathlib.Path):

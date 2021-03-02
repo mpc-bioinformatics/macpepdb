@@ -1,8 +1,8 @@
 import unittest
 import os
+import time
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+import psycopg2
 
 # Abstrct class for database dependent test cases.
 class AbstractDatabaseTestCase(unittest.TestCase):
@@ -10,14 +10,14 @@ class AbstractDatabaseTestCase(unittest.TestCase):
         """
         Creates engine and session_factory before each test.
         """
-        self.engine = create_engine(os.getenv("TEST_MACPEPDB_URL"), echo=False)
-        self.session_factory = sessionmaker(bind=self.engine)
-        self.tearDown()
+        self.database_connection = psycopg2.connect(os.getenv("TEST_MACPEPDB_URL"))
 
     def tearDown(self):
         """
         Removes data from all tables after each tests.
         """
-        with self.engine.connect() as db_connection:
-            for table in ['proteins_peptides', 'peptides', 'proteins', 'taxonomies', 'taxonomy_merges', 'maintenance_information']:
-                db_connection.execute(f"delete from {table};")
+        for table in ['proteins_peptides', 'peptides', 'proteins', 'taxonomies', 'taxonomy_merges', 'maintenance_information']:
+            with self.database_connection:
+                with self.database_connection.cursor() as database_cursor:
+                    database_cursor.execute(f"delete from {table};")
+        self.database_connection.close()

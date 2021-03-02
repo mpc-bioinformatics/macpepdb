@@ -1,9 +1,5 @@
+from __future__ import annotations
 from enum import IntEnum, unique
-
-from .database_record import DatabaseRecord
-
-from sqlalchemy import Column, Integer, Text, ForeignKey, SmallInteger
-from sqlalchemy.orm import relationship
 
 @unique
 class TaxonomyRank(IntEnum):
@@ -63,21 +59,28 @@ class TaxonomyRank(IntEnum):
         if rank in cls.__members__:
             return cls.__members__[rank]
 
-class Taxonomy(DatabaseRecord):
-    __tablename__ = "taxonomies"
-
-    id = Column(Integer, primary_key=True)
-    parent_id = Column(Integer, ForeignKey('taxonomies.id'))
-    name = Column(Text)
-    rank = Column(SmallInteger)
-
-    parent = relationship("Taxonomy", backref="children", remote_side=[id])
+class Taxonomy:
+    TABLE_NAME = "taxonomies"
 
     def __init__(self, id: int, parent_id: int, name: str, rank: TaxonomyRank):
         self.id = id
         self.parent_id = parent_id
         self.name = name
         self.rank = rank
+
+    def parent(self, database_cursor):
+        PARENT_QUERY = "SELECT id, parent_id, name, rank WHERE id = %s;"
+        database_cursor.execute(
+            PARENT_QUERY,
+            (self.parent_id,)
+        )
+        row = database_cursor.fetchone()
+        return Taxonomy(
+            row[0],
+            row[1],
+            row[2],
+            TaxonomyRank(row[3])
+        )
 
     # This method is implemented to use bot accessions as hash when a protein merge is stored in a hashable collection (Set, Dictionary, ...)
     def __hash__(self):
@@ -86,3 +89,21 @@ class Taxonomy(DatabaseRecord):
     # According to the Python documentation this should be implemented if __hash__() is implemented.
     def __eq__(self, other):
         return self.id == other.id
+
+
+    @staticmethod
+    def insert(database_cursor, taxonomy: Taxonomy):
+        """
+        @param database_cursor Database cursor
+        @param taxonomy Taxonomy to insert
+        """
+        INSERT_QUERY = f"INSERT INTO {Taxonomy.TABLE_NAME} (id, parent_id, name, rank) VALUES (%s, %s, %s, %s);"
+        database_cursor.execute(
+            INSERT_QUERY,
+            (
+                taxonomy.id,
+                taxonomy.parent_id,
+                taxonomy.name,
+                taxonomy.rank.value
+            )
+        )

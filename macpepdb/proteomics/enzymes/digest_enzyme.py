@@ -1,6 +1,7 @@
 import re
-from ...models.protein import Protein
-from ...models.peptide import Peptide
+
+from ...models import peptide
+from ...models import protein
 
 class DigestEnzyme:
     def __init__(self, name: str = "Abstract Digest Enzym", shortcut: str = "", regex: re = r".", max_number_of_missed_cleavages: int = 0, minimum_peptide_length: int = 0, maximum_peptide_length: int = 1):
@@ -10,7 +11,7 @@ class DigestEnzyme:
         self.__max_number_of_missed_cleavages = max_number_of_missed_cleavages
         self.__peptide_range = range(minimum_peptide_length, maximum_peptide_length + 1) # upper border of range is excluded, so plus
 
-    def digest(self, protein: Protein) -> list:
+    def digest(self, protein: 'protein.Protein') -> list:
         peptides = set()
         # Split protein sequence on every cleavage position
         protein_parts = re.split(self.__regex, protein.sequence)
@@ -25,7 +26,7 @@ class DigestEnzyme:
             for missed_cleavage in range(part_index, last_part_to_add):
                 peptide_sequence += protein_parts[missed_cleavage]
                 if len(peptide_sequence) in self.__peptide_range and peptide_sequence.count('X') == 0:
-                    peptides.add(Peptide(peptide_sequence, missed_cleavage - part_index))
+                    peptides.add(peptide.Peptide(peptide_sequence, missed_cleavage - part_index))
 
         return list(peptides)
 
@@ -43,5 +44,4 @@ class DigestEnzyme:
         from .trypsin import Trypsin
         return [
             Trypsin.NAME.lower()
-        ] 
-
+        ]
