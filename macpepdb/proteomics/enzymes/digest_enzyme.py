@@ -9,7 +9,22 @@ class DigestEnzyme:
         self.__shortcut = shortcut
         self.__regex = regex
         self.__max_number_of_missed_cleavages = max_number_of_missed_cleavages
+        self.__minimum_peptide_length = minimum_peptide_length
+        self.__maximum_peptide_length = maximum_peptide_length
         self.__peptide_range = range(minimum_peptide_length, maximum_peptide_length + 1) # upper border of range is excluded, so plus
+
+    @property
+    def max_number_of_missed_cleavages(self):
+        return self.__max_number_of_missed_cleavages
+
+    @property
+    def minimum_peptide_length(self):
+        return self.__minimum_peptide_length
+
+    @property
+    def maximum_peptide_length(self):
+        return self.__maximum_peptide_length
+
 
     def digest(self, protein: 'protein.Protein') -> list:
         peptides = set()

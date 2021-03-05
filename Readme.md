@@ -70,8 +70,15 @@ If you intend to create a protein/peptide database and your Postgresql server is
 Run `MACPEPDB_DB_URL=postgresql://<USER>:<PASSWORD>@<HOST>:<PORT>/<DATABASE> test alembic upgrade head`    
 If you use the docker container, run the command in a temporary container: `docker run --rm -it macpepdb-py sh`
 
-#### Digest
-To build the database you need a running postgresql server with an empty database. As input file for the digestion you can use FASTA-files or the [UniProt-text-files](https://www.uniprot.org/docs/userman.htm#linetypes). Then run the digestion command: `python -m macpepdb digestion ...`, check out `python -m macpepdb digestion --help` for more information.
+#### Fill the database
+First create a work folder with the following structure:
+```
+|_ work_dir
+   |__ protein_data
+   |__ taxonomy_data
+   |__ logs
+```
+Place your protein data files as `.dat`- or `.txt`-files, containing the proteins in UniProt-text-format, in the `protein_data`-folder.
+If you like to use the web interface as well, download the `taxdump.zip` from [NCBI](https://ftp.ncbi.nih.gov/pub/taxonomy/) and put the contained `.dmp`-files in the `taxonomy_data`-folder.
 
-#### Include taxonomy trees
-This step is only necessary if you want to run the webinterface. Download the `taxdump.zip` from [NCBI](https://ftp.ncbi.nih.gov/pub/taxonomy/). Then run the include command: `python -m macpepdb taxonomy-maintenance ...`, check out `python -m macpepdb taxonomy-maintenance --help` for more information.
+Than start the database maintenance job with `python -m macpepdb database ...`. Run `python -m macpepdb database --help` to see the required arguments. Remember to use the container internal paths when using a docker container.

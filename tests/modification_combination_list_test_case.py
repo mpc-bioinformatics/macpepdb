@@ -2,12 +2,14 @@ import unittest
 import pathlib
 import re
 import os
+import shutil
+import tempfile
 
 from macpepdb.proteomics.modification_collection import ModificationCollection
 from macpepdb.models.modification_combination_list import ModificatioCombinationList
 from macpepdb.proteomics.mass.convert import to_int as mass_to_int, thomson_to_dalton
 from macpepdb.models.peptide import Peptide
-from macpepdb.tasks.digestion import Digestion
+from macpepdb.tasks.database_maintenance.database_maintenance import DatabaseMaintenance
 from macpepdb.proteomics.enzymes.digest_enzyme import DigestEnzyme
 from macpepdb.peptide_mass_validator import PeptideMassValidator
 from macpepdb.proteomics.mass.precursor_range import PrecursorRange
@@ -138,61 +140,75 @@ class ModifiedPeptideWhereClauseBuilderTestCase(AbstractDatabaseTestCase):
         PRECURSOR_TOLERANCE = 20
         # With the given mass, tolerance and modifications 3 peptides shoud be found
 
-        protein_file_path = pathlib.Path('./test_files/UP000002006.txt')
         modifications_file_path = pathlib.Path('./test_files/modifications.csv')
 
-        digestion = Digestion(
-            [protein_file_path],
-            pathlib.Path("./digestion_test.log"),
-            pathlib.Path("./digestion_test.unprocessible_proteins.txt"),
-            pathlib.Path("./digestion_test.statistics.csv"),
-            5,
-            4,
-            "Trypsin",
-            2,
-            5,
-            40
-        )
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            work_dir = pathlib.Path(tmp_dir)
+            test_files_path = pathlib.Path('./test_files')
+            protein_data_test_file_path = test_files_path.joinpath('UP000002006.txt')
+            
 
-        digestion.digest_to_database(os.getenv("TEST_MACPEPDB_URL"))
+            # Prepare work directory for test
+            ## Add protein data
+            protein_data_path = work_dir.joinpath('protein_data/')
+            protein_data_path.mkdir()
+            shutil.copy(str(protein_data_test_file_path), str(protein_data_path))
+            ## Add taxonomy data
+            taxonomy_data_path = work_dir.joinpath('taxonomy_data/')
+            taxonomy_data_path.mkdir()
+            for dmp_file_path in test_files_path.glob('*.dmp'):
+                shutil.copy(str(dmp_file_path), str(taxonomy_data_path))
 
-        modification_collection = ModificationCollection.read_from_csv_file(modifications_file_path)
-        peptide_mass_validator = PeptideMassValidator(modification_collection, VARIABLE_MODIFICATION_LIMIT, PrecursorRange(PRECURSOR, PRECURSOR_TOLERANCE, PRECURSOR_TOLERANCE))
+            maintenance = DatabaseMaintenance(
+                os.getenv("TEST_MACPEPDB_URL"),
+                work_dir,
+                4,
+                5,
+                'Trypsin',
+                2,
+                5,
+                40
+            )
 
-        validated_matching_peptide_sequences = set()
+            maintenance.start()
 
-        with self.database_connection:
-            with self.database_connection.cursor() as database_cursor:
-                # Run through all peptides (in batches of 1000 peptides) and check which matchs the precursor and modification requirements
-                database_cursor.execute(f"SELECT id, sequence, number_of_missed_cleavages FROM {Peptide.TABLE_NAME};")
-                while True:
-                    rows = database_cursor.fetchmany(1000)
-                    if not len(rows):
-                        break
-                    for row in rows:
-                        peptide = Peptide(row[1], row[2], row[0])
-                        if peptide_mass_validator.validate(peptide):
-                            validated_matching_peptide_sequences.add(peptide.sequence)
+            modification_collection = ModificationCollection.read_from_csv_file(modifications_file_path)
+            peptide_mass_validator = PeptideMassValidator(modification_collection, VARIABLE_MODIFICATION_LIMIT, PrecursorRange(PRECURSOR, PRECURSOR_TOLERANCE, PRECURSOR_TOLERANCE))
 
-        with self.database_connection:
-            with self.database_connection.cursor() as database_cursor:
-                modification_combination_list =  ModificatioCombinationList(modification_collection, PRECURSOR, PRECURSOR_TOLERANCE, PRECURSOR_TOLERANCE, VARIABLE_MODIFICATION_LIMIT)
-                select_conditions = modification_combination_list.to_sql()
-                peptides = Peptide.select(database_cursor, select_conditions, True)
+            validated_matching_peptide_sequences = set()
 
-                queried_matching_peptide_sequences = set()
-                for peptide in peptides:
-                    queried_matching_peptide_sequences.add(peptide.sequence)
+            with self.database_connection:
+                with self.database_connection.cursor() as database_cursor:
+                    # Run through all peptides (in batches of 1000 peptides) and check which matchs the precursor and modification requirements
+                    database_cursor.execute(f"SELECT id, sequence, number_of_missed_cleavages FROM {Peptide.TABLE_NAME};")
+                    while True:
+                        rows = database_cursor.fetchmany(1000)
+                        if not len(rows):
+                            break
+                        for row in rows:
+                            peptide = Peptide(row[1], row[2], row[0])
+                            if peptide_mass_validator.validate(peptide):
+                                validated_matching_peptide_sequences.add(peptide.sequence)
 
-                # Check length of both manually validated set and the queried set
-                self.assertEqual(len(validated_matching_peptide_sequences), len(queried_matching_peptide_sequences))
+            with self.database_connection:
+                with self.database_connection.cursor() as database_cursor:
+                    modification_combination_list =  ModificatioCombinationList(modification_collection, PRECURSOR, PRECURSOR_TOLERANCE, PRECURSOR_TOLERANCE, VARIABLE_MODIFICATION_LIMIT)
+                    select_conditions = modification_combination_list.to_sql()
+                    peptides = Peptide.select(database_cursor, select_conditions, True)
 
-                # Cross check if peptide from one set is in the other set
-                for sequence in queried_matching_peptide_sequences:
-                    self.assertIn(sequence, validated_matching_peptide_sequences)
+                    queried_matching_peptide_sequences = set()
+                    for peptide in peptides:
+                        queried_matching_peptide_sequences.add(peptide.sequence)
 
-                for sequence in validated_matching_peptide_sequences:
-                    self.assertIn(sequence, queried_matching_peptide_sequences)
+                    # Check length of both manually validated set and the queried set
+                    self.assertEqual(len(validated_matching_peptide_sequences), len(queried_matching_peptide_sequences))
+
+                    # Cross check if peptide from one set is in the other set
+                    for sequence in queried_matching_peptide_sequences:
+                        self.assertIn(sequence, validated_matching_peptide_sequences)
+
+                    for sequence in validated_matching_peptide_sequences:
+                        self.assertIn(sequence, queried_matching_peptide_sequences)
 
 
 
