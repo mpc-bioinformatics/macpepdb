@@ -11,7 +11,6 @@ class PeptideBase:
 
     def __init__(self, sequence: str, number_of_missed_cleavages: int, id = None):
         self.__id = None
-        self.peff_notation_of_modifications = ""
         self.__sequence = sequence.upper()
         self.__number_of_missed_cleavages = number_of_missed_cleavages
         self.__weight = self.__class__.calculate_weight(self.__sequence)
@@ -153,10 +152,7 @@ class PeptideBase:
         return self.sequence == other.sequence
 
     def __get_fasta_header(self):
-        if len(self.peff_notation_of_modifications) > 0:
-            return "{} {}".format(self.__class__.FASTA_HEADER_PREFIX, self.peff_notation_of_modifications)
-        else:
-            return self.__class__.FASTA_HEADER_PREFIX
+        return self.__class__.FASTA_HEADER_PREFIX
 
     def to_fasta_entry(self):
         return "{}\n{}\n".format(self.__get_fasta_header(), self.sequence)
@@ -165,15 +161,12 @@ class PeptideBase:
         return {
             'id': self.id,
             'sequence': self.sequence,
-            'weight': self.weights,
-            'peff_notation_of_modifications': self.peff_notation_of_modifications
+            'weight': self.weights
         }
 
     @classmethod
     def from_dict(cls, attributes: dict):
-        peptide = cls(attributes["sequence"], attributes["number_of_missed_cleavages"], attributes["id"])
-        peptide.peff_notation_of_modifications = attributes["peff_notation_of_modifications"]
-        return peptide
+        return cls(attributes["sequence"], attributes["number_of_missed_cleavages"], attributes["id"])
 
     @classmethod
     def select(cls, database_cursor, select_conditions: tuple = ("", []), fetchall: bool = False):
