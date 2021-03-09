@@ -12,14 +12,26 @@ class PeptideBase:
     def __init__(self, sequence: str, number_of_missed_cleavages: int, id = None):
         self.__id = None
         self.peff_notation_of_modifications = ""
-        self.sequence = sequence.upper()
-        self.number_of_missed_cleavages = number_of_missed_cleavages
-        self.weight = self.__class__.calculate_weight(self.sequence)
+        self.__sequence = sequence.upper()
+        self.__number_of_missed_cleavages = number_of_missed_cleavages
+        self.__weight = self.__class__.calculate_weight(self.__sequence)
 
     @property
     def id(self):
         return self.__id;
-    
+
+    @property
+    def sequence(self):
+        return self.__sequence
+
+    @property
+    def weight(self):
+        return self.__weight
+
+    @property
+    def number_of_missed_cleavages(self):
+        return self.__number_of_missed_cleavages
+
     @property
     def a_count(self):
         return self.sequence.count('A')
