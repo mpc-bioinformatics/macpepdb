@@ -10,7 +10,7 @@ class PeptideBase:
     FASTA_HEADER_PREFIX = ">PEPTIDE_"
 
     def __init__(self, sequence: str, number_of_missed_cleavages: int, id = None):
-        self.__id = None
+        self.__id = id
         self.__sequence = sequence.upper()
         self.__number_of_missed_cleavages = number_of_missed_cleavages
         self.__weight = self.__class__.calculate_weight(self.__sequence)
