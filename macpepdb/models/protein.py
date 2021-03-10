@@ -93,7 +93,8 @@ class Protein:
         if not self.__id:
             return []
         PROTEIN_QUERY = (
-            f"SELECT {peptide_module.Peptide.TABLE_NAME}.id, {peptide_module.Peptide.TABLE_NAME}.sequence, {peptide_module.Peptide.TABLE_NAME}.number_of_missed_cleavages " f"FROM {peptide_module.Peptide.TABLE_NAME}, {ProteinPeptideAssociation.TABLE_NAME} "
+            f"SELECT {peptide_module.Peptide.TABLE_NAME}.id, {peptide_module.Peptide.TABLE_NAME}.sequence, {peptide_module.Peptide.TABLE_NAME}.number_of_missed_cleavages "
+            f"FROM {peptide_module.Peptide.TABLE_NAME}, {ProteinPeptideAssociation.TABLE_NAME} "
             f"WHERE {ProteinPeptideAssociation.TABLE_NAME}.protein_id = %s AND {ProteinPeptideAssociation.TABLE_NAME}.peptide_id = {peptide_module.Peptide.TABLE_NAME}.id"
         )
         database_cursor.execute(
