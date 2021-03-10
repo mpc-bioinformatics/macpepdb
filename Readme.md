@@ -67,7 +67,7 @@ If you intend to create a protein/peptide database and your Postgresql server is
 
 ### Building a databse
 #### Prepare the database
-Run `MACPEPDB_DB_URL=postgresql://<USER>:<PASSWORD>@<HOST>:<PORT>/<DATABASE> test alembic upgrade head`    
+Run `MACPEPDB_DB_URL=postgresql://<USER>:<PASSWORD>@<HOST>:<PORT>/<DATABASE> alembic upgrade head`    
 If you use the docker container, run the command in a temporary container: `docker run --rm -it macpepdb-py sh`
 
 #### Fill the database
