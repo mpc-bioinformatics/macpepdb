@@ -194,24 +194,27 @@ class Protein:
 
         # Digest protein and create sequence => peptide map
         new_peptides = {peptide.sequence: peptide for peptide in enzyme.digest(protein)}
-        protein_peptide_associations = []
 
-        stored_peptides = peptide_module.Peptide.select(database_cursor, ("sequence = ANY(%s)", [list(new_peptides.keys())]), True)
+        # Some proteins may be to short or have to few cleavage sides to produce peptides for the allowed length. If not peptides where returned, we can omit the peptide handling.
+        if len(new_peptides):
+            protein_peptide_associations = []
 
-        # Remove already existing peptides form new peptides and associate already stored peptides
-        for peptide in stored_peptides:
-            new_peptides.pop(peptide.sequence, None)
-            protein_peptide_associations.append(ProteinPeptideAssociation(protein.id, peptide.id))
+            stored_peptides = peptide_module.Peptide.select(database_cursor, ("sequence = ANY(%s)", [list(new_peptides.keys())]), True)
 
-        # Convert sequence => peptide map to peptide list
-        new_peptides = list(new_peptides.values())
+            # Remove already existing peptides form new peptides and associate already stored peptides
+            for peptide in stored_peptides:
+                new_peptides.pop(peptide.sequence, None)
+                protein_peptide_associations.append(ProteinPeptideAssociation(protein.id, peptide.id))
 
-        new_peptide_ids = peptide_module.Peptide.bulk_insert(database_cursor, new_peptides)
+            # Convert sequence => peptide map to peptide list
+            new_peptides = list(new_peptides.values())
 
-        for new_peptide_id in new_peptide_ids:
-            protein_peptide_associations.append(ProteinPeptideAssociation(protein.id, new_peptide_id))
+            new_peptide_ids = peptide_module.Peptide.bulk_insert(database_cursor, new_peptides)
 
-        ProteinPeptideAssociation.bulk_insert(database_cursor, protein_peptide_associations)
+            for new_peptide_id in new_peptide_ids:
+                protein_peptide_associations.append(ProteinPeptideAssociation(protein.id, new_peptide_id))
+
+            ProteinPeptideAssociation.bulk_insert(database_cursor, protein_peptide_associations)
 
         return len(new_peptides)
 
@@ -264,30 +267,32 @@ class Protein:
                 database_cursor.execute("DELETE FROM proteins_peptides WHERE protein_id = %s AND peptide_id IN %s;", (self.id, tuple(peptides_ids_to_unreference)))
             ### At this point new_peptides contain new and not referenced peptides
 
-            ### Remove already existing peptides from new peptides and create association value
-            stored_peptides = peptide_module.Peptide.select(database_cursor, ("sequence = ANY(%s)", [list(new_peptides.keys())]), True)
+            # Check if there are peptides left
+            if len(new_peptides):
+                ### Remove already existing peptides from new peptides and create association value
+                stored_peptides = peptide_module.Peptide.select(database_cursor, ("sequence = ANY(%s)", [list(new_peptides.keys())]), True)
 
-            protein_peptide_associations = []
+                protein_peptide_associations = []
 
-            # Remove existing peptides from new_peptides and create association value
-            for peptide in stored_peptides:
-                # Remove the peptide from new peptides and create association values
-                if peptide.sequence in new_peptides:
-                    new_peptides.pop(peptide.sequence, None)
-                    protein_peptide_associations.append(ProteinPeptideAssociation(self.id, peptide.id))
+                # Remove existing peptides from new_peptides and create association value
+                for peptide in stored_peptides:
+                    # Remove the peptide from new peptides and create association values
+                    if peptide.sequence in new_peptides:
+                        new_peptides.pop(peptide.sequence, None)
+                        protein_peptide_associations.append(ProteinPeptideAssociation(self.id, peptide.id))
 
-            ### At this point new_peptides should only contain peptides which not exist in the database
-            number_of_new_peptides = len(new_peptides)
+                ### At this point new_peptides should only contain peptides which not exist in the database
+                number_of_new_peptides = len(new_peptides)
 
-            # Insert new peptides
-            new_peptide_ids = peptide_module.Peptide.bulk_insert(database_cursor, new_peptides.values())
+                # Insert new peptides
+                new_peptide_ids = peptide_module.Peptide.bulk_insert(database_cursor, new_peptides.values())
 
-            # Create association values for new peptides
-            for new_peptide_id in new_peptide_ids:
-                protein_peptide_associations.append(ProteinPeptideAssociation(self.id, new_peptide_id))
+                # Create association values for new peptides
+                for new_peptide_id in new_peptide_ids:
+                    protein_peptide_associations.append(ProteinPeptideAssociation(self.id, new_peptide_id))
 
-            # Bulk insert new peptides
-            ProteinPeptideAssociation.bulk_insert(database_cursor, protein_peptide_associations)
+                # Bulk insert new peptides
+                ProteinPeptideAssociation.bulk_insert(database_cursor, protein_peptide_associations)
 
         # Update protein
         if len(update_columns):
