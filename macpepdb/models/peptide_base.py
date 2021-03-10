@@ -13,8 +13,8 @@ class PeptideBase:
         self.__id = id
         self.__sequence = sequence.upper()
         self.__number_of_missed_cleavages = number_of_missed_cleavages
-        self.__weight = self.__class__.calculate_weight(self.__sequence)
-
+        self.__weight = None
+        
     @property
     def id(self):
         return self.__id;
@@ -25,6 +25,8 @@ class PeptideBase:
 
     @property
     def weight(self):
+        if not self.__weight:
+            self.__weight = self.__class__.calculate_weight(self.__sequence)
         return self.__weight
 
     @property
