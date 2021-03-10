@@ -101,7 +101,7 @@ class DatabaseMaintenance():
                 self.__maximum_peptide_length,
                 run_count
             )
-            error_count = digestion.maintain(self.__database_url)
+            error_count = digestion.run(self.__database_url)
 
             # If not errors occure break while-loop
             if not error_count:

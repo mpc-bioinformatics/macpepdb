@@ -43,7 +43,7 @@ class ProteinDigestion:
         self.__statistics_csv_file_path = log_dir_path.joinpath(f"statistics_{run_count}.csv")
         self.__stop_signal = False
 
-    def maintain(self, database_url: str) -> int:
+    def run(self, database_url: str) -> int:
         """
         Reads the protein files in `work_dir/protein_data` and updates the database.
         @param database_url Datebase
