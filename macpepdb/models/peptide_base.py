@@ -163,6 +163,7 @@ class PeptideBase:
         return {
             'id': self.id,
             'sequence': self.sequence,
+            'number_of_missed_cleavages': attributes["number_of_missed_cleavages"],
             'weight': self.weight
         }
 
