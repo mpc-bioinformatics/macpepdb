@@ -25,18 +25,7 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase):
             work_dir = pathlib.Path(tmp_dir)
             test_files_path = pathlib.Path('./test_files')
             protein_data_test_file_path = test_files_path.joinpath('UP000002006.txt')
-            
-
-            # Prepare work directory for test
-            ## Add protein data
-            protein_data_path = work_dir.joinpath('protein_data/')
-            protein_data_path.mkdir()
-            shutil.copy(str(protein_data_test_file_path), str(protein_data_path))
-            ## Add taxonomy data
-            taxonomy_data_path = work_dir.joinpath('taxonomy_data/')
-            taxonomy_data_path.mkdir()
-            for dmp_file_path in test_files_path.glob('*.dmp'):
-                shutil.copy(str(dmp_file_path), str(taxonomy_data_path))
+            self.prepare_workdir(work_dir, test_files_path, protein_data_test_file_path)
 
             maintenance = DatabaseMaintenance(
                 os.getenv("TEST_MACPEPDB_URL"),
@@ -89,87 +78,101 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase):
                     self.assertGreater(database_status.values['last_update'], 0)
                     self.assertFalse(database_status.values['maintenance_mode'])
 
-    # def test_digest_with_protein(self):
-    #     # Digest the databse
-    #     test_file_path = pathlib.Path("./test_files/UP000002006.txt")
+    def test_digestion_with_protein_update(self):
+        # Digest the databse
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            work_dir = pathlib.Path(tmp_dir)
+            test_files_path = pathlib.Path('./test_files')
+            protein_data_test_file_path = test_files_path.joinpath('UP000002006.txt')
+            self.prepare_workdir(work_dir, test_files_path, protein_data_test_file_path)
 
-    #     digestion = ProteinDigestion(
-    #         [test_file_path],
-    #         pathlib.Path("./digestion_test.log"),
-    #         pathlib.Path("./digestion_test.unprocessible_proteins.txt"),
-    #         pathlib.Path("./digestion_test.statistics.csv"),
-    #         5,
-    #         4,
-    #         "Trypsin",
-    #         TRYPSIN_MAX_MISSED_CLEAVAGES,
-    #         TRYPSIN_MIN_PEPTIDE_LENGTH,
-    #         TRYPSIN_MAX_PEPTIDE_LENGTH
-    #     )
+            maintenance = DatabaseMaintenance(
+                os.getenv("TEST_MACPEPDB_URL"),
+                work_dir,
+                4,
+                5,
+                'Trypsin',
+                TRYPSIN_MAX_MISSED_CLEAVAGES,
+                TRYPSIN_MIN_PEPTIDE_LENGTH,
+                TRYPSIN_MAX_PEPTIDE_LENGTH
+            )
 
-    #     digestion.digest_to_database(os.getenv("TEST_MACPEPDB_URL"))
+            maintenance.start()
 
-    #     # Digest the modified B0FIH3. Sequence, accession, taxonomy id and proteome id are updated.
-    #     test_file_path = pathlib.Path("./test_files/B0FIH3_updated.txt")
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            work_dir = pathlib.Path(tmp_dir)
+            test_files_path = pathlib.Path('./test_files')
+            protein_data_test_file_path = test_files_path.joinpath('B0FIH3_updated.txt')
+            self.prepare_workdir(work_dir, test_files_path, protein_data_test_file_path)
 
-    #     # Digest with different digest values to see if the digestion uses the values from the database
-    #     digestion = ProteinDigestion(
-    #         [test_file_path],
-    #         pathlib.Path("./digestion_test.log"),
-    #         pathlib.Path("./digestion_test.unprocessible_proteins.txt"),
-    #         pathlib.Path("./digestion_test.statistics.csv"),
-    #         5,
-    #         4,
-    #         "Trypsin",
-    #         8,
-    #         6,
-    #         50
-    #     )
+            maintenance = DatabaseMaintenance(
+                os.getenv("TEST_MACPEPDB_URL"),
+                work_dir,
+                4,
+                5,
+                'Trypsin',
+                TRYPSIN_MAX_MISSED_CLEAVAGES,
+                TRYPSIN_MIN_PEPTIDE_LENGTH,
+                TRYPSIN_MAX_PEPTIDE_LENGTH
+            )
 
-    #     digestion.digest_to_database(os.getenv("TEST_MACPEPDB_URL"))
+            maintenance.start()
 
-    #     EnzymeClass = DigestEnzyme.get_enzyme_by_name("Trypsin")
-    #     trypsin = EnzymeClass(TRYPSIN_MAX_MISSED_CLEAVAGES, TRYPSIN_MIN_PEPTIDE_LENGTH, TRYPSIN_MAX_PEPTIDE_LENGTH)
+            EnzymeClass = DigestEnzyme.get_enzyme_by_name("Trypsin")
+            trypsin = EnzymeClass(TRYPSIN_MAX_MISSED_CLEAVAGES, TRYPSIN_MIN_PEPTIDE_LENGTH, TRYPSIN_MAX_PEPTIDE_LENGTH)
 
-    #     read_protein = None
-    #     read_protein_peptide_sequences = {}
-    #     with test_file_path.open("r") as test_file:
-    #         file_reader = UniprotTextReader(test_file)
+            read_protein = None
+            read_protein_peptide_sequences = {}
+            with protein_data_test_file_path.open("r") as protein_data_test_file:
+                file_reader = UniprotTextReader(protein_data_test_file)
 
-    #         for protein in file_reader:
-    #             read_protein = protein
-    #     read_protein_peptide_sequences = {peptide.sequence for peptide in trypsin.digest(read_protein)}
+                for protein in file_reader:
+                    read_protein = protein
+            read_protein_peptide_sequences = {peptide.sequence for peptide in trypsin.digest(read_protein)}
 
 
-    #     with self.database_connection:
-    #         with self.database_connection.cursor() as database_cursor:
-    #             # Fetch peptide from database
-    #             database_protein = Protein.select(database_cursor, ("accession = %s", [read_protein.accession]))
+            with self.database_connection:
+                with self.database_connection.cursor() as database_cursor:
+                    # Fetch peptide from database
+                    database_protein = Protein.select(database_cursor, ("accession = %s", [read_protein.accession]))
 
-    #             # Test if peptide exists
-    #             self.assertNotEqual(database_protein, None)
+                    # Test if peptide exists
+                    self.assertNotEqual(database_protein, None)
 
-    #             # Test protein attributes
-    #             self.assertEqual(read_protein.accession, database_protein.accession)
-    #             self.assertEqual(read_protein.taxonomy_id, database_protein.taxonomy_id)
-    #             self.assertEqual(read_protein.proteome_id, database_protein.proteome_id)
-    #             self.assertEqual(read_protein.sequence, database_protein.sequence)
+                    # Test protein attributes
+                    self.assertEqual(read_protein.accession, database_protein.accession)
+                    self.assertEqual(read_protein.taxonomy_id, database_protein.taxonomy_id)
+                    self.assertEqual(read_protein.proteome_id, database_protein.proteome_id)
+                    self.assertEqual(read_protein.sequence, database_protein.sequence)
 
-    #             # Test peptides
-    #             databse_protein_peptide_sequences = {peptide.sequence for peptide in database_protein.peptides(database_cursor)}
-    #             for sequence in read_protein_peptide_sequences:
-    #                 self.assertIn(sequence, databse_protein_peptide_sequences)
+                    # Test peptides
+                    databse_protein_peptide_sequences = {peptide.sequence for peptide in database_protein.peptides(database_cursor)}
+                    for sequence in read_protein_peptide_sequences:
+                        self.assertIn(sequence, databse_protein_peptide_sequences)
 
-    #             for sequence in databse_protein_peptide_sequences:
-    #                 self.assertIn(sequence, read_protein_peptide_sequences)
+                    for sequence in databse_protein_peptide_sequences:
+                        self.assertIn(sequence, read_protein_peptide_sequences)
 
-    #             # Test secondary accessions
-    #             # Convert to sets of source accession
-    #             read_protein_secondary_accessions = set(read_protein.secondary_accessions)
-    #             database_protein_secondary_accessions = set(database_protein.secondary_accessions)
+                    # Test secondary accessions
+                    # Convert to sets of source accession
+                    read_protein_secondary_accessions = set(read_protein.secondary_accessions)
+                    database_protein_secondary_accessions = set(database_protein.secondary_accessions)
 
-    #             # Crosscheck if each accession from the on set is in the other
-    #             for accession in read_protein_secondary_accessions:
-    #                 self.assertIn(accession, database_protein_secondary_accessions)
+                    # Crosscheck if each accession from the on set is in the other
+                    for accession in read_protein_secondary_accessions:
+                        self.assertIn(accession, database_protein_secondary_accessions)
 
-    #             for accession in database_protein_secondary_accessions:
-    #                 self.assertIn(accession, read_protein_secondary_accessions)
+                    for accession in database_protein_secondary_accessions:
+                        self.assertIn(accession, read_protein_secondary_accessions)
+
+    def prepare_workdir(self, work_dir_path: pathlib.Path, test_files_path: pathlib.Path, protein_data_file_path: pathlib.Path):
+        # Prepare work directory for test
+        ## Add protein data
+        protein_data_path = work_dir_path.joinpath('protein_data/')
+        protein_data_path.mkdir()
+        shutil.copy(str(protein_data_file_path), str(protein_data_path))
+        ## Add taxonomy data
+        taxonomy_data_path = work_dir_path.joinpath('taxonomy_data/')
+        taxonomy_data_path.mkdir()
+        for dmp_file_path in test_files_path.glob('*.dmp'):
+            shutil.copy(str(dmp_file_path), str(taxonomy_data_path))
