@@ -163,7 +163,7 @@ class PeptideBase:
         return {
             'id': self.id,
             'sequence': self.sequence,
-            'weight': self.weights
+            'weight': self.weight
         }
 
     @classmethod
