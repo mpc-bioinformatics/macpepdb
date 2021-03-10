@@ -12,7 +12,7 @@ class ModificationCounter:
         self.modification = modification
         self.count = 0
 
-class ModificatioCombination:
+class ModificationCombination:
     """
     This class keeps all information for querying peptides with a specific modification combination.
     The property `precursor_range` holds the PrecursorRange (mass tolerance) for the query and `column_conditions` contains a dictionary,
@@ -94,7 +94,7 @@ class ModificatioCombination:
             values.append(value)
         return (query_string, values)
 
-class ModificatioCombinationList:
+class ModificationCombinationList:
     """
     This class creates all possible combination (ModificationCombination) from a given ModificationCollection for querying peptides.
     The class itself is iterable.
@@ -208,18 +208,18 @@ class ModificatioCombinationList:
 
             # Add current counter state to matrix, if getcurrent counter is last counter or precursor is reached
             if counter_idx == len(self.__modification_counter) - 1 or is_precursor_reached:
-                self.__modification_combinations.append(ModificatioCombination(self.__modification_counter, self.__precursor, self.__lower_precursor_tolerance_ppm, self.__upper_precursor_tolerance_ppm))
+                self.__modification_combinations.append(ModificationCombination(self.__modification_counter, self.__precursor, self.__lower_precursor_tolerance_ppm, self.__upper_precursor_tolerance_ppm))
 
 
             # Stop iteration if precursor is reached
             if is_precursor_reached:
                 break
 
-    def __iter__(self) -> ModificatioCombinationList:
+    def __iter__(self) -> ModificationCombinationList:
         self.__modification_combinations_iter = iter(self.__modification_combinations)
         return self
 
-    def __next__(self) -> ModificatioCombination:
+    def __next__(self) -> ModificationCombination:
         return next(self.__modification_combinations_iter)
 
     def __len__(self):

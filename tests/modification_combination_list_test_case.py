@@ -6,7 +6,7 @@ import shutil
 import tempfile
 
 from macpepdb.proteomics.modification_collection import ModificationCollection
-from macpepdb.models.modification_combination_list import ModificatioCombinationList
+from macpepdb.models.modification_combination_list import ModificationCombinationList
 from macpepdb.proteomics.mass.convert import to_int as mass_to_int, thomson_to_dalton
 from macpepdb.models.peptide import Peptide
 from macpepdb.tasks.database_maintenance.database_maintenance import DatabaseMaintenance
@@ -95,7 +95,7 @@ class ModifiedPeptideWhereClauseBuilderTestCase(AbstractDatabaseTestCase):
 
         with self.database_connection:
             with self.database_connection.cursor() as database_cursor:
-                modification_combination_list =  ModificatioCombinationList(modification_collection, precursor, PRECURSOR_TOLERANCE, PRECURSOR_TOLERANCE, VARIABLE_MODIFICATION_MAXIMUM)
+                modification_combination_list =  ModificationCombinationList(modification_collection, precursor, PRECURSOR_TOLERANCE, PRECURSOR_TOLERANCE, VARIABLE_MODIFICATION_MAXIMUM)
 
                 select_conditions = modification_combination_list.to_sql()
                 select_conditions_string = database_cursor.mogrify(select_conditions[0], select_conditions[1]).decode('utf-8')
@@ -124,7 +124,7 @@ class ModifiedPeptideWhereClauseBuilderTestCase(AbstractDatabaseTestCase):
 
         with self.database_connection:
             with self.database_connection.cursor() as database_cursor:
-                modification_combination_list =  ModificatioCombinationList(modification_collection, precursor, PRECURSOR_TOLERANCE, PRECURSOR_TOLERANCE, VARIABLE_MODIFICATION_MAXIMUM)
+                modification_combination_list =  ModificationCombinationList(modification_collection, precursor, PRECURSOR_TOLERANCE, PRECURSOR_TOLERANCE, VARIABLE_MODIFICATION_MAXIMUM)
                 select_conditions = modification_combination_list.to_sql()
                 peptides = Peptide.select(database_cursor, select_conditions, True)
 
@@ -192,7 +192,7 @@ class ModifiedPeptideWhereClauseBuilderTestCase(AbstractDatabaseTestCase):
 
             with self.database_connection:
                 with self.database_connection.cursor() as database_cursor:
-                    modification_combination_list =  ModificatioCombinationList(modification_collection, PRECURSOR, PRECURSOR_TOLERANCE, PRECURSOR_TOLERANCE, VARIABLE_MODIFICATION_LIMIT)
+                    modification_combination_list =  ModificationCombinationList(modification_collection, PRECURSOR, PRECURSOR_TOLERANCE, PRECURSOR_TOLERANCE, VARIABLE_MODIFICATION_LIMIT)
                     select_conditions = modification_combination_list.to_sql()
                     peptides = Peptide.select(database_cursor, select_conditions, True)
 
