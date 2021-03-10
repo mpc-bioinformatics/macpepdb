@@ -199,13 +199,22 @@ class Protein:
         # Some proteins may be to short or have to few cleavage sides to produce peptides for the allowed length. If not peptides where returned, we can omit the peptide handling.
         if len(new_peptides):
             protein_peptide_associations = []
+            peptides_id_for_metadata_update = []
 
-            stored_peptides = peptide_module.Peptide.select(database_cursor, ("sequence = ANY(%s)", [list(new_peptides.keys())]), True)
+            stored_peptide_query = (
+                f"SELECT {peptide_module.Peptide.TABLE_NAME}.id, {peptide_module.Peptide.TABLE_NAME}.sequence, {peptide_module.Peptide.TABLE_NAME}.is_metadata_up_to_date "
+                f"FROM {peptide_module.Peptide.TABLE_NAME} "
+                f"WHERE {peptide_module.Peptide.TABLE_NAME}.sequence = ANY(%s);"
+            )
+            database_cursor.execute(stored_peptide_query, (list(new_peptides.keys()),))
+            stored_peptide_rows = database_cursor.fetchall()
 
             # Remove already existing peptides form new peptides and associate already stored peptides
-            for peptide in stored_peptides:
-                new_peptides.pop(peptide.sequence, None)
-                protein_peptide_associations.append(ProteinPeptideAssociation(protein.id, peptide.id))
+            for peptide_row in stored_peptide_rows:
+                new_peptides.pop(peptide_row[1], None)
+                protein_peptide_associations.append(ProteinPeptideAssociation(protein.id, peptide_row[0]))
+                if peptide_row[2]:
+                    peptides_id_for_metadata_update.append(peptide_row[0])
 
             # Convert sequence => peptide map to peptide list
             new_peptides = list(new_peptides.values())
@@ -216,6 +225,8 @@ class Protein:
                 protein_peptide_associations.append(ProteinPeptideAssociation(protein.id, new_peptide_id))
 
             ProteinPeptideAssociation.bulk_insert(database_cursor, protein_peptide_associations)
+            if len(peptides_id_for_metadata_update):
+                peptide_module.Peptide.flag_for_metadata_update(database_cursor, peptides_id_for_metadata_update)
 
         return len(new_peptides)
 
@@ -252,18 +263,28 @@ class Protein:
             # Create sequence => peptide map
             new_peptides = {peptide.sequence: peptide for peptide in enzyme.digest(updated_protein)}
 
+            peptides_id_for_metadata_update = []
+
             ### Remove already referenced peptides from new_peptides and dereference peptides which no longer part of the protein
-            currently_referenced_peptides = self.peptides(database_cursor)
+            referenced_peptides_query = (
+                f"SELECT {peptide_module.Peptide.TABLE_NAME}.id, {peptide_module.Peptide.TABLE_NAME}.sequence, {peptide_module.Peptide.TABLE_NAME}.is_metadata_up_to_date "
+                f"FROM {peptide_module.Peptide.TABLE_NAME}, {ProteinPeptideAssociation.TABLE_NAME} "
+                f"WHERE {ProteinPeptideAssociation.TABLE_NAME}.protein_id = %s AND {ProteinPeptideAssociation.TABLE_NAME}.peptide_id = {peptide_module.Peptide.TABLE_NAME}.id;"
+            )
+            database_cursor.execute(referenced_peptides_query, (self.id,))
+            currently_referenced_peptide_rows = database_cursor.fetchall()
             
             peptides_ids_to_unreference = []
             # Check if the referenced peptides are in the map of new peptides
-            for peptide in currently_referenced_peptides:
-                if not peptide.sequence in new_peptides:
+            for peptide_row in currently_referenced_peptide_rows:
+                if not peptide_row[1] in new_peptides:
                     # If this peptide is no longer in the peptide list of the protein, delete the reference
-                    peptides_ids_to_unreference.append(peptide.id)
+                    peptides_ids_to_unreference.append(peptide_row[0])
+                    if peptide_row[2]:
+                        peptides_id_for_metadata_update.append(peptide_row[0])
                 else:
                     # Remove it from new peptides, because it already exists and is associated with this protein
-                    new_peptides.pop(peptide.sequence, None)
+                    new_peptides.pop(peptide_row[1], None)
             if len(peptides_ids_to_unreference):
                 database_cursor.execute("DELETE FROM proteins_peptides WHERE protein_id = %s AND peptide_id IN %s;", (self.id, tuple(peptides_ids_to_unreference)))
             ### At this point new_peptides contain new and not referenced peptides
@@ -271,16 +292,24 @@ class Protein:
             # Check if there are peptides left
             if len(new_peptides):
                 ### Remove already existing peptides from new peptides and create association value
-                stored_peptides = peptide_module.Peptide.select(database_cursor, ("sequence = ANY(%s)", [list(new_peptides.keys())]), True)
+                stored_peptide_query = (
+                    f"SELECT {peptide_module.Peptide.TABLE_NAME}.id, {peptide_module.Peptide.TABLE_NAME}.sequence, {peptide_module.Peptide.TABLE_NAME}.is_metadata_up_to_date "
+                    f"FROM {peptide_module.Peptide.TABLE_NAME} "
+                    f"WHERE {peptide_module.Peptide.TABLE_NAME}.sequence = ANY(%s);"
+                )
+                database_cursor.execute(stored_peptide_query, (list(new_peptides.keys()),))
+                stored_peptide_rows = database_cursor.fetchall()
 
                 protein_peptide_associations = []
 
                 # Remove existing peptides from new_peptides and create association value
-                for peptide in stored_peptides:
+                for peptide_row in stored_peptide_rows:
                     # Remove the peptide from new peptides and create association values
-                    if peptide.sequence in new_peptides:
-                        new_peptides.pop(peptide.sequence, None)
-                        protein_peptide_associations.append(ProteinPeptideAssociation(self.id, peptide.id))
+                    if peptide_row[1] in new_peptides:
+                        new_peptides.pop(peptide_row[1], None)
+                        protein_peptide_associations.append(ProteinPeptideAssociation(self.id, peptide_row[0]))
+                        if peptide_row[2]:
+                            peptides_id_for_metadata_update.append(peptide_row[0])
 
                 ### At this point new_peptides should only contain peptides which not exist in the database
                 number_of_new_peptides = len(new_peptides)
@@ -294,6 +323,9 @@ class Protein:
 
                 # Bulk insert new peptides
                 ProteinPeptideAssociation.bulk_insert(database_cursor, protein_peptide_associations)
+
+            if len(peptides_id_for_metadata_update):
+                peptide_module.Peptide.flag_for_metadata_update(database_cursor, peptides_id_for_metadata_update)
 
         # Update protein
         if len(update_columns):

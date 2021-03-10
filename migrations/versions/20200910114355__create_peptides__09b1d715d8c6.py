@@ -49,6 +49,14 @@ def upgrade():
         sa.Column('y_count', sa.SmallInteger, default=0, nullable=False),
         sa.Column('n_terminus', sa.CHAR(1), nullable=False),
         sa.Column('c_terminus', sa.CHAR(1), nullable=False),
+        # Flag to mark peptide for metadata update
+        sa.Column('is_metadata_up_to_date', sa.Boolean, server_default=sa.text('false'), nullable=False),
+        # Peptide metadata, collected/duplicated from proteins-table in a second step.
+        sa.Column('is_swiss_prot', sa.Boolean, server_default=sa.text('false'), nullable=False),
+        sa.Column('is_trembl', sa.Boolean, server_default=sa.text('false'), nullable=False),
+        sa.Column('taxonomy_ids', sa.dialects.postgresql.ARRAY(sa.Integer), server_default='{}', nullable=False),
+        sa.Column('unique_taxonomy_ids', sa.dialects.postgresql.ARRAY(sa.Integer), server_default='{}', nullable=False),
+        sa.Column('proteome_ids', sa.dialects.postgresql.ARRAY(sa.VARCHAR(11)), server_default='{}', nullable=False),
         # partition key must included in unique and primary key constraints
         sa.UniqueConstraint('sequence', 'weight'),
         sa.PrimaryKeyConstraint('id', 'weight'),

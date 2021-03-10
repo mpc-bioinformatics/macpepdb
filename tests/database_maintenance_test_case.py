@@ -64,9 +64,9 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase):
                     # Check if set count is equals db count
                     database_cursor.execute(f"SELECT count(*) FROM {Peptide.TABLE_NAME};")
                     self.assertEqual(len(peptides), database_cursor.fetchone()[0])
-                    # Check if all peptides from Set exists in database
+                    # Check if all peptides from Set exists in database and their metadata are up to date
                     for peptide in peptides:
-                        database_cursor.execute(f"SELECT true FROM {Peptide.TABLE_NAME} WHERE sequence = %s;", (peptide.sequence,))
+                        database_cursor.execute(f"SELECT true FROM {Peptide.TABLE_NAME} WHERE sequence = %s AND is_metadata_up_to_date = true AND array_length(taxonomy_ids, 1) > 0 AND array_length(proteome_ids, 1) > 0;", (peptide.sequence,))
                         self.assertTrue(database_cursor.fetchone()[0])
                     # Check if all peptides in database are present in Set
                     for peptide in Peptide.select(database_cursor, fetchall=True):

@@ -5,6 +5,7 @@ import shutil
 from ...proteomics.enzymes.digest_enzyme import DigestEnzyme
 from .taxonomy_tree import TaxonomyTree
 from .protein_digestion import ProteinDigestion
+from .peptide_metadata_collector import PeptideMetadataCollector
 
 class DatabaseMaintenance():
     TAXONOMY_FILES = ['nodes.dmp', 'names.dmp', 'merged.dmp', 'delete.dmp']
@@ -131,6 +132,15 @@ class DatabaseMaintenance():
 
 
             print(f"Digest ended with {error_count} errors. Digest the remaining proteins with {number_of_threads} threads.")
+
+        # Collect peptide meta data
+        collector = PeptideMetadataCollector(
+            self.__logs_path,
+            # Increase the number of threads by one third. The peptide updates are independent from one another, so there are no deadlocks to be expected.
+            self.__statistics_write_period,
+            int(self.__number_of_threads * 1.33)
+        )
+        collector.run(self.__database_url)
 
         # Cleanup by removing all files in the temporary work directory
         if self.__temporary_protein_data_path.is_dir():
