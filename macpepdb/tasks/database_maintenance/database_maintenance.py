@@ -1,11 +1,23 @@
+import datetime
+import json
 import pathlib
 import glob
 import shutil
+import psycopg2
 
+from enum import unique, Enum
+
+from ...models.maintenance_information import MaintenanceInformation
 from ...proteomics.enzymes.digest_enzyme import DigestEnzyme
 from .taxonomy_tree import TaxonomyTree
 from .protein_digestion import ProteinDigestion
 from .peptide_metadata_collector import PeptideMetadataCollector
+
+@unique
+class DatabaseStatus(Enum):
+    DIGESTION = "digest proteins"
+    METADATA_COLLECTION = "collect peptide metadata"
+    READY = "ready for normal use"
 
 class DatabaseMaintenance():
     TAXONOMY_FILES = ['nodes.dmp', 'names.dmp', 'merged.dmp', 'delete.dmp']
@@ -85,6 +97,7 @@ class DatabaseMaintenance():
         """
         Build/update the protein digestion
         """
+        self.__set_databse_status(self.__database_url, DatabaseStatus.DIGESTION, True)
         # Run 0, first run with user supplied data in protein_data directory
         run_count = 0
         protein_data_path = self.__protein_data_path
@@ -133,6 +146,8 @@ class DatabaseMaintenance():
 
             print(f"Digest ended with {error_count} errors. Digest the remaining proteins with {number_of_threads} threads.")
 
+        self.__set_databse_status(self.__database_url, DatabaseStatus.METADATA_COLLECTION, False)
+
         # Collect peptide meta data
         collector = PeptideMetadataCollector(
             self.__logs_path,
@@ -142,9 +157,45 @@ class DatabaseMaintenance():
         )
         collector.run(self.__database_url)
 
+        now = datetime.datetime.utcnow()
+        epoch = datetime.datetime(1970,1,1)
+        last_update_timestamp = (now - epoch).total_seconds()
+        self.__set_databse_status(self.__database_url, DatabaseStatus.READY, False, last_update_timestamp)
+
         # Cleanup by removing all files in the temporary work directory
         if self.__temporary_protein_data_path.is_dir():
             shutil.rmtree(self.__temporary_protein_data_path, ignore_errors=True)
+
+
+    def __set_databse_status(self, database_url: str, status: DatabaseStatus, maintenance_mode: bool, last_update_timestamp: int = None):
+        """
+        Sets the database status
+        @param status Indicate if set to maintenance mode
+        @param last_update_timestamp UTC timestamp in seconds
+        """
+        database_connection = psycopg2.connect(database_url)
+        with database_connection.cursor() as database_cursor:
+            database_cursor.execute("SELECT values FROM maintenance_information WHERE key = %s;", (MaintenanceInformation.DATABASE_STATUS_KEY,))
+            database_status_row = database_cursor.fetchone()
+            if database_status_row:
+                database_status_values = database_status_row[0]
+                database_status_values['maintenance_mode'] = maintenance_mode
+                database_status_values['status'] = status.value
+                if last_update_timestamp:
+                    database_status_values['last_update'] = last_update_timestamp
+                database_cursor.execute("UPDATE maintenance_information SET values = %s WHERE key = %s;", (json.dumps(database_status_values), MaintenanceInformation.DATABASE_STATUS_KEY))
+            else:
+                database_status_values = {
+                    'status': status.value,
+                    'maintenance_mode': maintenance_mode 
+                }
+                if last_update_timestamp:
+                    database_status_values['last_update'] = last_update_timestamp
+                else:
+                    database_status_values['last_update'] = 0
+                database_cursor.execute("INSERT INTO maintenance_information (key, values) VALUES (%s, %s);", (MaintenanceInformation.DATABASE_STATUS_KEY, json.dumps(database_status_values)))
+            database_connection.commit()
+        database_connection.close()
 
 
     @classmethod

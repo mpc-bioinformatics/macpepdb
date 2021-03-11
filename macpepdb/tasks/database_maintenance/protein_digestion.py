@@ -7,7 +7,6 @@ import csv
 import random
 import signal
 import os
-import datetime
 import json
 
 import psycopg2
@@ -49,7 +48,6 @@ class ProteinDigestion:
         @param database_url Datebase
         @return int Number of errors
         """
-        self.__set_databse_status(database_url, True)
         self.__load_or_set_digestion_informations(database_url)
 
         # Very important 
@@ -161,11 +159,6 @@ class ProteinDigestion:
         log_connection.close()
         logger_process.join()
 
-        now = datetime.datetime.utcnow()
-        epoch = datetime.datetime(1970,1,1)
-        last_update_timestamp = (now - epoch).total_seconds()
-        self.__set_databse_status(database_url, False, last_update_timestamp)
-
         return statistics[2]
 
 
@@ -197,35 +190,6 @@ class ProteinDigestion:
                 database_cursor.execute("INSERT INTO maintenance_information (key, values) VALUES (%s, %s);", (MaintenanceInformation.DIGESTION_PARAMTERS_KEY, json.dumps(digestion_information_values)))
                 database_connection.commit()
         database_connection.close()
-
-    def __set_databse_status(self, database_url: str, is_maintenance_mode: bool, last_update_timestamp: int = None):
-        """
-        Sets the database status
-        @param is_maintenance_mode Indicate if set to maintenance mode
-        @param last_update_timestamp UTC timestamp in seconds
-        """
-        database_connection = psycopg2.connect(database_url)
-        with database_connection.cursor() as database_cursor:
-            database_cursor.execute("SELECT values FROM maintenance_information WHERE key = %s;", (MaintenanceInformation.DATABASE_STATUS_KEY,))
-            database_status_row = database_cursor.fetchone()
-            if database_status_row:
-                database_status_values = database_status_row[0]
-                database_status_values['maintenance_mode'] = is_maintenance_mode
-                if last_update_timestamp:
-                    database_status_values['last_update'] = last_update_timestamp
-                database_cursor.execute("UPDATE maintenance_information SET values = %s WHERE key = %s;", (json.dumps(database_status_values), MaintenanceInformation.DATABASE_STATUS_KEY))
-            else:
-                database_status_values = {
-                    'maintenance_mode': is_maintenance_mode
-                }
-                if last_update_timestamp:
-                    database_status_values['last_update'] = last_update_timestamp
-                else:
-                    database_status_values['last_update'] = 0
-                database_cursor.execute("INSERT INTO maintenance_information (key, values) VALUES (%s, %s);", (MaintenanceInformation.DATABASE_STATUS_KEY, json.dumps(database_status_values)))
-            database_connection.commit()
-        database_connection.close()
-
 
     @staticmethod
     def digest_worker(id: int, empty_queue_and_stop_flag: Event, stop_immediately_flag: Event, protein_queue: Queue, log_connection: Connection, unprocessible_log_connection: Connection, statistics: Array, enzyme: DigestEnzyme, database_url: str):

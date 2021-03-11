@@ -6,7 +6,7 @@ import tempfile
 from sqlalchemy import func, distinct
 from sqlalchemy.sql import exists
 
-from macpepdb.tasks.database_maintenance.database_maintenance import DatabaseMaintenance
+from macpepdb.tasks.database_maintenance.database_maintenance import DatabaseMaintenance, DatabaseStatus
 from macpepdb.proteomics.enzymes.digest_enzyme import DigestEnzyme
 from macpepdb.proteomics.file_reader.uniprot_text_reader import UniprotTextReader
 from macpepdb.models.peptide import Peptide
@@ -76,6 +76,7 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase):
                     database_status = MaintenanceInformation.select(database_cursor, MaintenanceInformation.DATABASE_STATUS_KEY)
                     self.assertNotEqual(database_status, None)
                     self.assertGreater(database_status.values['last_update'], 0)
+                    self.assertEqual(database_status.values['status'], DatabaseStatus.READY.value)
                     self.assertFalse(database_status.values['maintenance_mode'])
 
     def test_digestion_with_protein_update(self):
