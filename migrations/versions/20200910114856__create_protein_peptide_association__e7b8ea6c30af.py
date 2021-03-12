@@ -23,6 +23,8 @@ def upgrade():
         sa.Column('peptide_weight', sa.BigInteger),
         sa.ForeignKeyConstraint(['peptide_id', 'peptide_weight'], ['peptides.id', 'peptides.weight'])
     )
+    op.create_index('proteins_peptides_protein_id_idx', 'proteins_peptides', ['protein_id'])
+    op.create_index('proteins_peptides_peptide_id_peptide_weight_idx', 'proteins_peptides', ['peptide_id', 'peptide_weight'])
 
 
 def downgrade():

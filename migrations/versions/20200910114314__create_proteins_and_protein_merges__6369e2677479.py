@@ -31,6 +31,8 @@ def upgrade():
     )
     op.create_index('protein_accession_idx', 'proteins', ['accession'])
     op.create_index('protein_secondary_accessions_idx', 'proteins', ['secondary_accessions'], postgresql_using='gin')
+    op.create_index('protein_taxonomy_id_idx', 'proteins', ['taxonomy_id'])
+    op.create_index('protein_proteome_id_idx', 'proteins', ['proteome_id'])
 
 def downgrade():
     op.drop_table('proteins')

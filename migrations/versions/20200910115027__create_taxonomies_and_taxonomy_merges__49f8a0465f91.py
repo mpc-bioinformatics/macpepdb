@@ -22,7 +22,7 @@ def upgrade():
         sa.Column('id', sa.Integer, primary_key=True),
         sa.Column('parent_id', sa.Integer),
         sa.Column('name', sa.Text, nullable=False),
-        sa.Column('rank', sa.SmallInteger, nullable=False)
+        sa.Column('rank', sa.SmallInteger, nullable=True)
     )
     op.create_index('taxonomies_parent_id_idx', 'taxonomies', ['parent_id'])
     op.create_index('taxonomies_name_idx', 'taxonomies', ['name'])

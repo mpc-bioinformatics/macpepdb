@@ -33,8 +33,9 @@ def upgrade():
         sa.Column('f_count', sa.SmallInteger, default=0, nullable=False),
         sa.Column('g_count', sa.SmallInteger, default=0, nullable=False),
         sa.Column('h_count', sa.SmallInteger, default=0, nullable=False),
-        sa.Column('j_count', sa.SmallInteger, default=0, nullable=False),
+        sa.Column('i_count', sa.SmallInteger, default=0, nullable=False),
         sa.Column('k_count', sa.SmallInteger, default=0, nullable=False),
+        sa.Column('l_count', sa.SmallInteger, default=0, nullable=False),
         sa.Column('m_count', sa.SmallInteger, default=0, nullable=False),
         sa.Column('n_count', sa.SmallInteger, default=0, nullable=False),
         sa.Column('o_count', sa.SmallInteger, default=0, nullable=False),
@@ -70,6 +71,7 @@ def upgrade():
     for idx, (lower, upper) in enumerate(partition_boundaries.PEPTIDE_WEIGHTS):
         connection.execute(f"CREATE TABLE peptides_{str(idx).zfill(3)} PARTITION OF peptides FOR VALUES FROM ('{lower}') TO ('{upper}');")
 
+    op.create_index('peptide_weight_idx', 'peptides', ['weight'])
 
 def downgrade():
     op.drop_table('peptides')
