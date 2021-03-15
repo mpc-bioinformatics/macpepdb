@@ -10,7 +10,7 @@ from queue import Full as QueueFullError, Empty as QueueEmptyError
 import psycopg2
 
 # Internal imports
-from .logger_process import LoggerProcess
+from .multiprocessing.logger_process import LoggerProcess
 from ...models.taxonomy import Taxonomy, TaxonomyRank
 from ...models.taxonomy_merge import TaxonomyMerge
 from ...models.protein import Protein
