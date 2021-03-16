@@ -1,7 +1,6 @@
 import pathlib
 import time
 import signal
-import os
 import json
 
 import psycopg2
@@ -35,11 +34,11 @@ class ProteinDigestion:
         self.__statistics_csv_file_path = log_dir_path.joinpath(f"statistics_{run_count}.csv")
         self.__stop_signal = False
 
-    def run(self, database_url: str) -> int:
+    def run(self, database_url: str) -> (int, bool):
         """
         Reads the protein files in `work_dir/protein_data` and updates the database.
         @param database_url Datebase
-        @return int Number of errors
+        @return tupel First element isthe number of errors and the second element is the status of the stop flag
         """
         self.__load_or_set_digestion_informations(database_url)
 
@@ -58,8 +57,6 @@ class ProteinDigestion:
 
         unprocessable_log_connection = []
         general_log_connections = []
-
-        print(f"to stop the digestion gracefully, send TERM or INT signal to process {os.getpid()}")
 
         # Start digest worker
         digest_processes = []
@@ -142,7 +139,7 @@ class ProteinDigestion:
 
         logger_process.join()
 
-        return statistics[2]
+        return statistics[2], self.__stop_signal
 
     def __load_or_set_digestion_informations(self, database_url: str):
         """

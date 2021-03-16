@@ -3,7 +3,9 @@ import json
 import pathlib
 import glob
 import shutil
+import os
 import psycopg2
+import signal
 
 from enum import unique, Enum
 
@@ -37,12 +39,19 @@ class DatabaseMaintenance():
         self.__logs_path = work_dir.joinpath('logs/')
         self.__temporary_protein_data_path = self.__work_dir.joinpath('.temp_protein_data/')
 
+        self.__stop_signal = False
+        signal.signal(signal.SIGTERM, self.__stop_signal_handler)
+        signal.signal(signal.SIGINT, self.__stop_signal_handler)
+
     def start(self):
         """
         Maintain (create/update) the database.
+        Note: Depending on the size of the input files, the maintenance can be a long running process. You can stop it at any time by sending the TERM- or INT-signal to the main process. The maintenance will then gracefully stop.
+              If you use the maintenance from another library or script it may be good to wrap the maintenance into a separat process with the multiprocessing module, so you can stop it gracfully if you have to.
         """
         self.__prepare_logs_directory()
         self.__validate_folders()
+        print(f"To stop the database maintenance gracefully, send TERM or INT signal to process {os.getpid()}")
         self.__maintain_taxonomy_tree()
         self.__maintain_proteins_digestion()
     
@@ -114,11 +123,14 @@ class DatabaseMaintenance():
                 self.__maximum_peptide_length,
                 run_count
             )
-            error_count = digestion.run(self.__database_url)
+            error_count, self.__stop_signal = digestion.run(self.__database_url)
 
-            # If not errors occure break while-loop
+            # If no errors occure break while-loop
             if not error_count:
                 break
+
+            if self.__stop_signal:
+                return
             
             # If loop continues, there were errors. Create temporary workdir
             self.__temporary_protein_data_path.mkdir(parents=True, exist_ok=True)
@@ -146,6 +158,9 @@ class DatabaseMaintenance():
 
             print(f"Digest ended with {error_count} errors. Digest the remaining proteins with {number_of_threads} threads.")
 
+        if self.__stop_signal:
+            return
+
         self.__set_databse_status(self.__database_url, DatabaseStatus.METADATA_COLLECTION, False)
 
         # Collect peptide meta data
@@ -155,7 +170,10 @@ class DatabaseMaintenance():
             self.__statistics_write_period,
             int(self.__number_of_threads * 1.33)
         )
-        collector.run(self.__database_url)
+        self.__stop_signal = collector.run(self.__database_url)
+
+        if self.__stop_signal:
+            return
 
         now = datetime.datetime.utcnow()
         epoch = datetime.datetime(1970,1,1)
@@ -224,3 +242,6 @@ class DatabaseMaintenance():
         parser.add_argument("--maximum-peptide-length", type=int, help="Maximum peptide length (default: 60)", default="60")
         parser.add_argument("--database-url", "-d", type=str, required=True, help="Database url for postgres")
         parser.set_defaults(func=cls.maintain_from_command_line)
+
+    def __stop_signal_handler(self, signal_number, frame):
+        self.__stop_signal = True

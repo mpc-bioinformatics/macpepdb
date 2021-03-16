@@ -1,4 +1,3 @@
-import os
 import pathlib
 import psycopg2
 import signal
@@ -25,10 +24,11 @@ class PeptideMetadataCollector:
         self.__stop_signal = False
 
 
-    def run(self, database_url: str):
+    def run(self, database_url: str) -> bool:
         """
         Iterates through all peptides which are flagged for updates, collectes the meta information from the referenced proteins (review status, taxonomy IDs and proteome IDs) and stores them in the peptide.
         @param database_url
+        @return bool Returns the status of the stop flag
         """
         print("Update protein information on peptides. This may take a while.")
 
@@ -47,8 +47,6 @@ class PeptideMetadataCollector:
         signal.signal(signal.SIGINT, self.__stop_signal_handler)
 
         log_connections = []
-
-        print(f"to stop the peptide update gracefully, send TERM or INT signal to process {os.getpid()}")
 
         # Start digest worker
         peptide_update_processes = []
@@ -82,11 +80,18 @@ class PeptideMetadataCollector:
         database_connection = psycopg2.connect(database_url)
         enqueued_all_updatedable_peptides = False
         while not enqueued_all_updatedable_peptides:
+            # Break main loop
+            if self.__stop_signal:
+                break
             try:
                 with database_connection:
                     with database_connection.cursor(name='peptide_update') as database_cursor:
                         database_cursor.execute(f"SELECT id FROM {Peptide.TABLE_NAME} WHERE is_metadata_up_to_date = false;")
+                        # Fetch loop
                         while True:
+                            # Break fetch loop
+                            if self.__stop_signal:
+                                break
                             # Fetch 1000 peptide IDs
                             peptides_chunk = [row[0] for row in database_cursor.fetchmany(1000)]
                             # Break while loop if no more peptides were found
@@ -130,6 +135,8 @@ class PeptideMetadataCollector:
         statistics_logger_process.join()
 
         logger_process.join()
+
+        return self.__stop_signal
 
     def __stop_signal_handler(self, signal_number, frame):
         self.__stop_signal = True
