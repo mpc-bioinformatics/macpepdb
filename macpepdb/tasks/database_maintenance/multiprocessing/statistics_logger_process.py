@@ -63,5 +63,5 @@ class StatisticsLoggerProcess(GenericProcess):
                 self.__output_min_column_width,
                 len(self.__file_header[idx])
             )
-            output.append("{value:>{column_width}}".format(column_width=column_width, value=row[idx]))
+            output.append(f"{row[idx]:>{column_width}}")
         print("\t".join(output), end=line_end)
