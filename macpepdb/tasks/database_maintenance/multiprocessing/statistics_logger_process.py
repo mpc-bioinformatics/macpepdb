@@ -22,7 +22,7 @@ class StatisticsLoggerProcess(GenericProcess):
         # Snapshot of last written statistic to calculate difference
         last_statistics = [0] * len(self.__statistics)
         start_at = time.time()
-        self.__print_statistic_row(self.__file_header)
+        self.__print_statistic_row(self.__file_header, False)
         with self.__statistics_file_path.open("w") as statistics_file:
             statistics_writer = csv.writer(statistics_file)
             statistics_writer.writerow(self.__file_header)
@@ -47,14 +47,16 @@ class StatisticsLoggerProcess(GenericProcess):
                 # Write csv row to csv file
                 statistics_writer.writerow(csv_row)
                 statistics_file.flush()
-                # Output to console
-                self.__print_statistic_row(csv_row)
+                # Output to console, when the stop flag is not set, make line replaceable
+                self.__print_statistic_row(csv_row, not self.__stop_flag.is_set())
                 # Assign new 'snapshot'
                 last_statistics = current_statistics
+        print("\n")
         self.__log_connection.send("statistics logger is offline")
         self.__log_connection.close()
 
-    def __print_statistic_row(self, row: list):
+    def __print_statistic_row(self, row: list, is_replaceable: bool):
+        line_end = "\r" if is_replaceable else "\n"
         output = []
         for idx in range(0, len(self.__file_header)):
             column_width = max(
@@ -62,4 +64,4 @@ class StatisticsLoggerProcess(GenericProcess):
                 len(self.__file_header[idx])
             )
             output.append("{value:>{column_width}}".format(column_width=column_width, value=row[idx]))
-        print("\t".join(output))
+        print("\t".join(output), end=line_end)
