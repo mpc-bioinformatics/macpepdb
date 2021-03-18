@@ -1,4 +1,4 @@
-FROM python:3.7.8-alpine
+FROM python:3.8.8-alpine
 LABEL maintainer="dirk.winkelhardt@gmail.com"
 
 WORKDIR /usr/src/macpepdb
