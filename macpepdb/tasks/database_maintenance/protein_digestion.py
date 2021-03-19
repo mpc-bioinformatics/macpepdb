@@ -92,7 +92,6 @@ class ProteinDigestion:
         logger_process.start()
 
         for input_file_path in self.__input_file_paths:
-            current_input_file = str(input_file_path.resolve())
             # Break file loop
             if self.__stop_signal:
                 break
