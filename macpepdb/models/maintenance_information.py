@@ -35,7 +35,7 @@ class MaintenanceInformation:
         @param database_cursor Database cursor with open transaction.
         @param mainenance_infromation MaintenanceInformation to insert
         """
-        INSERT_QUERY = f"INSERT INTO {TMaintenanceInformation.TABLE_NAME} (key, values) VALUES (%s, %s);"
+        INSERT_QUERY = f"INSERT INTO {MaintenanceInformation.TABLE_NAME} (key, values) VALUES (%s, %s);"
         database_cursor.execute(
             INSERT_QUERY,
             (maintenance_information.key, maintenance_information.value)
@@ -50,5 +50,5 @@ class MaintenanceInformation:
         UPDATE_QUERY = f"UPDATE {MaintenanceInformation.TABLE_NAME} SET values = %s WHERE key = %s;"
         database_cursor.execute(
             UPDATE_QUERY,
-            (json.dumps(database_status_values), MaintenanceInformation.DATABASE_STATUS_KEY)
+            (json.dumps(maintenance_information.values), MaintenanceInformation.DATABASE_STATUS_KEY)
         )
