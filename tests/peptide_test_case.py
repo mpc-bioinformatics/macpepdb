@@ -1,3 +1,5 @@
+import unittest
+
 from macpepdb.models.peptide import Peptide
 from macpepdb.proteomics.mass.convert import to_float as mass_to_float
 
@@ -6,7 +8,7 @@ LEPTIN_SEQUENCE = "AVPIRKVQDDTKTLIKTIVTRINDISHTQSVSSKQRVTGLDFIPGLHPLLSLSKMDQTLA"
 # Reference calculated with https://web.expasy.org/compute_pi/
 LEPTIN_SEQUENCE_WEIGHT = 6622.66
 
-class PeptideTestCase:
+class PeptideTestCase(unittest.TestCase):
     def test_termini(self):
         leptin = Peptide(LEPTIN_SEQUENCE, 0)
         self.assertEqual("A", leptin.n_terminus)
