@@ -5,7 +5,7 @@ with open("Readme.md", "r") as fh:
 
 setuptools.setup(
     name="MaCPepDB",
-    version="1.0.0",
+    version="1.2.3",
     author="Dirk Winkelhardt",
     author_email="dirk.winkelhardt@rub.de",
     description="Package for building large peptide databases.",
