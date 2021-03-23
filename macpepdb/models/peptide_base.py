@@ -20,7 +20,7 @@ class PeptideBase:
         
     @property
     def id(self):
-        return self.__id;
+        return self.__id
 
     @property
     def sequence(self):
