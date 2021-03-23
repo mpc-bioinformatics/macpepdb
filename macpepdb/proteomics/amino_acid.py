@@ -34,6 +34,12 @@ class AminoAcid:
     def get_unknown():
         return X
 
+    @staticmethod
+    def all() -> tuple:
+        """
+        Returns a tuple with all known amino acids
+        """
+        return KNOWN_AMINO_ACIDS
 
 
 # Standard amino acids
@@ -63,3 +69,30 @@ Y = AminoAcid("Tyrosine", 'Y', "Tyr", "C9H9O2N", 163.063328575, 163.1760)
 # Special amino acids
 ## Some Search Engines and Databases used the X Amino Acid for unknown amino acids
 X = AminoAcid("Unknown Amino Acid", 'X', "Xaa", "Unknown", 0.0, 0.0)
+
+# Tuple with containing all standard amino acids and X (unknown)
+KNOWN_AMINO_ACIDS = (
+    A,
+    C,
+    D,
+    E,
+    F,
+    G,
+    H,
+    I,
+    K,
+    L,
+    M,
+    N,
+    O,
+    P,
+    Q,
+    R,
+    S,
+    T,
+    U,
+    V,
+    W,
+    Y,
+    X
+)
