@@ -180,10 +180,6 @@ class PeptideBase:
     def length(self):
         return len(self.sequence)
 
-    @property
-    def partition_index(self):
-        return self.__class__.get_parition_index(self.weight)
-
     # Calculats the weight of a sequence
     @classmethod
     def calculate_weight(cls, sequence: str) -> int:
