@@ -1,3 +1,4 @@
+from collections import Counter
 from psycopg2.extras import execute_values
 
 from ..proteomics.neutral_loss import NeutralLoss
@@ -15,29 +16,7 @@ class PeptideBase:
         self.__number_of_missed_cleavages = number_of_missed_cleavages
         # On demand values
         self.__weight = None
-        self.__are_amino_acids_counted = False
-        self.__a_count = 0
-        self.__c_count = 0
-        self.__d_count = 0
-        self.__e_count = 0
-        self.__f_count = 0
-        self.__g_count = 0
-        self.__h_count = 0
-        self.__i_count = 0
-        self.__k_count = 0
-        self.__l_count = 0
-        self.__m_count = 0
-        self.__n_count = 0
-        self.__o_count = 0
-        self.__p_count = 0
-        self.__q_count = 0
-        self.__r_count = 0
-        self.__s_count = 0
-        self.__t_count = 0
-        self.__u_count = 0
-        self.__v_count = 0
-        self.__w_count = 0
-        self.__y_count = 0
+        self.__amino_acid_counter = None
         
     @property
     def id(self):
@@ -59,135 +38,135 @@ class PeptideBase:
 
     @property
     def a_count(self):
-        if not self.__are_amino_acids_counted:
+        if not self.__amino_acid_counter:
             self.__count_amino_acids()
-        return self.__a_count
+        return self.__amino_acid_counter['A']
 
     @property
     def c_count(self):
-        if not self.__are_amino_acids_counted:
+        if not self.__amino_acid_counter:
             self.__count_amino_acids()
-        return self.__c_count
+        return self.__amino_acid_counter['C']
 
     @property
     def d_count(self):
-        if not self.__are_amino_acids_counted:
+        if not self.__amino_acid_counter:
             self.__count_amino_acids()
-        return self.__d_count
+        return self.__amino_acid_counter['D']
 
     @property
     def e_count(self):
-        if not self.__are_amino_acids_counted:
+        if not self.__amino_acid_counter:
             self.__count_amino_acids()
-        return self.__e_count
+        return self.__amino_acid_counter['E']
 
     @property
     def f_count(self):
-        if not self.__are_amino_acids_counted:
+        if not self.__amino_acid_counter:
             self.__count_amino_acids()
-        return self.__f_count
+        return self.__amino_acid_counter['F']
 
     @property
     def g_count(self):
-        if not self.__are_amino_acids_counted:
+        if not self.__amino_acid_counter:
             self.__count_amino_acids()
-        return self.__g_count
+        return self.__amino_acid_counter['G']
 
     @property
     def h_count(self):
-        if not self.__are_amino_acids_counted:
+        if not self.__amino_acid_counter:
             self.__count_amino_acids()
-        return self.__h_count
+        return self.__amino_acid_counter['H']
 
     @property
     def i_count(self):
-        if not self.__are_amino_acids_counted:
+        if not self.__amino_acid_counter:
             self.__count_amino_acids()
-        return self.__i_count
+        return self.__amino_acid_counter['I']
 
     @property
     def k_count(self):
-        if not self.__are_amino_acids_counted:
+        if not self.__amino_acid_counter:
             self.__count_amino_acids()
-        return self.__k_count
+        return self.__amino_acid_counter['K']
 
     @property
     def l_count(self):
-        if not self.__are_amino_acids_counted:
+        if not self.__amino_acid_counter:
             self.__count_amino_acids()
-        return self.__l_count
+        return self.__amino_acid_counter['L']
 
     @property
     def m_count(self):
-        if not self.__are_amino_acids_counted:
+        if not self.__amino_acid_counter:
             self.__count_amino_acids()
-        return self.__m_count
+        return self.__amino_acid_counter['M']
 
     @property
     def n_count(self):
-        if not self.__are_amino_acids_counted:
+        if not self.__amino_acid_counter:
             self.__count_amino_acids()
-        return self.__n_count
+        return self.__amino_acid_counter['N']
 
     @property
     def o_count(self):
-        if not self.__are_amino_acids_counted:
+        if not self.__amino_acid_counter:
             self.__count_amino_acids()
-        return self.__o_count
+        return self.__amino_acid_counter['O']
 
     @property
     def p_count(self):
-        if not self.__are_amino_acids_counted:
+        if not self.__amino_acid_counter:
             self.__count_amino_acids()
-        return self.__p_count
+        return self.__amino_acid_counter['P']
 
     @property
     def q_count(self):
-        if not self.__are_amino_acids_counted:
+        if not self.__amino_acid_counter:
             self.__count_amino_acids()
-        return self.__q_count
+        return self.__amino_acid_counter['Q']
 
     @property
     def r_count(self):
-        if not self.__are_amino_acids_counted:
+        if not self.__amino_acid_counter:
             self.__count_amino_acids()
-        return self.__r_count
+        return self.__amino_acid_counter['R']
 
     @property
     def s_count(self):
-        if not self.__are_amino_acids_counted:
+        if not self.__amino_acid_counter:
             self.__count_amino_acids()
-        return self.__s_count
+        return self.__amino_acid_counter['S']
 
     @property
     def t_count(self):
-        if not self.__are_amino_acids_counted:
+        if not self.__amino_acid_counter:
             self.__count_amino_acids()
-        return self.__t_count
+        return self.__amino_acid_counter['T']
 
     @property
     def u_count(self):
-        if not self.__are_amino_acids_counted:
+        if not self.__amino_acid_counter:
             self.__count_amino_acids()
-        return self.__u_count
+        return self.__amino_acid_counter['U']
 
     @property
     def v_count(self):
-        if not self.__are_amino_acids_counted:
+        if not self.__amino_acid_counter:
             self.__count_amino_acids()
-        return self.__v_count
+        return self.__amino_acid_counter['V']
 
     @property
     def w_count(self):
-        if not self.__are_amino_acids_counted:
+        if not self.__amino_acid_counter:
             self.__count_amino_acids()
-        return self.__w_count
+        return self.__amino_acid_counter['W']
 
     @property
     def y_count(self):
-        if not self.__are_amino_acids_counted:
+        if not self.__amino_acid_counter:
             self.__count_amino_acids()
-        return self.__y_count
+        return self.__amino_acid_counter['Y']
 
     @property
     def n_terminus(self):
@@ -214,52 +193,7 @@ class PeptideBase:
         return weight
 
     def __count_amino_acids(self):
-        self.__are_amino_acids_counted = True
-        for one_letter_code in self.sequence:
-            if one_letter_code == 'A':
-                self.__a_count += 1
-            if one_letter_code == 'C':
-                self.__c_count += 1
-            if one_letter_code == 'D':
-                self.__d_count += 1
-            if one_letter_code == 'E':
-                self.__e_count += 1
-            if one_letter_code == 'F':
-                self.__f_count += 1
-            if one_letter_code == 'G':
-                self.__g_count += 1
-            if one_letter_code == 'H':
-                self.__h_count += 1
-            if one_letter_code == 'I':
-                self.__i_count += 1
-            if one_letter_code == 'K':
-                self.__k_count += 1
-            if one_letter_code == 'L':
-                self.__l_count += 1
-            if one_letter_code == 'M':
-                self.__m_count += 1
-            if one_letter_code == 'N':
-                self.__n_count += 1
-            if one_letter_code == 'O':
-                self.__o_count += 1
-            if one_letter_code == 'P':
-                self.__p_count += 1
-            if one_letter_code == 'Q':
-                self.__q_count += 1
-            if one_letter_code == 'R':
-                self.__r_count += 1
-            if one_letter_code == 'S':
-                self.__s_count += 1
-            if one_letter_code == 'T':
-                self.__t_count += 1
-            if one_letter_code == 'U':
-                self.__u_count += 1
-            if one_letter_code == 'V':
-                self.__v_count += 1
-            if one_letter_code == 'W':
-                self.__w_count += 1
-            if one_letter_code == 'Y':
-                self.__y_count += 1
+        self.__amino_acid_counter = Counter(self.__sequence)
 
     # This method is implemented to make sure only the sequence is used as hash when a protein is stored in a hashable collection (Set, Dictionary, ...)
     def __hash__(self):
