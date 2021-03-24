@@ -22,7 +22,7 @@ def upgrade():
     op.create_table(
         'peptides',
         sa.Column('id', sa.BigInteger, autoincrement=True),
-        sa.Column('sequence', sa.Text, nullable=False),
+        sa.Column('sequence', sa.VARCHAR(60), nullable=False),
         sa.Column('length', sa.SmallInteger, nullable=False),
         sa.Column('number_of_missed_cleavages', sa.SmallInteger, nullable=False),
         sa.Column('weight', sa.BigInteger, nullable=False),
