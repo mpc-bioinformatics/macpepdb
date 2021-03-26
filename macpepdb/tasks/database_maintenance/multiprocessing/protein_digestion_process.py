@@ -70,8 +70,6 @@ class ProteinDigestionProcess(GenericProcess):
                     # Catch all transaction errors
                     except psycopg2.Error as error:
                         # Rollback is done implcit by `with database_connection`
-                        # Remove all peptides from protein
-                        protein.peptides = []
                         # Try again after 5 (first try) and 10 (second try) + a random number between 0 and 5 (both including) seconds maybe some blocking transactions can pass so this transaction will successfully finish on the next try.
                         # If this is the third time an unsolvable error occures give up and log the error.
                         if unsolvable_errors < 2:
