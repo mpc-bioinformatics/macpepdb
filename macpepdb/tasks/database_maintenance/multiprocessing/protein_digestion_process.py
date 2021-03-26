@@ -12,6 +12,7 @@ from ....utilities.generic_process import GenericProcess
 
 
 class ProteinDigestionProcess(GenericProcess):
+    UNSOLVEABLE_ERROR_FACTOR_LIMIT = 2
     """
     Sequentially digests proteins from the given queue and inserts them and their proteins into the given database.
     """
@@ -42,10 +43,11 @@ class ProteinDigestionProcess(GenericProcess):
                 protein = self.__protein_queue.get(True, 5)
                 
                 # Variables for loop control
-                unsolvable_errors = 0
+                unsolvable_error_factor = 0
                 try_transaction_again = True
                 while try_transaction_again:
                     number_of_new_peptides = 0
+                    error = None
                     try:
                         count_protein = False
                         number_of_new_peptides = 0
@@ -67,16 +69,27 @@ class ProteinDigestionProcess(GenericProcess):
                             self.__statistics[0] += 1
                         self.__statistics[1] += number_of_new_peptides
                         self.__statistics.release()
-                    # Catch all transaction errors
-                    except psycopg2.Error as error:
-                        # Rollback is done implcit by `with database_connection`
+                    # Rollback is done implcit by `with database_connection`
+                    # Each error increases the unsolveable error factor differently. If the factor reaches UNSOLVEABLE_ERROR_FACTOR_LIMIT the protein is logged as unprocessible
+                    ## Catch violation of unique constraints. Usually a peptide which is already inserted by another transaction.
+                    except psycopg2.errors.UniqueViolation as unique_violation_error:
+                        error = unique_violation_error
+                        if unsolvable_error_factor < self.__class__.UNSOLVEABLE_ERROR_FACTOR_LIMIT:
+                            unsolvable_error_factor += 0.2
+                    ## Catch deadlocks between transactions. This occures usually when 2 transactions try to insert the same peptides 
+                    except psycopg2.errors.DeadlockDetected as deadlock_detected_error:
+                        error = deadlock_detected_error
                         # Try again after 5 (first try) and 10 (second try) + a random number between 0 and 5 (both including) seconds maybe some blocking transactions can pass so this transaction will successfully finish on the next try.
-                        # If this is the third time an unsolvable error occures give up and log the error.
-                        if unsolvable_errors < 2:
-                            unsolvable_errors += 1
-                            time.sleep(5 * unsolvable_errors + random.randint(0, 5))
-                        # Log the error on the third try and put the protein in unprocessible queue
-                        else:
+                        if unsolvable_error_factor < self.__class__.UNSOLVEABLE_ERROR_FACTOR_LIMIT:
+                            unsolvable_error_factor += 1
+                            time.sleep(5 * unsolvable_error_factor + random.randint(0, 5))
+                    ## Catch other errors.
+                    except psycopg2.Error as base_error:
+                        unsolvable_error_factor += self.__class__.UNSOLVEABLE_ERROR_FACTOR_LIMIT
+                        error = base_error
+                    finally:
+                        # Log the last error if the unsolvable_error_factor exceeds the limit
+                        if unsolvable_error_factor >= self.__class__.UNSOLVEABLE_ERROR_FACTOR_LIMIT:
                             self.__general_log.send("Exception on protein {}, see:\n{}".format(protein.accession, error))
                             self.__unprocessable_protein_log.send(protein.to_embl_entry())
                             self.__statistics.acquire()
