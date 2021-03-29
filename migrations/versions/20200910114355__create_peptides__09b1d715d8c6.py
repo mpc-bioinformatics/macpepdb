@@ -21,11 +21,10 @@ depends_on = None
 def upgrade():
     op.create_table(
         'peptides',
-        sa.Column('id', sa.BigInteger, autoincrement=True),
+        sa.Column('weight', sa.BigInteger, nullable=False),
         sa.Column('sequence', sa.VARCHAR(60), nullable=False),
         sa.Column('length', sa.SmallInteger, nullable=False),
         sa.Column('number_of_missed_cleavages', sa.SmallInteger, nullable=False),
-        sa.Column('weight', sa.BigInteger, nullable=False),
         sa.Column('a_count', sa.SmallInteger, default=0, nullable=False),
         sa.Column('c_count', sa.SmallInteger, default=0, nullable=False),
         sa.Column('d_count', sa.SmallInteger, default=0, nullable=False),
@@ -58,9 +57,7 @@ def upgrade():
         sa.Column('taxonomy_ids', sa.dialects.postgresql.ARRAY(sa.Integer), server_default='{}', nullable=False),
         sa.Column('unique_taxonomy_ids', sa.dialects.postgresql.ARRAY(sa.Integer), server_default='{}', nullable=False),
         sa.Column('proteome_ids', sa.dialects.postgresql.ARRAY(sa.VARCHAR(11)), server_default='{}', nullable=False),
-        # partition key must included in unique and primary key constraints
-        sa.UniqueConstraint('sequence', 'weight'),
-        sa.PrimaryKeyConstraint('id', 'weight'),
+        sa.PrimaryKeyConstraint('weight', 'sequence'),
         postgresql_partition_by='RANGE (weight)'
     )
 
@@ -70,8 +67,6 @@ def upgrade():
     connection = op.get_bind()
     for idx, (lower, upper) in enumerate(partition_boundaries.PEPTIDE_WEIGHTS):
         connection.execute(f"CREATE TABLE peptides_{str(idx).zfill(3)} PARTITION OF peptides FOR VALUES FROM ('{lower}') TO ('{upper}');")
-
-    op.create_index('peptide_weight_idx', 'peptides', ['weight'])
 
 def downgrade():
     op.drop_table('peptides')

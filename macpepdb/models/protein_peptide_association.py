@@ -5,7 +5,7 @@ class ProteinPeptideAssociation:
 
     def __init__(self, protein, peptide):
         self.__protein_id = protein.id
-        self.__peptide_id = peptide.id
+        self.__peptide_sequence = peptide.sequence
         self.__peptide_weight = peptide.weight
 
     @property
@@ -13,9 +13,9 @@ class ProteinPeptideAssociation:
         return self.__protein_id
     
     @property
-    def peptide_id(self):
-        return self.__peptide_id
-    
+    def peptide_sequence(self):
+        return self.__peptide_sequence
+
     @property
     def peptide_weight(self):
         return self.__peptide_weight
@@ -26,12 +26,11 @@ class ProteinPeptideAssociation:
         @param database_cursor Database cursor with open transaction.
         @param protein_peptide_associations List of ProteinPeptideAssciation.
         """
-        BULK_INSERT_QUERY = f"INSERT INTO {ProteinPeptideAssociation.TABLE_NAME} (protein_id, peptide_id, peptide_weight) VALUES %s;"
-        # The peptide weigth is indeed part of the foreign key, but we reduce the JOIN to protein_id/peptide_id to be faster. So we set it to None as SQLAlchemy has done it before.
+        BULK_INSERT_QUERY = f"INSERT INTO {ProteinPeptideAssociation.TABLE_NAME} (protein_id, peptide_sequence, peptide_weight) VALUES %s;"
         execute_values(
             database_cursor,
             BULK_INSERT_QUERY,
-            [(association.protein_id, association.peptide_id, association.peptide_weight) for association in protein_peptide_associations ]
+            [(association.protein_id, association.peptide_sequence, association.peptide_weight) for association in protein_peptide_associations ]
         )
     
     @staticmethod

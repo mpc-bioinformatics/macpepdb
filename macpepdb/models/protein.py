@@ -93,9 +93,9 @@ class Protein:
         if not self.__id:
             return []
         REFERENCED_PEPTIDES_QUERY = (
-            f"SELECT {peptide_module.Peptide.TABLE_NAME}.id, {peptide_module.Peptide.TABLE_NAME}.sequence, {peptide_module.Peptide.TABLE_NAME}.number_of_missed_cleavages "
+            f"SELECT {peptide_module.Peptide.TABLE_NAME}.sequence, {peptide_module.Peptide.TABLE_NAME}.number_of_missed_cleavages "
             f"FROM {peptide_module.Peptide.TABLE_NAME}, {ProteinPeptideAssociation.TABLE_NAME} "
-            f"WHERE {ProteinPeptideAssociation.TABLE_NAME}.protein_id = %s AND {ProteinPeptideAssociation.TABLE_NAME}.peptide_id = {peptide_module.Peptide.TABLE_NAME}.id"
+            f"WHERE {ProteinPeptideAssociation.TABLE_NAME}.protein_id = %s AND {ProteinPeptideAssociation.TABLE_NAME}.peptide_sequence = {peptide_module.Peptide.TABLE_NAME}.sequence;"
         )
         database_cursor.execute(
             REFERENCED_PEPTIDES_QUERY,
@@ -103,9 +103,8 @@ class Protein:
         )
         return [
             peptide_module.Peptide(
-                row[1],
-                row[2],
-                row[0]
+                row[0],
+                row[1]
             ) for row in database_cursor.fetchall()
         ]
 
@@ -202,12 +201,12 @@ class Protein:
             peptides_for_metadata_update = []
 
             stored_peptide_query = (
-                f"SELECT {peptide_module.Peptide.TABLE_NAME}.id, {peptide_module.Peptide.TABLE_NAME}.sequence, {peptide_module.Peptide.TABLE_NAME}.number_of_missed_cleavages, {peptide_module.Peptide.TABLE_NAME}.is_metadata_up_to_date "
+                f"SELECT {peptide_module.Peptide.TABLE_NAME}.sequence, {peptide_module.Peptide.TABLE_NAME}.number_of_missed_cleavages, {peptide_module.Peptide.TABLE_NAME}.is_metadata_up_to_date "
                 f"FROM {peptide_module.Peptide.TABLE_NAME} "
                 f"WHERE {peptide_module.Peptide.TABLE_NAME}.sequence = ANY(%s);"
             )
             database_cursor.execute(stored_peptide_query, (list(new_peptides.keys()),))
-            stored_peptides = [(peptide_module.Peptide(row[1], row[2], row[0]), row[3]) for row in database_cursor.fetchall()]
+            stored_peptides = [(peptide_module.Peptide(row[0], row[1]), row[2]) for row in database_cursor.fetchall()]
 
             # Remove already existing peptides form new peptides and associate already stored peptides
             for peptide, is_metadata_up_to_date in stored_peptides:
@@ -219,10 +218,9 @@ class Protein:
             # Convert sequence => peptide map to peptide list
             new_peptides = list(new_peptides.values())
 
-            new_peptide_ids = peptide_module.Peptide.bulk_insert(database_cursor, new_peptides)
+            peptide_module.Peptide.bulk_insert(database_cursor, new_peptides)
 
-            for idx, peptide in enumerate(new_peptides):
-                peptide.id = new_peptide_ids[idx]
+            for peptide in new_peptides:
                 protein_peptide_associations.append(ProteinPeptideAssociation(protein, peptide))
 
             ProteinPeptideAssociation.bulk_insert(database_cursor, protein_peptide_associations)
@@ -268,12 +266,12 @@ class Protein:
 
             ### Remove already referenced peptides from new_peptides and dereference peptides which no longer part of the protein
             referenced_peptides_query = (
-                f"SELECT {peptide_module.Peptide.TABLE_NAME}.id, {peptide_module.Peptide.TABLE_NAME}.sequence, {peptide_module.Peptide.TABLE_NAME}.number_of_missed_cleavages, {peptide_module.Peptide.TABLE_NAME}.is_metadata_up_to_date "
+                f"SELECT {peptide_module.Peptide.TABLE_NAME}.sequence, {peptide_module.Peptide.TABLE_NAME}.number_of_missed_cleavages, {peptide_module.Peptide.TABLE_NAME}.is_metadata_up_to_date "
                 f"FROM {peptide_module.Peptide.TABLE_NAME}, {ProteinPeptideAssociation.TABLE_NAME} "
-                f"WHERE {ProteinPeptideAssociation.TABLE_NAME}.protein_id = %s AND {ProteinPeptideAssociation.TABLE_NAME}.peptide_id = {peptide_module.Peptide.TABLE_NAME}.id;"
+                f"WHERE {ProteinPeptideAssociation.TABLE_NAME}.protein_id = %s AND {ProteinPeptideAssociation.TABLE_NAME}.peptide_sequence = {peptide_module.Peptide.TABLE_NAME}.sequence;"
             )
             database_cursor.execute(referenced_peptides_query, (self.id,))
-            currently_referenced_peptides = [(peptide_module.Peptide(row[1], row[2], row[0]), row[3]) for row in database_cursor.fetchall()]
+            currently_referenced_peptides = [(peptide_module.Peptide(row[0], row[1]), row[2]) for row in database_cursor.fetchall()]
             
             peptides_to_unreference = []
             # Check if the referenced peptides are in the map of new peptides
@@ -287,19 +285,19 @@ class Protein:
                     # Remove it from new peptides, because it already exists and is associated with this protein
                     new_peptides.pop(peptide.sequence, None)
             if len(peptides_to_unreference):
-                database_cursor.execute("DELETE FROM proteins_peptides WHERE protein_id = %s AND peptide_id = ANY(%s);", (self.id, [peptide.id for peptide in peptides_to_unreference]))
+                database_cursor.execute("DELETE FROM proteins_peptides WHERE protein_id = %s AND peptide_sequence  = ANY(%s);", (self.id, [peptide.sequence for peptide in peptides_to_unreference]))
             ### At this point new_peptides contain new and not referenced peptides
 
             # Check if there are peptides left
             if len(new_peptides):
                 ### Remove already existing peptides from new peptides and create association value
                 stored_peptide_query = (
-                    f"SELECT {peptide_module.Peptide.TABLE_NAME}.id, {peptide_module.Peptide.TABLE_NAME}.sequence, {peptide_module.Peptide.TABLE_NAME}.number_of_missed_cleavages, {peptide_module.Peptide.TABLE_NAME}.is_metadata_up_to_date "
+                    f"SELECT {peptide_module.Peptide.TABLE_NAME}.sequence, {peptide_module.Peptide.TABLE_NAME}.number_of_missed_cleavages, {peptide_module.Peptide.TABLE_NAME}.is_metadata_up_to_date "
                     f"FROM {peptide_module.Peptide.TABLE_NAME} "
                     f"WHERE {peptide_module.Peptide.TABLE_NAME}.sequence = ANY(%s);"
                 )
                 database_cursor.execute(stored_peptide_query, (list(new_peptides.keys()),))
-                stored_peptides = [(peptide_module.Peptide(row[1], row[2], row[0]), row[3]) for row in database_cursor.fetchall()]
+                stored_peptides = [(peptide_module.Peptide(row[0], row[1]), row[2]) for row in database_cursor.fetchall()]
 
                 protein_peptide_associations = []
 
@@ -315,13 +313,11 @@ class Protein:
                 ### At this point new_peptides should only contain peptides which not exist in the database
                 number_of_new_peptides = len(new_peptides)
                 
-                new_peptides = list(new_peptides.values())
-
                 # Insert new peptides
-                new_peptide_ids = peptide_module.Peptide.bulk_insert(database_cursor, new_peptides)
-                # Assign peptide IDs and create association
-                for idx, peptide in enumerate(new_peptides):
-                    peptide.id = new_peptide_ids[idx]
+                peptide_module.Peptide.bulk_insert(database_cursor, new_peptides.values())
+
+                # Create association values for new peptides
+                for peptide in new_peptides.values():
                     protein_peptide_associations.append(ProteinPeptideAssociation(self, peptide))
 
                 # Bulk insert new peptides

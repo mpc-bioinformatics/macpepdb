@@ -86,7 +86,7 @@ class PeptideMetadataCollector:
             try:
                 with database_connection:
                     with database_connection.cursor(name='peptide_update') as database_cursor:
-                        database_cursor.execute(f"SELECT id FROM {Peptide.TABLE_NAME} WHERE is_metadata_up_to_date = false;")
+                        database_cursor.execute(f"SELECT sequence FROM {Peptide.TABLE_NAME} WHERE is_metadata_up_to_date = false;")
                         # Fetch loop
                         while True:
                             # Break fetch loop

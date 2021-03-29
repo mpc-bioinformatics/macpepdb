@@ -10,22 +10,12 @@ class PeptideBase:
     TABLE_NAME = 'peptide_base'
     FASTA_HEADER_PREFIX = ">PEPTIDE_"
 
-    def __init__(self, sequence: str, number_of_missed_cleavages: int, id = None):
-        self.__id = id
+    def __init__(self, sequence: str, number_of_missed_cleavages: int):
         self.__sequence = sequence.upper()
         self.__number_of_missed_cleavages = number_of_missed_cleavages
         # On demand values
         self.__weight = None
         self.__amino_acid_counter = None
-        
-    @property
-    def id(self):
-        return self.__id
-
-    @id.setter
-    def id(self, value):
-        if self.__id == None:
-            self.__id = value
 
     @property
     def sequence(self):
@@ -212,7 +202,6 @@ class PeptideBase:
 
     def to_dict(self):
         return {
-            'id': self.id,
             'sequence': self.sequence,
             'number_of_missed_cleavages': self.number_of_missed_cleavages,
             'weight': self.weight
@@ -220,7 +209,7 @@ class PeptideBase:
 
     @classmethod
     def from_dict(cls, attributes: dict):
-        return cls(attributes["sequence"], attributes["number_of_missed_cleavages"], attributes["id"])
+        return cls(attributes["sequence"], attributes["number_of_missed_cleavages"])
 
     @classmethod
     def select(cls, database_cursor, select_conditions: tuple = ("", []), fetchall: bool = False):
@@ -230,18 +219,18 @@ class PeptideBase:
         @param fetchall Indicates if multiple rows should be fetched
         @return Ppetide or list of proteins
         """
-        select_query = f"SELECT id, sequence, number_of_missed_cleavages FROM {cls.TABLE_NAME}"
+        select_query = f"SELECT sequence, number_of_missed_cleavages FROM {cls.TABLE_NAME}"
         if len(select_conditions) == 2 and len(select_conditions[0]):
             select_query += f" WHERE {select_conditions[0]}"
         select_query += ";"
         database_cursor.execute(select_query, select_conditions[1])
         
         if fetchall:
-            return [cls(row[1], row[2], row[0]) for row in database_cursor.fetchall()]
+            return [cls(row[0], row[1]) for row in database_cursor.fetchall()]
         else:
             row = database_cursor.fetchall()
             if row:
-                return cls(row[1], row[2], row[0])
+                return cls(row[0], row[1])
             else:
                 return None
 
@@ -253,17 +242,16 @@ class PeptideBase:
         @return int ID of inserted peptide
         """
         INSERT_QUERY = (
-            f"INSERT INTO {cls.TABLE_NAME} (sequence, length, number_of_missed_cleavages, weight, a_count, c_count, d_count, e_count, f_count, g_count, h_count, i_count, k_count, l_count, m_count, n_count, o_count, p_count, q_count, r_count, s_count, t_count, u_count, v_count, w_count, y_count, n_terminus, c_terminus) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
-            "RETURNING id;"
+            f"INSERT INTO {cls.TABLE_NAME} (weight, sequence, length, number_of_missed_cleavages, a_count, c_count, d_count, e_count, f_count, g_count, h_count, i_count, k_count, l_count, m_count, n_count, o_count, p_count, q_count, r_count, s_count, t_count, u_count, v_count, w_count, y_count, n_terminus, c_terminus) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
         )
         database_cursor.execute(
             INSERT_QUERY,
             (
+                peptide.weight,
                 peptide.sequence,
                 peptide.length,
                 peptide.number_of_missed_cleavages,
-                peptide.weight,
                 peptide.a_count,
                 peptide.c_count,
                 peptide.d_count,
@@ -292,27 +280,26 @@ class PeptideBase:
         )
 
     @classmethod
-    def bulk_insert(cls, database_cursor, peptides: list) -> list:
+    def bulk_insert(cls, database_cursor, peptides: list):
         """
         @param database_cursor Database cursor with open transaction.
         @param peptides Peptides for bulk insert. Make sure they do not exitst before.
         @return list List of the new peptide IDs in the same order as the peptides where inserted.
         """
         BULK_INSERT_QUERY = (
-            f"INSERT INTO {cls.TABLE_NAME} (sequence, length, number_of_missed_cleavages, weight, a_count, c_count, d_count, e_count, f_count, g_count, h_count, i_count, k_count, l_count, m_count, n_count, o_count, p_count, q_count, r_count, s_count, t_count, u_count, v_count, w_count, y_count, n_terminus, c_terminus) "
-            "VALUES %s "
-            "RETURNING id;"
+            f"INSERT INTO {cls.TABLE_NAME} (weight, sequence, length, number_of_missed_cleavages, a_count, c_count, d_count, e_count, f_count, g_count, h_count, i_count, k_count, l_count, m_count, n_count, o_count, p_count, q_count, r_count, s_count, t_count, u_count, v_count, w_count, y_count, n_terminus, c_terminus) "
+            "VALUES %s;"
         )
         # Bulk insert the new peptides
-        id_rows = execute_values(
+        execute_values(
             database_cursor,
             BULK_INSERT_QUERY,
             [
                 (
+                    peptide.weight,
                     peptide.sequence,
                     peptide.length,
                     peptide.number_of_missed_cleavages,
-                    peptide.weight,
                     peptide.a_count,
                     peptide.c_count,
                     peptide.d_count,
@@ -338,7 +325,5 @@ class PeptideBase:
                     peptide.n_terminus,
                     peptide.c_terminus
                 ) for peptide in peptides
-            ],
-            fetch=True
+            ]
         )
-        return [row[0] for row in id_rows]
