@@ -25,6 +25,7 @@ def upgrade():
         sa.PrimaryKeyConstraint('protein_accession', 'peptide_weight', 'peptide_sequence')
     )
 
+    op.create_index('proteins_peptides_peptide_seqeunce_idx', 'proteins_peptides', ['peptide_sequence'])
 
 def downgrade():
     op.drop_table('proteins_peptides')
