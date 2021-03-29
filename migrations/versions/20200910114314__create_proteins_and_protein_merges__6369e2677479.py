@@ -19,8 +19,7 @@ depends_on = None
 def upgrade():
     op.create_table(
         'proteins',
-        sa.Column('id', sa.BigInteger, primary_key=True),
-        sa.Column('accession', sa.VARCHAR(10), nullable=False, unique=True),
+        sa.Column('accession', sa.VARCHAR(10), nullable=False, primary_key=True),
         sa.Column('secondary_accessions', sa.dialects.postgresql.ARRAY(sa.VARCHAR(10)), nullable=False),
         sa.Column('entry_name', sa.VARCHAR(16), nullable=False),
         sa.Column('name', sa.Text),
@@ -29,7 +28,6 @@ def upgrade():
         sa.Column('proteome_id', sa.VARCHAR(11)),
         sa.Column('is_reviewed', sa.Boolean, nullable=False)
     )
-    op.create_index('protein_accession_idx', 'proteins', ['accession'])
     op.create_index('protein_secondary_accessions_idx', 'proteins', ['secondary_accessions'], postgresql_using='gin')
     op.create_index('protein_taxonomy_id_idx', 'proteins', ['taxonomy_id'])
     op.create_index('protein_proteome_id_idx', 'proteins', ['proteome_id'])

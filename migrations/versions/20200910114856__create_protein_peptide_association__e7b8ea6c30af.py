@@ -18,11 +18,11 @@ depends_on = None
 def upgrade():
     op.create_table(
         'proteins_peptides',
-        sa.Column('protein_id', sa.BigInteger, sa.ForeignKey('proteins.id')),
+        sa.Column('protein_accession', sa.VARCHAR(10), sa.ForeignKey('proteins.accession', onupdate='CASCADE')),
         sa.Column('peptide_weight', sa.BigInteger),
         sa.Column('peptide_sequence', sa.VARCHAR(60)),
         sa.ForeignKeyConstraint(['peptide_weight', 'peptide_sequence'], ['peptides.weight', 'peptides.sequence']),
-        sa.PrimaryKeyConstraint('protein_id', 'peptide_weight', 'peptide_sequence')
+        sa.PrimaryKeyConstraint('protein_accession', 'peptide_weight', 'peptide_sequence')
     )
 
 

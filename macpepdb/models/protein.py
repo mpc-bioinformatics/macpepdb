@@ -11,7 +11,7 @@ class Protein:
 
     TABLE_NAME = 'proteins'
 
-    def __init__(self, accession: str, secondary_accessions: list, entry_name: str, name: str, sequence: str, taxonomy_id: int, proteome_id: str, is_reviewed: bool, id = None):
+    def __init__(self, accession: str, secondary_accessions: list, entry_name: str, name: str, sequence: str, taxonomy_id: int, proteome_id: str, is_reviewed: bool):
         self.accession = accession
         self.secondary_accessions = secondary_accessions
         self.entry_name = entry_name
@@ -20,16 +20,6 @@ class Protein:
         self.taxonomy_id = taxonomy_id
         self.proteome_id = proteome_id
         self.is_reviewed = is_reviewed
-        self.__id = id
-
-    @property
-    def id(self):
-        return self.__id
-
-    @id.setter
-    def id(self, value):
-        if self.__id == None:
-            self.__id = value
 
     def to_embl_entry(self) -> str:
         embl_entry = f"ID   {self.entry_name}    {'Reviewed' if self.is_reviewed else 'Unreviewed'};    {len(self.sequence)}\n"
@@ -79,7 +69,6 @@ class Protein:
 
     def to_dict(self):
         return {
-            "id": self.id,
             "accession": self.accession,
             "entry_name": self.entry_name,
             "name": self.name,
@@ -90,16 +79,14 @@ class Protein:
         }
 
     def peptides(self, database_cursor):
-        if not self.__id:
-            return []
         REFERENCED_PEPTIDES_QUERY = (
             f"SELECT {peptide_module.Peptide.TABLE_NAME}.sequence, {peptide_module.Peptide.TABLE_NAME}.number_of_missed_cleavages "
             f"FROM {peptide_module.Peptide.TABLE_NAME}, {ProteinPeptideAssociation.TABLE_NAME} "
-            f"WHERE {ProteinPeptideAssociation.TABLE_NAME}.protein_id = %s AND {ProteinPeptideAssociation.TABLE_NAME}.peptide_sequence = {peptide_module.Peptide.TABLE_NAME}.sequence;"
+            f"WHERE {ProteinPeptideAssociation.TABLE_NAME}.protein_accession = %s AND {ProteinPeptideAssociation.TABLE_NAME}.peptide_sequence = {peptide_module.Peptide.TABLE_NAME}.sequence;"
         )
         database_cursor.execute(
             REFERENCED_PEPTIDES_QUERY,
-            (self.__id,)
+            (self.accession,)
         )
         return [
             peptide_module.Peptide(
@@ -116,7 +103,7 @@ class Protein:
         @param fetchall Indicates if multiple rows should be fetched
         @return Protein or list of proteins
         """
-        select_query = f"SELECT id, accession, secondary_accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed FROM {Protein.TABLE_NAME}"
+        select_query = f"SELECT accession, secondary_accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed FROM {Protein.TABLE_NAME}"
         if len(select_conditions) == 2 and len(select_conditions[0]):
             select_query += f" WHERE {select_conditions[0]}"
         select_query += ";"
@@ -133,24 +120,23 @@ class Protein:
     @staticmethod
     def from_sql_row(sql_row):
         """
-        @param sql_row Contains the protein columns in the following order: id, accession, secondary_accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed
+        @param sql_row Contains the protein columns in the following order: accession, secondary_accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed
         @return Protein
         """
         return Protein(
+            sql_row[0],
             sql_row[1],
             sql_row[2],
             sql_row[3],
             sql_row[4],
             sql_row[5],
             sql_row[6],
-            sql_row[7],
-            sql_row[8],
-            sql_row[0]
+            sql_row[7]
         )
 
     @staticmethod
-    def insert(database_cursor, protein) -> int:
-        INSERT_QUERY = f"INSERT INTO {Protein.TABLE_NAME} (accession, secondary_accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id;"
+    def insert(database_cursor, protein):
+        INSERT_QUERY = f"INSERT INTO {Protein.TABLE_NAME} (accession, secondary_accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);"
         database_cursor.execute(
             INSERT_QUERY,
             (
@@ -164,20 +150,17 @@ class Protein:
                 protein.is_reviewed
             )
         )
-        return database_cursor.fetchone()[0]
 
     @staticmethod
     def delete(database_cursor, protein):
-        if not protein.id:
-            return
-        DELETE_QUERY = f"DELETE FROM {Protein.TABLE_NAME} WHERE id = %s;"
+        DELETE_QUERY = f"DELETE FROM {Protein.TABLE_NAME} WHERE accession = %s;"
         ProteinPeptideAssociation.delete(
             database_cursor,
             [
-                ("protein_id = %s", protein.id)
+                ("protein_accession = %s", protein.accession)
             ]
         )
-        database_cursor.execute(DELETE_QUERY, (protein.id,))
+        database_cursor.execute(DELETE_QUERY, (protein.accession,))
 
     @staticmethod
     def create(database_cursor, protein, enzyme) -> int:
@@ -189,7 +172,7 @@ class Protein:
         @return int Number of newly inserted peptides
         """
         # Create protein and get protein ID
-        protein.id = Protein.insert(database_cursor, protein)
+        Protein.insert(database_cursor, protein)
         
 
         # Digest protein and create sequence => peptide map
@@ -268,9 +251,9 @@ class Protein:
             referenced_peptides_query = (
                 f"SELECT {peptide_module.Peptide.TABLE_NAME}.sequence, {peptide_module.Peptide.TABLE_NAME}.number_of_missed_cleavages, {peptide_module.Peptide.TABLE_NAME}.is_metadata_up_to_date "
                 f"FROM {peptide_module.Peptide.TABLE_NAME}, {ProteinPeptideAssociation.TABLE_NAME} "
-                f"WHERE {ProteinPeptideAssociation.TABLE_NAME}.protein_id = %s AND {ProteinPeptideAssociation.TABLE_NAME}.peptide_sequence = {peptide_module.Peptide.TABLE_NAME}.sequence;"
+                f"WHERE {ProteinPeptideAssociation.TABLE_NAME}.protein_accession = %s AND {ProteinPeptideAssociation.TABLE_NAME}.peptide_sequence = {peptide_module.Peptide.TABLE_NAME}.sequence;"
             )
-            database_cursor.execute(referenced_peptides_query, (self.id,))
+            database_cursor.execute(referenced_peptides_query, (self.accession,))
             currently_referenced_peptides = [(peptide_module.Peptide(row[0], row[1]), row[2]) for row in database_cursor.fetchall()]
             
             peptides_to_unreference = []
@@ -285,7 +268,7 @@ class Protein:
                     # Remove it from new peptides, because it already exists and is associated with this protein
                     new_peptides.pop(peptide.sequence, None)
             if len(peptides_to_unreference):
-                database_cursor.execute("DELETE FROM proteins_peptides WHERE protein_id = %s AND peptide_sequence  = ANY(%s);", (self.id, [peptide.sequence for peptide in peptides_to_unreference]))
+                database_cursor.execute("DELETE FROM proteins_peptides WHERE protein_accession = %s AND peptide_sequence  = ANY(%s);", (self.accession, [peptide.sequence for peptide in peptides_to_unreference]))
             ### At this point new_peptides contain new and not referenced peptides
 
             # Check if there are peptides left
@@ -329,7 +312,7 @@ class Protein:
         # Update protein
         if len(update_columns):
             update_columns = ", ".join(update_columns)
-            update_values.append(self.id)
-            database_cursor.execute(f"UPDATE proteins SET {update_columns} WHERE id = %s", update_values)
+            update_values.append(self.accession)
+            database_cursor.execute(f"UPDATE proteins SET {update_columns} WHERE accession = %s", update_values)
 
         return number_of_new_peptides

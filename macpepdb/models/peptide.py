@@ -29,7 +29,7 @@ class Peptide(PeptideBase):
         proteome_ids = set()
         # Key is a taxonomy id, value is a counter which indicates how often the taxonomy among the referenced proteins
         taxonomy_id_count_map = {} 
-        database_cursor.execute(f"SELECT is_reviewed, taxonomy_id, proteome_id FROM {protein.Protein.TABLE_NAME} WHERE id = ANY(SELECT protein_id FROM {ProteinPeptideAssociation.TABLE_NAME} WHERE peptide_sequence = %s);", (peptide_sequence,))
+        database_cursor.execute(f"SELECT is_reviewed, taxonomy_id, proteome_id FROM {protein.Protein.TABLE_NAME} WHERE accession = ANY(SELECT protein_accession FROM {ProteinPeptideAssociation.TABLE_NAME} WHERE peptide_sequence = %s);", (peptide_sequence,))
         for row in database_cursor.fetchall():
             review_statuses.append(row[0])
             proteome_ids.add(row[2])

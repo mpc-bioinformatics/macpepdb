@@ -22,10 +22,9 @@ class ProteinTestCase(AbstractDatabaseTestCase):
             with self.database_connection.cursor() as database_cursor:
                 inserted_leptin_peptide_count = Protein.create(database_cursor, leptin, trypsin)
                 self.database_connection.commit()
-                database_cursor.execute(f"SELECT id FROM {Protein.TABLE_NAME} WHERE accession = %s;", (leptin.accession,))
-                leptin.id = database_cursor.fetchone()[0]
+                database_cursor.execute(f"SELECT true FROM {Protein.TABLE_NAME} WHERE accession = %s;", (leptin.accession,))
                 # Check if id is now an integer (autoincrement from db)
-                self.assertTrue(isinstance(leptin.id, int))
+                self.assertTrue(database_cursor.fetchone()[0])
                 # Check if alle peptides were inserted
                 self.assertEqual(inserted_leptin_peptide_count, len(leptin_peptides))
 
@@ -50,7 +49,7 @@ class ProteinTestCase(AbstractDatabaseTestCase):
                     ("accession = %s", [leptin.accession])
                 )
                 database_leptin_petides = database_leptin.peptides(database_cursor)
-                self.assertEqual(database_leptin.id, leptin.id)
+                self.assertEqual(database_leptin.accession, leptin.accession)
                 self.assertEqual(len(database_leptin_petides), len(leptin_peptides))
 
 

@@ -4,13 +4,13 @@ class ProteinPeptideAssociation:
     TABLE_NAME = 'proteins_peptides'
 
     def __init__(self, protein, peptide):
-        self.__protein_id = protein.id
+        self.__protein_accession = protein.accession
         self.__peptide_sequence = peptide.sequence
         self.__peptide_weight = peptide.weight
 
     @property
-    def protein_id(self):
-        return self.__protein_id
+    def protein_accession(self):
+        return self.__protein_accession
     
     @property
     def peptide_sequence(self):
@@ -26,11 +26,11 @@ class ProteinPeptideAssociation:
         @param database_cursor Database cursor with open transaction.
         @param protein_peptide_associations List of ProteinPeptideAssciation.
         """
-        BULK_INSERT_QUERY = f"INSERT INTO {ProteinPeptideAssociation.TABLE_NAME} (protein_id, peptide_sequence, peptide_weight) VALUES %s;"
+        BULK_INSERT_QUERY = f"INSERT INTO {ProteinPeptideAssociation.TABLE_NAME} (protein_accession, peptide_sequence, peptide_weight) VALUES %s;"
         execute_values(
             database_cursor,
             BULK_INSERT_QUERY,
-            [(association.protein_id, association.peptide_sequence, association.peptide_weight) for association in protein_peptide_associations ]
+            [(association.protein_accession, association.peptide_sequence, association.peptide_weight) for association in protein_peptide_associations ]
         )
     
     @staticmethod
