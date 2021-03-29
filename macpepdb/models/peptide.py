@@ -22,8 +22,8 @@ class Peptide(PeptideBase):
         return [protein.Protein.from_sql_row(row) for row in database_cursor.fetchall()]
 
     @staticmethod
-    def flag_for_metadata_update(database_cursor, peptide_ids: list):
-        database_cursor.execute(f"UPDATE {Peptide.TABLE_NAME} SET is_metadata_up_to_date = %s WHERE id = ANY(%s);", (False, peptide_ids))
+    def flag_for_metadata_update(database_cursor, peptides: list):
+        database_cursor.execute(f"UPDATE {Peptide.TABLE_NAME} SET is_metadata_up_to_date = %s WHERE id = ANY(%s);", (False, [peptide.id for peptide in peptides]))
 
     @staticmethod
     def update_metadata(database_cursor, peptide_id: int):

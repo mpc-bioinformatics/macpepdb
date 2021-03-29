@@ -3,9 +3,10 @@ from psycopg2.extras import execute_values
 class ProteinPeptideAssociation:
     TABLE_NAME = 'proteins_peptides'
 
-    def __init__(self, protein_id, peptide_id):
-        self.__protein_id = protein_id
-        self.__peptide_id = peptide_id
+    def __init__(self, protein, peptide):
+        self.__protein_id = protein.id
+        self.__peptide_id = peptide.id
+        self.__peptide_weight = peptide.weight
 
     @property
     def protein_id(self):
@@ -14,6 +15,10 @@ class ProteinPeptideAssociation:
     @property
     def peptide_id(self):
         return self.__peptide_id
+    
+    @property
+    def peptide_weight(self):
+        return self.__peptide_weight
 
     @staticmethod
     def bulk_insert(database_cursor, protein_peptide_associations: list):
@@ -26,7 +31,7 @@ class ProteinPeptideAssociation:
         execute_values(
             database_cursor,
             BULK_INSERT_QUERY,
-            [(association.protein_id, association.peptide_id, None) for association in protein_peptide_associations ]
+            [(association.protein_id, association.peptide_id, association.peptide_weight) for association in protein_peptide_associations ]
         )
     
     @staticmethod

@@ -22,6 +22,11 @@ class PeptideBase:
     def id(self):
         return self.__id
 
+    @id.setter
+    def id(self, value):
+        if self.__id == None:
+            self.__id = value
+
     @property
     def sequence(self):
         return self.__sequence
