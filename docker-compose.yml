@@ -1,11 +1,50 @@
 version: '3'
 
 services:
-  psql:
-    image: 'postgres:13'
+  master:
+    container_name: "$macpepdb_citus_master"
+    image: 'citusdata/citus:10'
     ports:
       - 127.0.0.1:5433:5432
-    environment:
+    labels:
+      - 'com.citusdata.role=Master'
+    environment: &AUTH
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: developer
+      PGUSER: postgres
+      PGPASSWORD: developer
+      POSTGRES_HOST_AUTH_METHOD: trust
       POSTGRES_DB: macpepdb_dev
+    volumes:
+      - ./init_db.sh:/docker-entrypoint-initdb.d/init_db.sh
+  worker1:
+    image: 'citusdata/citus:10'
+    labels: 
+      - 'com.citusdata.role=Worker'
+    depends_on: 
+      - manager
+    environment: *AUTH
+    command: "/wait-for-manager.sh"
+    volumes: 
+      - healthcheck-volume:/healthcheck
+  worker2:
+    image: 'citusdata/citus:10'
+    labels: 
+      - 'com.citusdata.role=Worker'
+    depends_on: 
+      - manager
+    environment: *AUTH
+    command: "/wait-for-manager.sh"
+    volumes: 
+      - healthcheck-volume:/healthcheck
+  manager:
+    container_name: "$macpepdb_citus_manager"
+    image: 'citusdata/membership-manager:0.3.0'
+    volumes: 
+      - "${DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock"
+      - healthcheck-volume:/healthcheck
+    depends_on: 
+      - master
+    environment: *AUTH
+volumes:
+  healthcheck-volume:

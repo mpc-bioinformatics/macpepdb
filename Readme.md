@@ -55,8 +55,9 @@ If you intend to create a protein/peptide database and your Postgresql server is
 
 ### Building a database
 #### Prepare the database
-Run `MACPEPDB_DB_URL=postgresql://<USER>:<PASSWORD>@<HOST>:<PORT>/<DATABASE> alembic upgrade head`    
-If you use the docker container, run the command in a temporary container: `docker run --rm -it macpepdb-py sh`
+1. Follow the [Citus documentation](http://docs.citusdata.com/en/v10.0/installation/multi_node.html) to setup a Citus cluster.
+2. Run `psql -h <CITUS_CONTROLLER> -U <DB_USER> -c "ALTER DATABASE <DB_NAME> SET citus.multi_shard_modify_mode = 'sequential';"` and `psql -h <CITUS_CONTROLLER> -U <DB_USER> -c "ALTER DATABASE <DB_NAME> SET citus.shard_count = 100;"` to configure the database
+4. Run `MACPEPDB_DB_URL=postgresql://<USER>:<PASSWORD>@<HOST>:<PORT>/<DATABASE> alembic upgrade head`, if you use the docker container, run the command in a temporary container: `docker run --rm -it macpepdb-py sh`
 
 #### Fill the database
 First create a work folder with the following structure:

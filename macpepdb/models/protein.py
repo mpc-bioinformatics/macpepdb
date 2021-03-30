@@ -98,7 +98,7 @@ class Protein:
         referenced_peptides_query = (
             f"SELECT sequence, number_of_missed_cleavages "
             f"FROM {peptide_module.Peptide.TABLE_NAME} "
-            f"WHERE (mass, sequence) IN (SELECT peptide_mass, peptide_sequence FROM {ProteinPeptideAssociation.TABLE_NAME} WHERE protein_accession = %s)"
+            f"WHERE (mass, sequence) IN (SELECT mass, peptide_sequence FROM {ProteinPeptideAssociation.TABLE_NAME} WHERE protein_accession = %s)"
         )
         if order_by:
             order_type = "ASC" if not order_descending else "DESC"
@@ -300,7 +300,7 @@ class Protein:
             referenced_peptides_query = (
                 f"SELECT {peptide_module.Peptide.TABLE_NAME}.sequence, {peptide_module.Peptide.TABLE_NAME}.number_of_missed_cleavages, {peptide_module.Peptide.TABLE_NAME}.is_metadata_up_to_date "
                 f"FROM {peptide_module.Peptide.TABLE_NAME} "
-                f"WHERE (mass, sequence) IN (SELECT peptide_mass, peptide_sequence FROM {ProteinPeptideAssociation.TABLE_NAME} WHERE protein_accession = %s);"
+                f"WHERE (mass, sequence) IN (SELECT mass, peptide_sequence FROM {ProteinPeptideAssociation.TABLE_NAME} WHERE protein_accession = %s);"
             )
             database_cursor.execute(referenced_peptides_query, (self.accession,))
             currently_referenced_peptides = [(peptide_module.Peptide(row[0], row[1]), row[2]) for row in database_cursor.fetchall()]

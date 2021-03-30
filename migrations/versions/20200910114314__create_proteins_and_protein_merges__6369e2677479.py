@@ -33,5 +33,9 @@ def upgrade():
     op.create_index('protein_taxonomy_id_idx', 'proteins', ['taxonomy_id'])
     op.create_index('protein_proteome_id_idx', 'proteins', ['proteome_id'])
 
+    # Make 'proteins' a reference table (copy to all nodes)
+    connection = op.get_bind()
+    connection.execute("SELECT create_reference_table('proteins');")
+
 def downgrade():
     op.drop_table('proteins')

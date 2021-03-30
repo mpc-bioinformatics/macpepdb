@@ -26,7 +26,7 @@ class ProteinPeptideAssociation:
         @param database_cursor Database cursor with open transaction.
         @param protein_peptide_associations List of ProteinPeptideAssciation.
         """
-        BULK_INSERT_QUERY = f"INSERT INTO {ProteinPeptideAssociation.TABLE_NAME} (protein_accession, peptide_sequence, peptide_mass) VALUES %s ON CONFLICT DO NOTHING;"
+        BULK_INSERT_QUERY = f"INSERT INTO {ProteinPeptideAssociation.TABLE_NAME} (protein_accession, peptide_sequence, mass) VALUES %s;"
         execute_values(
             database_cursor,
             BULK_INSERT_QUERY,
