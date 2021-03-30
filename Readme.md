@@ -7,7 +7,7 @@ Creates a peptide databases by digesting proteins stored in FASTA-/Uniprot-Text-
 ### Prepare development environment
 ```bash
 # Install necessary dependencies for your distro
-sudo pacman -S python python-pip postgresql postgresql-libs
+sudo pacman -S python python-pip postgresql-libs docker docker-compose
 
 # It is recommended to use a pyenv to make sure the python version is matching
 # Follow the instruction to install pyenv on https://github.com/pyenv/pyenv#installation
@@ -28,25 +28,18 @@ pip install --upgrade pip
 # Install needed python modules
 pip install -r ./requirements.txt
 
-# Create necessary folders for your database files in the project folder. This folder are already ignored by GIT.
-mkdir -p .db/pgsql/data .db/pgsql/run .db/pgsql/config .db/pgsql/wal
-# Initialize Postgresql-database. Use password `developer` to match the existing Procfile for Foreman.
-initdb -D .db/pgsql/data -X $(pwd)/.db/pgsql/wal -U postgres -W
 # Start the database
-postgres -D $(pwd)/.db/pgsql/data -h 127.0.0.1 -p 5433 -k $(pwd)/.db/pgsql/run
+docker-compose up
 
-# In another terminal(tab) create the databases
-psql -h 127.0.0.1 -p 5433 -U postgres -c "create database macpepdb_dev;"
-psql -h 127.0.0.1 -p 5433 -U postgres -c "create database macpepdb_test;"
 # Run migrations
-MACPEPDB_DB_URL=postgresql://postgres:developer@127.0.0.1:5433/macpepdb_test alembic upgrade head
+MACPEPDB_DB_URL=postgresql://postgres:developer@127.0.0.1:5433/macpepdb_dev alembic upgrade head
 ```
 
 If you add some new python modules, make sure you update `requirements.txt` by running `pip freeze > requirements.txt`
 
 ### Running tests
 ```bash
-TEST_MACPEPDB_URL=postgresql://postgres:developer@127.0.0.1:5433/macpepdb_test python -m unittest tests/*_test_case.py
+TEST_MACPEPDB_URL=postgresql://postgres:developer@127.0.0.1:5433/macpepdb_dev python -m unittest tests/*_test_case.py
 ```
 ### Run the modules CLI
 Run `python -m macpepdb --help` in the root-folder of the repository.
