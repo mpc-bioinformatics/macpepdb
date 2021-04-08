@@ -15,9 +15,54 @@ class AminoAcid:
     # If the given one letter code is unknown Unknown Amino Acid (X) is returned.
     @classmethod
     def get_by_one_letter_code(cls, one_letter_code: str):
-        try:
-            return eval(one_letter_code.upper())
-        except NameError:
+        olc = one_letter_code.upper()
+        if olc == 'A':
+            return A
+        elif olc == 'C':
+            return C
+        elif olc == 'D':
+            return D
+        elif olc == 'E':
+            return E
+        elif olc == 'F':
+            return F
+        elif olc == 'G':
+            return G
+        elif olc == 'H':
+            return H
+        elif olc == 'I':
+            return I
+        elif olc == 'K':
+            return K
+        elif olc == 'L':
+            return L
+        elif olc == 'M':
+            return M
+        elif olc == 'N':
+            return N
+        elif olc == 'O':
+            return O
+        elif olc == 'P':
+            return P
+        elif olc == 'Q':
+            return Q
+        elif olc == 'R':
+            return R
+        elif olc == 'S':
+            return S
+        elif olc == 'T':
+            return T
+        elif olc == 'U':
+            return U
+        elif olc == 'V':
+            return V
+        elif olc == 'W':
+            return W
+        elif olc == 'Y':
+            return Y
+        elif olc == 'X':
+            return X
+        else:
             return X
 
     # Returns Tryptophan (W)
