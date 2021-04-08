@@ -13,8 +13,8 @@ class PeptideBase:
     def __init__(self, sequence: str, number_of_missed_cleavages: int):
         self.__sequence = sequence.upper()
         self.__number_of_missed_cleavages = number_of_missed_cleavages
+        self.__weight = self.__class__.calculate_weight(self.__sequence)
         # On demand values
-        self.__weight = None
         self.__amino_acid_counter = None
 
     @property
@@ -23,8 +23,6 @@ class PeptideBase:
 
     @property
     def weight(self):
-        if not self.__weight:
-            self.__weight = self.__class__.calculate_weight(self.__sequence)
         return self.__weight
 
     @property
@@ -188,7 +186,7 @@ class PeptideBase:
 
     # This method is implemented to make sure only the sequence is used as hash when a protein is stored in a hashable collection (Set, Dictionary, ...)
     def __hash__(self):
-        return hash(self.sequence)
+        return hash((self.weight, self.sequence))
 
     # According to the Python documentation this should be implemented if __hash__() is implemented.
     def __eq__(self, other):
