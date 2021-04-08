@@ -1,7 +1,7 @@
 from collections import Counter
 from psycopg2.extras import execute_values
 
-from ..proteomics.neutral_loss import NeutralLoss
+from ..proteomics.neutral_loss import H2O
 from ..proteomics.amino_acid import AminoAcid
 from ..proteomics.amino_acid import AMINO_ACIDS_FOR_COUNTING
 
@@ -176,7 +176,7 @@ class PeptideBase:
     # Calculats the weight of a sequence
     @classmethod
     def calculate_weight(cls, sequence: str) -> int:
-        weight = NeutralLoss.get_by_name("H2O").mono_mass
+        weight = H2O.mono_mass
         for amino_acid_one_letter_code in sequence:
             weight += AminoAcid.get_by_one_letter_code(amino_acid_one_letter_code).mono_mass
         return weight
