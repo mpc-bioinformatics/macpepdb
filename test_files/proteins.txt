@@ -5228,3 +5228,89 @@ SQ   SEQUENCE   361 AA;  41227 MW;  67924223E08AFD8D CRC64;
      QFDKGKQQVM AKIKRPGAPR KVVKSDAAKS RTSNKPDNAK VAKAFAEGRV SHEDAFKFLV
      D
 //
+ID   KV3A6_MOUSE             Reviewed;         132 AA.
+AC   P01658;
+DT   21-JUL-1986, integrated into UniProtKB/Swiss-Prot.
+DT   21-JUL-1986, sequence version 1.
+DT   07-APR-2021, entry version 93.
+DE   RecName: Full=Ig kappa chain V-III region MOPC 321;
+DE   Flags: Precursor;
+OS   Mus musculus (Mouse).
+OC   Eukaryota; Metazoa; Chordata; Craniata; Vertebrata; Euteleostomi; Mammalia;
+OC   Eutheria; Euarchontoglires; Glires; Rodentia; Myomorpha; Muroidea; Muridae;
+OC   Murinae; Mus; Mus.
+OX   NCBI_TaxID=10090;
+RN   [1]
+RP   PROTEIN SEQUENCE OF 1-37 (PRECURSOR PROTEIN).
+RX   PubMed=98179; DOI=10.1021/bi00605a022;
+RA   Burstein Y., Schechter I.;
+RT   "Primary structures of N-terminal extra peptide segments linked to the
+RT   variable and constant regions of immunoglobulin light chain precursors:
+RT   implications on the organization and controlled expression of
+RT   immunoglobulin genes.";
+RL   Biochemistry 17:2392-2400(1978).
+RN   [2]
+RP   PROTEIN SEQUENCE OF 21-132.
+RX   PubMed=4120629; DOI=10.1021/bi00728a027;
+RA   McKean D.J., Potter M., Hood L.E.;
+RT   "Mouse immunoglobulin chains. Partial amino acid sequence of a kappa
+RT   chain.";
+RL   Biochemistry 12:749-759(1973).
+CC   -!- MISCELLANEOUS: The partial sequence of the C region of this Bence-Jones
+CC       protein was also determined. It differs from that reported for mouse
+CC       MOPC 21 only in the transposition of two nearby residues.
+CC   ---------------------------------------------------------------------------
+CC   Copyrighted by the UniProt Consortium, see https://www.uniprot.org/terms
+CC   Distributed under the Creative Commons Attribution (CC BY 4.0) License
+CC   ---------------------------------------------------------------------------
+DR   PIR; A90412; KVMS32.
+DR   MaxQB; P01658; -.
+DR   PRIDE; P01658; -.
+DR   ProteomicsDB; 264805; -.
+DR   Proteomes; UP000000589; Unplaced.
+DR   RNAct; P01658; protein.
+DR   GO; GO:0005615; C:extracellular space; IBA:GO_Central.
+DR   GO; GO:0019814; C:immunoglobulin complex; IEA:UniProtKB-KW.
+DR   GO; GO:0002250; P:adaptive immune response; IEA:UniProtKB-KW.
+DR   GO; GO:0006955; P:immune response; IBA:GO_Central.
+DR   Gene3D; 2.60.40.10; -; 1.
+DR   InterPro; IPR007110; Ig-like_dom.
+DR   InterPro; IPR036179; Ig-like_dom_sf.
+DR   InterPro; IPR013783; Ig-like_fold.
+DR   InterPro; IPR003599; Ig_sub.
+DR   InterPro; IPR013106; Ig_V-set.
+DR   Pfam; PF07686; V-set; 1.
+DR   SMART; SM00409; IG; 1.
+DR   SMART; SM00406; IGv; 1.
+DR   SUPFAM; SSF48726; SSF48726; 1.
+DR   PROSITE; PS50835; IG_LIKE; 1.
+PE   1: Evidence at protein level;
+KW   Adaptive immunity; Bence-Jones protein; Direct protein sequencing;
+KW   Disulfide bond; Immunity; Immunoglobulin; Reference proteome; Signal.
+FT   SIGNAL          1..20
+FT                   /evidence="ECO:0000269|PubMed:4120629"
+FT   CHAIN           21..132
+FT                   /note="Ig kappa chain V-III region MOPC 321"
+FT                   /id="PRO_0000015186"
+FT   REGION          21..43
+FT                   /note="Framework-1"
+FT   REGION          44..58
+FT                   /note="Complementarity-determining-1"
+FT   REGION          59..73
+FT                   /note="Framework-2"
+FT   REGION          74..80
+FT                   /note="Complementarity-determining-2"
+FT   REGION          81..112
+FT                   /note="Framework-3"
+FT   REGION          113..121
+FT                   /note="Complementarity-determining-3"
+FT   REGION          122..131
+FT                   /note="Framework-4"
+FT   DISULFID        43..112
+FT                   /evidence="ECO:0000255|PROSITE-ProRule:PRU00114"
+FT   NON_TER         132
+SQ   SEQUENCE   132 AA;  14525 MW;  9F3B809BB773FBE9 CRC64;
+     METDTLLLWV LLLWVPGSTG DIVLTQSPAS LAVSLGQRAT ISCRASKSVN TYGNSFMZWY
+     ZZKPGZPPKL LIYRASNLZS GIPARFSGSG SRTBFTLTIB PVZABDVATY FCZZSBZBPW
+     TFGSGTKLEI KR
+//

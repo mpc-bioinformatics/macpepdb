@@ -24,7 +24,7 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             work_dir = pathlib.Path(tmp_dir)
             test_files_path = pathlib.Path('./test_files')
-            protein_data_test_file_path = test_files_path.joinpath('UP000002006.txt')
+            protein_data_test_file_path = test_files_path.joinpath('proteins.txt')
             self.prepare_workdir(work_dir, test_files_path, protein_data_test_file_path)
 
             maintenance = DatabaseMaintenance(
@@ -84,7 +84,7 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             work_dir = pathlib.Path(tmp_dir)
             test_files_path = pathlib.Path('./test_files')
-            protein_data_test_file_path = test_files_path.joinpath('UP000002006.txt')
+            protein_data_test_file_path = test_files_path.joinpath('proteins.txt')
             self.prepare_workdir(work_dir, test_files_path, protein_data_test_file_path)
 
             maintenance = DatabaseMaintenance(

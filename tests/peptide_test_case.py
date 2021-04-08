@@ -2,69 +2,105 @@ import unittest
 
 from macpepdb.models.peptide import Peptide
 from macpepdb.proteomics.mass.convert import to_float as mass_to_float
+from macpepdb.proteomics.amino_acid import AminoAcid
+from macpepdb.proteomics.neutral_loss import H2O
 
-# Part (20 - 60) of Leptin (UniProt  accession: Q257X2)
-LEPTIN_SEQUENCE = "AVPIRKVQDDTKTLIKTIVTRINDISHTQSVSSKQRVTGLDFIPGLHPLLSLSKMDQTLA"
-# Reference calculated with https://web.expasy.org/compute_pi/
-LEPTIN_SEQUENCE_WEIGHT = 6622.66
+# Fictional sequence 
+FICTIONAL_SEQUENCE = "AZVPIRKVJQODDEEWWTBKTLIKTUOIVCTRINDISHTJQSCCVSSKQRVTGJLDFYIPGLOHPLLBSLSKMCDWWOQTLA"
 
 class PeptideTestCase(unittest.TestCase):
     def test_termini(self):
-        leptin = Peptide(LEPTIN_SEQUENCE, 0)
-        self.assertEqual("A", leptin.n_terminus)
-        self.assertEqual("A", leptin.c_terminus)
+        fictional_peptide = Peptide(FICTIONAL_SEQUENCE, 0)
+        self.assertEqual("A", fictional_peptide.n_terminus)
+        self.assertEqual("A", fictional_peptide.c_terminus)
 
     def test_amino_acid_counts(self):
-        leptin = Peptide(LEPTIN_SEQUENCE, 0)
-        self.assertEqual(leptin.a_count, 2)
-        self.assertEqual(leptin.c_count, 0)
-        self.assertEqual(leptin.d_count, 5)
-        self.assertEqual(leptin.e_count, 0)
-        self.assertEqual(leptin.f_count, 1)
-        self.assertEqual(leptin.g_count, 2)
-        self.assertEqual(leptin.h_count, 2)
-        self.assertEqual(leptin.i_count, 6)
-        self.assertEqual(leptin.k_count, 5)
-        self.assertEqual(leptin.l_count, 7)
-        self.assertEqual(leptin.m_count, 1)
-        self.assertEqual(leptin.n_count, 1)
-        self.assertEqual(leptin.o_count, 0)
-        self.assertEqual(leptin.p_count, 3)
-        self.assertEqual(leptin.q_count, 4)
-        self.assertEqual(leptin.r_count, 3)
-        self.assertEqual(leptin.s_count, 6)
-        self.assertEqual(leptin.t_count, 7)
-        self.assertEqual(leptin.u_count, 0)
-        self.assertEqual(leptin.v_count, 5)
-        self.assertEqual(leptin.w_count, 0)
-        self.assertEqual(leptin.y_count, 0)
+        fictional_peptide = Peptide(FICTIONAL_SEQUENCE, 0)
+        self.assertEqual(fictional_peptide.a_count, 2)
+        self.assertEqual(fictional_peptide.b_count, 2)
+        self.assertEqual(fictional_peptide.c_count, 4)
+        self.assertEqual(fictional_peptide.d_count, 5)
+        self.assertEqual(fictional_peptide.e_count, 2)
+        self.assertEqual(fictional_peptide.f_count, 1)
+        self.assertEqual(fictional_peptide.g_count, 2)
+        self.assertEqual(fictional_peptide.h_count, 2)
+        self.assertEqual(fictional_peptide.i_count, 6)
+        self.assertEqual(fictional_peptide.j_count, 3)
+        self.assertEqual(fictional_peptide.k_count, 5)
+        self.assertEqual(fictional_peptide.l_count, 7)
+        self.assertEqual(fictional_peptide.m_count, 1)
+        self.assertEqual(fictional_peptide.n_count, 1)
+        self.assertEqual(fictional_peptide.o_count, 4)
+        self.assertEqual(fictional_peptide.p_count, 3)
+        self.assertEqual(fictional_peptide.q_count, 4)
+        self.assertEqual(fictional_peptide.r_count, 3)
+        self.assertEqual(fictional_peptide.s_count, 6)
+        self.assertEqual(fictional_peptide.t_count, 7)
+        self.assertEqual(fictional_peptide.u_count, 1)
+        self.assertEqual(fictional_peptide.v_count, 5)
+        self.assertEqual(fictional_peptide.w_count, 4)
+        self.assertEqual(fictional_peptide.y_count, 1)
+        self.assertEqual(fictional_peptide.z_count, 1)
 
-        amino_acid_sum = leptin.a_count \
-            + leptin.c_count \
-            + leptin.d_count \
-            + leptin.e_count \
-            + leptin.f_count \
-            + leptin.g_count \
-            + leptin.h_count \
-            + leptin.i_count \
-            + leptin.k_count \
-            + leptin.l_count \
-            + leptin.m_count \
-            + leptin.n_count \
-            + leptin.o_count \
-            + leptin.p_count \
-            + leptin.q_count \
-            + leptin.r_count \
-            + leptin.s_count \
-            + leptin.t_count \
-            + leptin.u_count \
-            + leptin.v_count \
-            + leptin.w_count \
-            + leptin.y_count
+        amino_acid_sum = fictional_peptide.a_count \
+            + fictional_peptide.b_count \
+            + fictional_peptide.c_count \
+            + fictional_peptide.d_count \
+            + fictional_peptide.e_count \
+            + fictional_peptide.f_count \
+            + fictional_peptide.g_count \
+            + fictional_peptide.h_count \
+            + fictional_peptide.i_count \
+            + fictional_peptide.j_count \
+            + fictional_peptide.k_count \
+            + fictional_peptide.l_count \
+            + fictional_peptide.m_count \
+            + fictional_peptide.n_count \
+            + fictional_peptide.o_count \
+            + fictional_peptide.p_count \
+            + fictional_peptide.q_count \
+            + fictional_peptide.r_count \
+            + fictional_peptide.s_count \
+            + fictional_peptide.t_count \
+            + fictional_peptide.u_count \
+            + fictional_peptide.v_count \
+            + fictional_peptide.w_count \
+            + fictional_peptide.y_count \
+            + fictional_peptide.z_count
 
-        self.assertEqual(len(leptin.sequence), amino_acid_sum)
+        self.assertEqual(len(fictional_peptide.sequence), amino_acid_sum)
 
     def test_weight_calculation(self):
-        peptide = Peptide(LEPTIN_SEQUENCE, 0)
-        self.assertEqual(LEPTIN_SEQUENCE_WEIGHT, round(mass_to_float(peptide.weight), 2))
+        fictional_peptide = Peptide(FICTIONAL_SEQUENCE, 0)
+
+        # If the amino acid cound test passes, we can use the counts to calculate the mass manally.
+        # Actually there is no external tool which supports all of our known amino acids, so we can double check the weigth.
+        mass = fictional_peptide.a_count * AminoAcid.get_by_one_letter_code('A').mono_mass \
+            + fictional_peptide.b_count * AminoAcid.get_by_one_letter_code('B').mono_mass \
+            + fictional_peptide.c_count * AminoAcid.get_by_one_letter_code('C').mono_mass \
+            + fictional_peptide.d_count * AminoAcid.get_by_one_letter_code('D').mono_mass \
+            + fictional_peptide.e_count * AminoAcid.get_by_one_letter_code('E').mono_mass \
+            + fictional_peptide.f_count * AminoAcid.get_by_one_letter_code('F').mono_mass \
+            + fictional_peptide.g_count * AminoAcid.get_by_one_letter_code('G').mono_mass \
+            + fictional_peptide.h_count * AminoAcid.get_by_one_letter_code('H').mono_mass \
+            + fictional_peptide.i_count * AminoAcid.get_by_one_letter_code('I').mono_mass \
+            + fictional_peptide.j_count * AminoAcid.get_by_one_letter_code('J').mono_mass \
+            + fictional_peptide.k_count * AminoAcid.get_by_one_letter_code('K').mono_mass \
+            + fictional_peptide.l_count * AminoAcid.get_by_one_letter_code('L').mono_mass \
+            + fictional_peptide.m_count * AminoAcid.get_by_one_letter_code('M').mono_mass \
+            + fictional_peptide.n_count * AminoAcid.get_by_one_letter_code('N').mono_mass \
+            + fictional_peptide.o_count * AminoAcid.get_by_one_letter_code('O').mono_mass \
+            + fictional_peptide.p_count * AminoAcid.get_by_one_letter_code('P').mono_mass \
+            + fictional_peptide.q_count * AminoAcid.get_by_one_letter_code('Q').mono_mass \
+            + fictional_peptide.r_count * AminoAcid.get_by_one_letter_code('R').mono_mass \
+            + fictional_peptide.s_count * AminoAcid.get_by_one_letter_code('S').mono_mass \
+            + fictional_peptide.t_count * AminoAcid.get_by_one_letter_code('T').mono_mass \
+            + fictional_peptide.u_count * AminoAcid.get_by_one_letter_code('U').mono_mass \
+            + fictional_peptide.v_count * AminoAcid.get_by_one_letter_code('V').mono_mass \
+            + fictional_peptide.w_count * AminoAcid.get_by_one_letter_code('W').mono_mass \
+            + fictional_peptide.y_count * AminoAcid.get_by_one_letter_code('Y').mono_mass \
+            + fictional_peptide.z_count * AminoAcid.get_by_one_letter_code('Z').mono_mass \
+            + H2O.mono_mass
+
+        self.assertEqual(mass, fictional_peptide.weight)
 

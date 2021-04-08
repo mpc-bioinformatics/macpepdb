@@ -5,7 +5,7 @@ from macpepdb.proteomics.file_reader.uniprot_text_reader import UniprotTextReade
 
 class UniprotTextReaderTestCase(unittest.TestCase):
     def test_reading(self):
-        test_file_path = pathlib.Path("./test_files/UP000002006.txt")
+        test_file_path = pathlib.Path("./test_files/proteins.txt")
 
         proteins = []
 

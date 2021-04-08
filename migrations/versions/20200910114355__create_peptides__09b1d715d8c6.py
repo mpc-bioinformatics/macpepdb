@@ -26,6 +26,7 @@ def upgrade():
         sa.Column('length', sa.SmallInteger, nullable=False),
         sa.Column('number_of_missed_cleavages', sa.SmallInteger, nullable=False),
         sa.Column('a_count', sa.SmallInteger, default=0, nullable=False),
+        sa.Column('b_count', sa.SmallInteger, default=0, nullable=False),
         sa.Column('c_count', sa.SmallInteger, default=0, nullable=False),
         sa.Column('d_count', sa.SmallInteger, default=0, nullable=False),
         sa.Column('e_count', sa.SmallInteger, default=0, nullable=False),
@@ -33,6 +34,7 @@ def upgrade():
         sa.Column('g_count', sa.SmallInteger, default=0, nullable=False),
         sa.Column('h_count', sa.SmallInteger, default=0, nullable=False),
         sa.Column('i_count', sa.SmallInteger, default=0, nullable=False),
+        sa.Column('j_count', sa.SmallInteger, default=0, nullable=False),
         sa.Column('k_count', sa.SmallInteger, default=0, nullable=False),
         sa.Column('l_count', sa.SmallInteger, default=0, nullable=False),
         sa.Column('m_count', sa.SmallInteger, default=0, nullable=False),
@@ -47,6 +49,7 @@ def upgrade():
         sa.Column('v_count', sa.SmallInteger, default=0, nullable=False),
         sa.Column('w_count', sa.SmallInteger, default=0, nullable=False),
         sa.Column('y_count', sa.SmallInteger, default=0, nullable=False),
+        sa.Column('z_count', sa.SmallInteger, default=0, nullable=False),
         sa.Column('n_terminus', sa.CHAR(1), nullable=False),
         sa.Column('c_terminus', sa.CHAR(1), nullable=False),
         # Flag to mark peptide for metadata update

@@ -60,10 +60,16 @@ class AminoAcid:
             return W
         elif olc == 'Y':
             return Y
+        elif olc == 'B':
+            return B
+        elif olc == 'J':
+            return J
+        elif olc == 'Z':
+            return Z
         elif olc == 'X':
             return X
         else:
-            return X
+            raise NameError(f"No amino acid with one letter code '{olc}' found.")
 
     # Returns Tryptophan (W)
     @classmethod
@@ -111,6 +117,10 @@ U = AminoAcid("Selenocysteine", 'U', "SeC", "C3H5NOSe", 150.953633405, 150.0379)
 V = AminoAcid("Valine", 'V', "Val", "C5H9ON", 99.068413945, 99.1326)
 W = AminoAcid("Tryptophan", 'W', "Trp", "C11H10ON2", 186.079312980, 186.2132)
 Y = AminoAcid("Tyrosine", 'Y', "Tyr", "C9H9O2N", 163.063328575, 163.1760)
+# Ambigous amino acids
+B = AminoAcid("Asparagine or aspartic acid", 'B', "Asx", "C4H6O2N2/C4H5O3N", 114.5349352675, 114.59502)
+J = AminoAcid("Isoleucine or Leucine", 'J', "Xle", "C6H11ON", 113.084064015, 113.1594)
+Z = AminoAcid("Glutamine or glutamic acid", 'Z', "Glx", "C5H8O2N2/C5H7O3N", 128.5505853375, 128.6216)
 # Special amino acids
 ## Some Search Engines and Databases used the X Amino Acid for unknown amino acids
 X = AminoAcid("Unknown Amino Acid", 'X', "Xaa", "Unknown", 0.0, 0.0)
@@ -139,5 +149,15 @@ KNOWN_AMINO_ACIDS = (
     V,
     W,
     Y,
-    X
+    B,
+    J,
+    Z,
+    X,
 )
+
+# Lookup for ambigous amino acids where the differentiated amino acids actually have varying masses.
+# This is true for B and Z. 
+REPLACEABLE_AMBIGIOUS_AMINO_ACID_LOOKUP = {
+    'B': [D, N],
+    'Z': [E, Q]
+}

@@ -36,6 +36,12 @@ class PeptideBase:
         return self.__amino_acid_counter['A']
 
     @property
+    def b_count(self):
+        if not self.__amino_acid_counter:
+            self.__count_amino_acids()
+        return self.__amino_acid_counter['B']
+
+    @property
     def c_count(self):
         if not self.__amino_acid_counter:
             self.__count_amino_acids()
@@ -76,6 +82,12 @@ class PeptideBase:
         if not self.__amino_acid_counter:
             self.__count_amino_acids()
         return self.__amino_acid_counter['I']
+
+    @property
+    def j_count(self):
+        if not self.__amino_acid_counter:
+            self.__count_amino_acids()
+        return self.__amino_acid_counter['J']
 
     @property
     def k_count(self):
@@ -162,6 +174,12 @@ class PeptideBase:
         return self.__amino_acid_counter['Y']
 
     @property
+    def z_count(self):
+        if not self.__amino_acid_counter:
+            self.__count_amino_acids()
+        return self.__amino_acid_counter['Z']
+
+    @property
     def n_terminus(self):
         return self.sequence[0]
 
@@ -240,8 +258,8 @@ class PeptideBase:
         @return int ID of inserted peptide
         """
         INSERT_QUERY = (
-            f"INSERT INTO {cls.TABLE_NAME} (weight, sequence, length, number_of_missed_cleavages, a_count, c_count, d_count, e_count, f_count, g_count, h_count, i_count, k_count, l_count, m_count, n_count, o_count, p_count, q_count, r_count, s_count, t_count, u_count, v_count, w_count, y_count, n_terminus, c_terminus) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
+            f"INSERT INTO {cls.TABLE_NAME} (weight, sequence, length, number_of_missed_cleavages, a_count, b_count, c_count, d_count, e_count, f_count, g_count, h_count, i_count, j_count, k_count, l_count, m_count, n_count, o_count, p_count, q_count, r_count, s_count, t_count, u_count, v_count, w_count, y_count, z_count, n_terminus, c_terminus) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
         )
         database_cursor.execute(
             INSERT_QUERY,
@@ -251,6 +269,7 @@ class PeptideBase:
                 peptide.length,
                 peptide.number_of_missed_cleavages,
                 peptide.a_count,
+                peptide.b_count,
                 peptide.c_count,
                 peptide.d_count,
                 peptide.e_count,
@@ -258,6 +277,7 @@ class PeptideBase:
                 peptide.g_count,
                 peptide.h_count,
                 peptide.i_count,
+                peptide.j_count,
                 peptide.k_count,
                 peptide.l_count,
                 peptide.m_count,
@@ -272,6 +292,7 @@ class PeptideBase:
                 peptide.v_count,
                 peptide.w_count,
                 peptide.y_count,
+                peptide.z_count,
                 peptide.n_terminus,
                 peptide.c_terminus
             )
@@ -285,7 +306,7 @@ class PeptideBase:
         @return list List of the new peptide IDs in the same order as the peptides where inserted.
         """
         BULK_INSERT_QUERY = (
-            f"INSERT INTO {cls.TABLE_NAME} (weight, sequence, length, number_of_missed_cleavages, a_count, c_count, d_count, e_count, f_count, g_count, h_count, i_count, k_count, l_count, m_count, n_count, o_count, p_count, q_count, r_count, s_count, t_count, u_count, v_count, w_count, y_count, n_terminus, c_terminus) "
+            f"INSERT INTO {cls.TABLE_NAME} (weight, sequence, length, number_of_missed_cleavages, a_count, b_count, c_count, d_count, e_count, f_count, g_count, h_count, i_count, j_count, k_count, l_count, m_count, n_count, o_count, p_count, q_count, r_count, s_count, t_count, u_count, v_count, w_count, y_count, z_count, n_terminus, c_terminus) "
             "VALUES %s;"
         )
         # Bulk insert the new peptides
@@ -299,6 +320,7 @@ class PeptideBase:
                     peptide.length,
                     peptide.number_of_missed_cleavages,
                     peptide.a_count,
+                    peptide.b_count,
                     peptide.c_count,
                     peptide.d_count,
                     peptide.e_count,
@@ -306,6 +328,7 @@ class PeptideBase:
                     peptide.g_count,
                     peptide.h_count,
                     peptide.i_count,
+                    peptide.j_count,
                     peptide.k_count,
                     peptide.l_count,
                     peptide.m_count,
@@ -320,6 +343,7 @@ class PeptideBase:
                     peptide.v_count,
                     peptide.w_count,
                     peptide.y_count,
+                    peptide.z_count,
                     peptide.n_terminus,
                     peptide.c_terminus
                 ) for peptide in peptides
