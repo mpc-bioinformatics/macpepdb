@@ -2,6 +2,7 @@ import re
 
 from ...models import peptide
 from ...models import protein
+from ...proteomics.amino_acid import X as UnknwonAminoAcid
 
 class DigestEnzyme:
     def __init__(self, name: str = "Abstract Digest Enzym", shortcut: str = "", regex: re = r".", max_number_of_missed_cleavages: int = 0, minimum_peptide_length: int = 0, maximum_peptide_length: int = 1):
@@ -40,7 +41,7 @@ class DigestEnzyme:
             peptide_sequence = ""
             for missed_cleavage in range(part_index, last_part_to_add):
                 peptide_sequence += protein_parts[missed_cleavage]
-                if len(peptide_sequence) in self.__peptide_range and peptide_sequence.count('X') == 0:
+                if len(peptide_sequence) in self.__peptide_range and peptide_sequence.count(UnknwonAminoAcid.one_letter_code) == 0:
                     peptides.add(peptide.Peptide(peptide_sequence, missed_cleavage - part_index))
 
         return list(peptides)
