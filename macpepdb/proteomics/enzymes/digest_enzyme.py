@@ -41,7 +41,7 @@ class DigestEnzyme:
             peptide_sequence = ""
             for missed_cleavage in range(part_index, last_part_to_add):
                 peptide_sequence += protein_parts[missed_cleavage]
-                if len(peptide_sequence) in self.__peptide_range and peptide_sequence.count(UnknwonAminoAcid.one_letter_code) == 0:
+                if len(peptide_sequence) in self.__peptide_range and not UnknwonAminoAcid.one_letter_code in peptide_sequence:
                     peptides.add(peptide.Peptide(peptide_sequence, missed_cleavage - part_index))
 
         return list(peptides)
