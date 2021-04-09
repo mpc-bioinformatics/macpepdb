@@ -28,25 +28,28 @@ class UniprotTextReader():
         
         while True:
             line = next(self.__file_iter)
+            
+            line = line.rstrip()
 
-            if line.startswith("ID"):
-                entry_name, is_reviewed = self.__process_id(line[5:])
-            elif line.startswith("AC"):
-                accessions += self.__process_ac(line[5:])
-            elif line.startswith("OX"):
-                taxonomy_id = self.__process_ox(line[5:])
-            elif line.startswith("DR"):
-                if line[5:].startswith("Proteomes;"):
-                    proteome_id = self.__process_dr_proteoms(line[5:])
-            # sequence starts with two whitespaces
-            elif line.startswith("  "):
-                sequence += self.__process_sq_no_header(line)
-            elif line.startswith("DE"):
-                if name == "" and line[5:].startswith("RecName") or line[5:].startswith("AltName") or line[5:].startswith("Sub"):
-                    name = self.__process_de_name(line[5:])
-            elif line.startswith("//"):
-                primary_accession = accessions.pop(0)
-                return Protein(primary_accession, accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed)
+            if len(line) >= 2:
+                if line.startswith("ID"):
+                    entry_name, is_reviewed = self.__process_id(line[5:])
+                elif line.startswith("AC"):
+                    accessions += self.__process_ac(line[5:])
+                elif line.startswith("OX"):
+                    taxonomy_id = self.__process_ox(line[5:])
+                elif line.startswith("DR"):
+                    if line[5:].startswith("Proteomes;"):
+                        proteome_id = self.__process_dr_proteoms(line[5:])
+                # sequence starts with two whitespaces
+                elif line.startswith("  "):
+                    sequence += self.__process_sq_no_header(line)
+                elif line.startswith("DE"):
+                    if name == "" and line[5:].startswith("RecName") or line[5:].startswith("AltName") or line[5:].startswith("Sub"):
+                        name = self.__process_de_name(line[5:])
+                elif line.startswith("//"):
+                    primary_accession = accessions.pop(0)
+                    return Protein(primary_accession, accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed)
 
 
     # Returns the the uniprot entry name and the review status (ture|false)
