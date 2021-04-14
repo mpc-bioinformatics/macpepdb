@@ -13,7 +13,7 @@ from ... import process_context
 
 
 class PeptideMetadataCollector:
-    STATISTIC_FILE_HEADER = ["seconds", "updated_pepide", "peptide_update_rate"]
+    STATISTIC_FILE_HEADER = ["seconds", "updated_peptides", "peptide_update_rate"]
     STATISTIC_PRINT_MIN_COLUMN_WIDTH = 12
 
     def __init__(self, log_dir_path: pathlib.Path, statistics_write_period: int, number_of_threads: int):
