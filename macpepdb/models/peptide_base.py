@@ -259,7 +259,7 @@ class PeptideBase:
         """
         INSERT_QUERY = (
             f"INSERT INTO {cls.TABLE_NAME} (weight, sequence, length, number_of_missed_cleavages, a_count, b_count, c_count, d_count, e_count, f_count, g_count, h_count, i_count, j_count, k_count, l_count, m_count, n_count, o_count, p_count, q_count, r_count, s_count, t_count, u_count, v_count, w_count, y_count, z_count, n_terminus, c_terminus) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);"
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING;"
         )
         database_cursor.execute(
             INSERT_QUERY,
@@ -307,7 +307,7 @@ class PeptideBase:
         """
         BULK_INSERT_QUERY = (
             f"INSERT INTO {cls.TABLE_NAME} (weight, sequence, length, number_of_missed_cleavages, a_count, b_count, c_count, d_count, e_count, f_count, g_count, h_count, i_count, j_count, k_count, l_count, m_count, n_count, o_count, p_count, q_count, r_count, s_count, t_count, u_count, v_count, w_count, y_count, z_count, n_terminus, c_terminus) "
-            "VALUES %s;"
+            "VALUES %s ON CONFLICT DO NOTHING;"
         )
         # Bulk insert the new peptides
         execute_values(
