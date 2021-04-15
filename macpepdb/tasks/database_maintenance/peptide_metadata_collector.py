@@ -73,10 +73,14 @@ class PeptideMetadataCollector:
         # Close this copy
         general_log_connection_write.close()
 
+        # Create one connection for the main process
+        general_log_connection_read, general_log_connection = process_context.Pipe(duplex=False)
+        log_connections.append(general_log_connection_read)
 
         logger_process = LoggerProcess(self.__log_file_path, "w", log_connections)
         logger_process.start()
 
+        general_log_connection.send("Start enqueuing peptides.")
         database_connection = psycopg2.connect(database_url)
         enqueued_all_updatedable_peptides = False
         while not enqueued_all_updatedable_peptides:
@@ -117,10 +121,14 @@ class PeptideMetadataCollector:
                                 slice_start += 100
             except psycopg2.Error as error:
                 # Catch database errors and disconnects
-                log_connection.send(f"error occured, see:\n{error}\ntry again")
+                general_log_connection.send(f"error occured, see:\n{error}\ntry again")
+
+        general_log_connection.send("All peptides enqueued.")
 
         if database_connection and database_connection.closed != 0:
             database_connection.close()
+
+        general_log_connection.close()
 
         # Signalling all processes to 
         if self.__stop_signal:
