@@ -80,7 +80,7 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase):
                     self.assertFalse(database_status.values['maintenance_mode'])
 
     def test_digestion_with_protein_update(self):
-        # Digest the databse
+        # Digest the database
         with tempfile.TemporaryDirectory() as tmp_dir:
             work_dir = pathlib.Path(tmp_dir)
             test_files_path = pathlib.Path('./test_files')
@@ -147,11 +147,11 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase):
                     self.assertEqual(read_protein.sequence, database_protein.sequence)
 
                     # Test peptides
-                    databse_protein_peptide_sequences = {peptide.sequence for peptide in database_protein.peptides(database_cursor)}
+                    database_protein_peptide_sequences = {peptide.sequence for peptide in database_protein.peptides(database_cursor)}
                     for sequence in read_protein_peptide_sequences:
-                        self.assertIn(sequence, databse_protein_peptide_sequences)
+                        self.assertIn(sequence, database_protein_peptide_sequences)
 
-                    for sequence in databse_protein_peptide_sequences:
+                    for sequence in database_protein_peptide_sequences:
                         self.assertIn(sequence, read_protein_peptide_sequences)
 
                     # Test secondary accessions

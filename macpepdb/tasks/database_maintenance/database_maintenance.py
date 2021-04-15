@@ -106,7 +106,7 @@ class DatabaseMaintenance():
         """
         Build/update the protein digestion
         """
-        self.__set_databse_status(self.__database_url, DatabaseStatus.DIGESTION, True)
+        self.__set_database_status(self.__database_url, DatabaseStatus.DIGESTION, True)
         # Run 0, first run with user supplied data in protein_data directory
         run_count = 0
         protein_data_path = self.__protein_data_path
@@ -161,7 +161,7 @@ class DatabaseMaintenance():
         if self.__stop_signal:
             return
 
-        self.__set_databse_status(self.__database_url, DatabaseStatus.METADATA_COLLECTION, False)
+        self.__set_database_status(self.__database_url, DatabaseStatus.METADATA_COLLECTION, False)
 
         # Collect peptide meta data
         collector = PeptideMetadataCollector(
@@ -178,14 +178,14 @@ class DatabaseMaintenance():
         now = datetime.datetime.utcnow()
         epoch = datetime.datetime(1970,1,1)
         last_update_timestamp = (now - epoch).total_seconds()
-        self.__set_databse_status(self.__database_url, DatabaseStatus.READY, False, last_update_timestamp)
+        self.__set_database_status(self.__database_url, DatabaseStatus.READY, False, last_update_timestamp)
 
         # Cleanup by removing all files in the temporary work directory
         if self.__temporary_protein_data_path.is_dir():
             shutil.rmtree(self.__temporary_protein_data_path, ignore_errors=True)
 
 
-    def __set_databse_status(self, database_url: str, status: DatabaseStatus, maintenance_mode: bool, last_update_timestamp: int = None):
+    def __set_database_status(self, database_url: str, status: DatabaseStatus, maintenance_mode: bool, last_update_timestamp: int = None):
         """
         Sets the database status
         @param status Indicate if set to maintenance mode

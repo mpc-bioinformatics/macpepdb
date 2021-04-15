@@ -96,7 +96,7 @@ class ProteinDigestionProcess(GenericProcess):
                             self.__statistics[2] += 1
                             self.__statistics.release()
                             try_transaction_again = False
-            # Catch errors which occure during databse connect
+            # Catch errors which occure during database connect
             except psycopg2.Error as error:
                 self.__general_log.send("Error when opening the database connection, see:\n{}".format(error))
             # Catch queue.Empty which is thrown when protein_queue.get() timed out

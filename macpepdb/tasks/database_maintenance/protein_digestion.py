@@ -18,7 +18,7 @@ from ...models.maintenance_information import MaintenanceInformation
 from ... import process_context
 
 class ProteinDigestion:
-    STATISTIC_FILE_HEADER = ["seconds", "inserted_proteins", "inserted_peptides", "unsolvable errors", "protein_insert_rate", "peptide_insert_rate", "error_rate"]
+    STATISTIC_FILE_HEADER = ["seconds", "inserted_proteins", "inserted_peptides", "unsolvable_errors", "protein_insert_rate", "peptide_insert_rate", "error_rate"]
     STATISTIC_PRINT_MIN_COLUMN_WIDTH = 12
     
 

@@ -58,7 +58,7 @@ To create a Docker image use: `docker build --tag macpepdb-py .` . You can use t
 To access your files in the container mount your files to `/usr/src/macpepdb/data` with `-v YOUR_DATA_FOLDER:/usr/src/macpepdb/data` (add it before the `macpepdb-py`). Keep in mind your working in a container, so all files pathes are within the container.   
 If you intend to create a protein/peptide database and your Postgresql server is running in a Docke container too, make sure both, the  Postgresql server and the MacPepDB container have access to the same Docker network by adding `--network=YOUR_DOCKER_NETWORK` (before the ´macpepdb-py´).
 
-### Building a databse
+### Building a database
 #### Prepare the database
 Run `MACPEPDB_DB_URL=postgresql://<USER>:<PASSWORD>@<HOST>:<PORT>/<DATABASE> alembic upgrade head`    
 If you use the docker container, run the command in a temporary container: `docker run --rm -it macpepdb-py sh`

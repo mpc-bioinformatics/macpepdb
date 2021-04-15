@@ -57,7 +57,7 @@ class PeptideMetadataCollectorProcess(GenericProcess):
                         break
                     except BaseException as error:
                         self.__log_connection.send(f"error occured, see:\n{error}\ntry again")
-            # Catch errors which occure during databse connect
+            # Catch errors which occure during database connect
             except psycopg2.Error as error:
                 self.__log_connection.send("Error when opening the database connection, see:\n{}".format(error))
             # Catch queue.Empty which is thrown when protein_queue.get() timed out
