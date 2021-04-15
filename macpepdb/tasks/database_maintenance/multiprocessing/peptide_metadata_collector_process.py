@@ -26,7 +26,7 @@ class PeptideMetadataCollectorProcess(GenericProcess):
         """
         Collects the information from the referenced peptides und set update flag to false.
         """
-        self.__log_connection.send(f"peptide update worker {id} is online")
+        self.__log_connection.send(f"peptide update worker {self.__id} is online")
         database_connection = None
         PREPARED_STATEMENT_NAME = "updatepeptide_metadata"
         PREPARE_STATEMENT_QUERY = f"PREPARE {PREPARED_STATEMENT_NAME} AS UPDATE {Peptide.TABLE_NAME} SET is_metadata_up_to_date = true, is_swiss_prot = $1, is_trembl = $2, taxonomy_ids = $3, unique_taxonomy_ids = $4, proteome_ids = $5 WHERE sequence = $6;"
@@ -64,7 +64,7 @@ class PeptideMetadataCollectorProcess(GenericProcess):
             except EmptyQueueError:
                 pass
 
-        self.__log_connection.send(f"peptide update worker {id} is stopping")
+        self.__log_connection.send(f"peptide update worker {self.__id} is stopping")
         if database_connection and database_connection.closed != 0:
             with database_connection:
                 with database_connection.cursor() as database_cursor:
