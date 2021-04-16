@@ -244,7 +244,7 @@ class PeptideBase:
         if fetchall:
             return [cls(row[0], row[1]) for row in database_cursor.fetchall()]
         else:
-            row = database_cursor.fetchall()
+            row = database_cursor.fetchone()
             if row:
                 return cls(row[0], row[1])
             else:
