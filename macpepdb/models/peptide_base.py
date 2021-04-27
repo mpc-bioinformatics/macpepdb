@@ -233,7 +233,7 @@ class PeptideBase:
         @param database_cursor
         @param select_conditions A tupel with the where statement (without WHERE) and a list of parameters, e.g. ("accession = %s AND taxonomy_id = %s",["Q257X2", 6909])
         @param fetchall Indicates if multiple rows should be fetched
-        @return Ppetide or list of proteins
+        @return Petide or list of peptides
         """
         select_query = f"SELECT sequence, number_of_missed_cleavages FROM {cls.TABLE_NAME}"
         if len(select_conditions) == 2 and len(select_conditions[0]):
