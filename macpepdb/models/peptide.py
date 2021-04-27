@@ -15,7 +15,7 @@ class Peptide(PeptideBase):
         )
         database_cursor.execute(
             PROTEIN_QUERY,
-            (self.__sequence)
+            (self.sequence,)
         )
         return [protein.Protein.from_sql_row(row) for row in database_cursor.fetchall()]
 
