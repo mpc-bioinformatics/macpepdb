@@ -10,8 +10,8 @@ class Peptide(PeptideBase):
 
     def proteins(self, database_cursor):
         PROTEIN_QUERY = (
-            f"SELECT id, accession, secondary_accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed FROM {protein.Protein.TABLE_NAME} "
-            f"WHERE id = ANY(SELECT protein_id FROM {ProteinPeptideAssociation.TABLE_NAME} WHERE peptide_sequence = %s);"
+            f"SELECT accession, secondary_accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed FROM {protein.Protein.TABLE_NAME} "
+            f"WHERE accession = ANY(SELECT protein_accession FROM {ProteinPeptideAssociation.TABLE_NAME} WHERE peptide_sequence = %s);"
         )
         database_cursor.execute(
             PROTEIN_QUERY,
