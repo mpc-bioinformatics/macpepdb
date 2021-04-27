@@ -55,7 +55,7 @@ class TaxonomyRank(IntEnum):
 
     @classmethod
     def from_string(cls, rank: str):
-        rank = rank.upper().replace("_", " ")
+        rank = rank.upper().replace(" ", "_")
         if rank in cls.__members__:
             return cls.__members__[rank]
 
