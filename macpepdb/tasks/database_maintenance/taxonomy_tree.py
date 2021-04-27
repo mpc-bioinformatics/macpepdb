@@ -89,6 +89,7 @@ class TaxonomyTree:
             print("Read taxonomy names and insert into database ...")
             # Open name file
             with self.__names_dmp_path.open("r") as names_file:
+                taxonomies_chunk = []
                 for line in names_file:
                     # Parse line
                     id, name, name_class = self.parse_name_line(line)
@@ -99,17 +100,33 @@ class TaxonomyTree:
                         if taxonomy:
                             # Assigne name
                             taxonomy.name = name
-                            # Put into queue
-                            while True:
-                                try:
-                                    queue.put(
-                                        taxonomy,
-                                        True,
-                                        2
-                                    )
-                                    break
-                                except QueueFullError:
-                                    continue
+                            taxonomies_chunk.append(taxonomy)
+                    if len(taxonomies_chunk) == 1000:
+                        # Put into queue
+                        while True:
+                            try:
+                                queue.put(
+                                    taxonomies_chunk,
+                                    True,
+                                    2
+                                )
+                                taxonomies_chunk = []
+                                break
+                            except QueueFullError:
+                                continue
+                if len(taxonomies_chunk) > 0:
+                    # Put into queue
+                    while True:
+                        try:
+                            queue.put(
+                                taxonomies_chunk,
+                                True,
+                                2
+                            )
+                            taxonomies_chunk = []
+                            break
+                        except QueueFullError:
+                            continue
 
             # Set stop flag
             stop_flag.set()
@@ -139,17 +156,34 @@ class TaxonomyTree:
             print("Process taxonomy merges ...")
             # Open file with node merges.
             with self.__merge_dmp_path.open("r") as merge_file:
+                taxonomy_merges_chunk = []
                 # Read line line by line. Each line contains the old id and the new id
                 for merge_line in merge_file:
                     source_id, target_id = self.parse_merge_line(merge_line)
+                    taxonomy_merges_chunk.append(TaxonomyMerge(source_id, target_id))
+                    if len(taxonomy_merges_chunk) == 1000:
+                        # Try to put Taxonomy into processing queue until there is a slot for it
+                        while True:
+                            try:
+                                queue.put(
+                                    taxonomy_merges_chunk,
+                                    True,
+                                    2
+                                )
+                                taxonomy_merges_chunk = []
+                                break
+                            except QueueFullError:
+                                continue
+                if len(taxonomy_merges_chunk) > 0:
                     # Try to put Taxonomy into processing queue until there is a slot for it
                     while True:
                         try:
                             queue.put(
-                                TaxonomyMerge(source_id, target_id),
+                                taxonomy_merges_chunk,
                                 True,
                                 2
                             )
+                            taxonomy_merges_chunk = []
                             break
                         except QueueFullError:
                             continue
@@ -208,31 +242,25 @@ class TaxonomyTree:
             if not database_connection or (database_connection and database_connection.closed != 0):
                 database_connection = psycopg2.connect(database_url)
             try:
-                # Take a taxonomy from queue
-                taxonomy = queue.get(True, 2)
-                with database_connection:
-                    with database_connection.cursor() as database_cursor:
-                        database_cursor.execute("SELECT id FROM taxonomies WHERE id = %s;", (taxonomy.id,))
-                        taxonomy_row = database_cursor.fetchone()
-                        if not taxonomy_row:
-                            commit_errors = 0
-                            # Try to insert it into the database
-                            while True:
-                                try:
-                                    database_cursor.execute("INSERT INTO taxonomies (id, parent_id, name, rank) VALUES (%s, %s, %s, %s);", (taxonomy.id, taxonomy.parent_id, taxonomy.name, taxonomy.rank.value))
-                                    database_connection.commit()
-                                    break
-                                except BaseException as error:
-                                    # On error, do a rollback
-                                    database_connection.rollback()
-                                    commit_errors += 1
-                                    # If there are tries left, sleep between 2 and 5 second and try again
-                                    if commit_errors < 3:
-                                        time.sleep(random.randint(0, 5))
-                                    else:
-                                        # Otherwise log the error and proceed with next taxonomy
-                                        log_connection.send(f" taxonomy {taxonomy.id}|{taxonomy.parent_id}|{taxonomy.name} raises error:\n{error}\n")
-                                        break
+                # Take taxonomies from queue
+                taxonomies = queue.get(True, 2)
+                commit_errors = 0
+                while True:
+                    try:
+                        with database_connection:
+                            with database_connection.cursor() as database_cursor:
+                                Taxonomy.bulk_insert(database_cursor, taxonomies)
+                        break
+                    except BaseException as error:
+                        commit_errors += 1
+                        # If there are tries left, sleep between 2 and 5 second and try again
+                        if commit_errors < 3:
+                            time.sleep(random.randint(0, 5))
+                        else:
+                            # Otherwise log the error and proceed with next taxonomy
+                            commaseperated_taxonomy_ids = ", ".join([str(taxonomy.id) for taxonomy in taxonomies])
+                            log_connection.send(f"taxonomy {commaseperated_taxonomy_ids} raises error:\n{error}\n")
+                            break
             except QueueEmptyError:
                 # Catch queue empty error (thrown on timeout)
                 continue
@@ -251,32 +279,25 @@ class TaxonomyTree:
                 database_connection = psycopg2.connect(database_url)
             try:
                 # Take a taxonomy from queue
-                taxonomy_merge = queue.get(True, 2)
-                with database_connection:
-                    with database_connection.cursor() as database_cursor:
-                        database_cursor.execute("SELECT source_id, target_id FROM taxonomy_merges WHERE source_id = %s AND target_id = %s;", (taxonomy_merge.source_id, taxonomy_merge.target_id))
-                        taxonomy_merge_row = database_cursor.fetchone()
-                        if not taxonomy_merge_row:
-                            commit_errors = 0
-                            # Try to insert it into the database
-                            while True:
-                                try:
-                                    database_cursor.execute("INSERT INTO taxonomy_merges (source_id, target_id) VALUES (%s, %s);", (taxonomy_merge.source_id, taxonomy_merge.target_id))
-                                    database_cursor.execute("UPDATE proteins SET taxonomy_id = %s WHERE taxonomy_id = %s;", (taxonomy_merge.source_id, taxonomy_merge.target_id))
-                                    database_cursor.execute("UPDATE peptides SET taxonomy_ids = (SELECT array_agg(taxonomy_id) FROM proteins WHERE id = ANY(protein_ids)) WHERE taxonomy_ids && %s;", ([taxonomy_merge.source_id],))
-                                    database_connection.commit()
-                                    break
-                                except BaseException as error:
-                                    # Do a rollback
-                                    database_connection.rollback()
-                                    commit_errors += 1
-                                    # If there are tries left, sleep between 2 and 5 second and try again
-                                    if commit_errors < 3:
-                                        time.sleep(random.randint(2, 5))
-                                    else:
-                                        # Otherwise log the error and proceed with next taxonomy
-                                        log_connection.send(f" taxonomy merge {taxonomy_merge.source_id}|{taxonomy_merge.target_id} raises error:\n{error}\n")
-                                        break
+                taxonomy_merges = queue.get(True, 2)
+                commit_errors = 0
+                # Try to insert it into the database
+                while True:
+                    try:
+                        with database_connection:
+                            with database_connection.cursor() as database_cursor:
+                                TaxonomyMerge.bulk_insert(database_cursor, taxonomy_merges)
+                        break
+                    except BaseException as error:
+                        commit_errors += 1
+                        # If there are tries left, sleep between 2 and 5 second and try again
+                        if commit_errors < 3:
+                            time.sleep(random.randint(2, 5))
+                        else:
+                            # Otherwise log the error and proceed with next taxonomy
+                            commaseperated_taxonmy_merges = ", ".join([f"({taxonomy_merge.source_id},{taxonomy_merge.target_id})" for taxonomy_merge in taxonomy_merges])
+                            log_connection.send(f"taxonomy merge {commaseperated_taxonmy_merges} raises error:\n{error}\n")
+                            break
             except QueueEmptyError:
                 # Catch queue empty error (thrown on timeout)
                 continue

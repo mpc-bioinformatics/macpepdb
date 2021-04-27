@@ -1,4 +1,5 @@
-from __future__ import annotations
+from __future__ import annotations#
+from psycopg2.extras import execute_values
 
 class TaxonomyMerge:
     TABLE_NAME = "taxonomy_merges"
@@ -25,4 +26,26 @@ class TaxonomyMerge:
         database_cursor.execute(
             INSERT_QUERY,
             (taxonomy_merge.source_id, taxonomy_merge.target_id)
+        )
+
+    @classmethod
+    def bulk_insert(cls, database_cursor, taxonomy_merges: list):
+        """
+        @param database_cursor Database cursor with open transaction.
+        @param taxonomy_merges TaxonomyMerges for bulk insert.
+        """
+        BULK_INSERT_QUERY = (
+            f"INSERT INTO {cls.TABLE_NAME} (source_id, target_id) "
+            "VALUES %s ON CONFLICT DO NOTHING;"
+        )
+        # Bulk insert the new peptides
+        execute_values(
+            database_cursor,
+            BULK_INSERT_QUERY,
+            [
+                (
+                    taxonomy_merge.source_id, 
+                    taxonomy_merge.target_id
+                ) for taxonomy_merge in taxonomy_merges
+            ]
         )

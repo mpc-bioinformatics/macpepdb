@@ -1,5 +1,6 @@
 from __future__ import annotations
 from enum import IntEnum, unique
+from psycopg2.extras import execute_values
 
 @unique
 class TaxonomyRank(IntEnum):
@@ -106,4 +107,28 @@ class Taxonomy:
                 taxonomy.name,
                 taxonomy.rank.value
             )
+        )
+
+    @classmethod
+    def bulk_insert(cls, database_cursor, taxonomies: list):
+        """
+        @param database_cursor Database cursor with open transaction.
+        @param taxonomies Taxonomies for bulk insert.
+        """
+        BULK_INSERT_QUERY = (
+            f"INSERT INTO {cls.TABLE_NAME} (id, parent_id, name, rank) "
+            "VALUES %s ON CONFLICT DO NOTHING;"
+        )
+        # Bulk insert the new peptides
+        execute_values(
+            database_cursor,
+            BULK_INSERT_QUERY,
+            [
+                (
+                    taxonomy.id,
+                    taxonomy.parent_id,
+                    taxonomy.name,
+                    taxonomy.rank.value
+                ) for taxonomy in taxonomies
+            ]
         )
