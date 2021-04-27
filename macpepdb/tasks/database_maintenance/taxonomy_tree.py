@@ -61,8 +61,8 @@ class TaxonomyTree:
             log_connection_write.close()
             procs.append(proc)
 
-        logger = LoggerProcess(self.__log_file, logger_write_mode, processing_context)
-        logger.start(log_connections)
+        logger = LoggerProcess(self.__log_file, logger_write_mode, log_connections)
+        logger.start()
 
         return procs, logger, queue, stop_flag
 
