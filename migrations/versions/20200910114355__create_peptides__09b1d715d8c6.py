@@ -71,7 +71,7 @@ def upgrade():
     for idx, (lower, upper) in enumerate(partition_boundaries.PEPTIDE_WEIGHTS):
         connection.execute(f"CREATE TABLE peptides_{str(idx).zfill(3)} PARTITION OF peptides FOR VALUES FROM ('{lower}') TO ('{upper}');")
 
-    op.create_index('peptide_seqeunce_idx', 'peptides', ['sequence'])
+    op.create_index('peptide_sequence_idx', 'peptides', ['sequence'])
 
 def downgrade():
     op.drop_table('peptides')
