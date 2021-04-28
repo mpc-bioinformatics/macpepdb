@@ -80,9 +80,9 @@ class Protein:
 
     def peptides(self, database_cursor):
         REFERENCED_PEPTIDES_QUERY = (
-            f"SELECT {peptide_module.Peptide.TABLE_NAME}.sequence, {peptide_module.Peptide.TABLE_NAME}.number_of_missed_cleavages "
-            f"FROM {peptide_module.Peptide.TABLE_NAME}, {ProteinPeptideAssociation.TABLE_NAME} "
-            f"WHERE {ProteinPeptideAssociation.TABLE_NAME}.protein_accession = %s AND {ProteinPeptideAssociation.TABLE_NAME}.peptide_sequence = {peptide_module.Peptide.TABLE_NAME}.sequence;"
+            f"SELECT sequence, number_of_missed_cleavages "
+            f"FROM {peptide_module.Peptide.TABLE_NAME} "
+            f"WHERE (weight, sequence) IN (SELECT peptide_weight, peptide_sequence FROM {ProteinPeptideAssociation.TABLE_NAME} WHERE protein_accession = %s);"
         )
         database_cursor.execute(
             REFERENCED_PEPTIDES_QUERY,
