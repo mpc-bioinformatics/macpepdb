@@ -254,8 +254,8 @@ class Protein:
             ### Remove already referenced peptides from new_peptides and dereference peptides which no longer part of the protein
             referenced_peptides_query = (
                 f"SELECT {peptide_module.Peptide.TABLE_NAME}.sequence, {peptide_module.Peptide.TABLE_NAME}.number_of_missed_cleavages, {peptide_module.Peptide.TABLE_NAME}.is_metadata_up_to_date "
-                f"FROM {peptide_module.Peptide.TABLE_NAME}, {ProteinPeptideAssociation.TABLE_NAME} "
-                f"WHERE {ProteinPeptideAssociation.TABLE_NAME}.protein_accession = %s AND {ProteinPeptideAssociation.TABLE_NAME}.peptide_sequence = {peptide_module.Peptide.TABLE_NAME}.sequence;"
+                f"FROM {peptide_module.Peptide.TABLE_NAME} "
+                f"WHERE (mass, sequence) IN (SELECT peptide_mass, peptide_sequence FROM {ProteinPeptideAssociation.TABLE_NAME} WHERE protein_accession = %s);"
             )
             database_cursor.execute(referenced_peptides_query, (self.accession,))
             currently_referenced_peptides = [(peptide_module.Peptide(row[0], row[1]), row[2]) for row in database_cursor.fetchall()]
