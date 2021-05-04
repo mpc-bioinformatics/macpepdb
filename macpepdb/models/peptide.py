@@ -116,10 +116,9 @@ class Peptide(PeptideBase):
         for row in database_cursor.fetchall():
             review_statuses.append(row[0])
             proteome_ids.add(row[2])
-            if row[1] in taxonomy_id_count_map:
-                taxonomy_id_count_map[row[1]] += 1
-            else:
-                taxonomy_id_count_map[row[1]] = 1
+            if not row[1] in taxonomy_id_count_map:
+                taxonomy_id_count_map[row[1]] = 0
+            taxonomy_id_count_map[row[1]] += 1
         unique_taxonomy_ids = [taxonomy_id for taxonomy_id, taxonomy_counter in taxonomy_id_count_map.items() if taxonomy_counter == 1]
         return (
             # is_swiss_prot when at least one status is true
