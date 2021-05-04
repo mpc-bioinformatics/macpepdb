@@ -180,13 +180,13 @@ class ModifiedPeptideWhereClauseBuilderTestCase(AbstractDatabaseTestCase):
             with self.database_connection:
                 with self.database_connection.cursor() as database_cursor:
                     # Run through all peptides (in batches of 1000 peptides) and check which matchs the precursor and modification requirements
-                    database_cursor.execute(f"SELECT id, sequence, number_of_missed_cleavages FROM {Peptide.TABLE_NAME};")
+                    database_cursor.execute(f"SELECT sequence, number_of_missed_cleavages FROM {Peptide.TABLE_NAME};")
                     while True:
                         rows = database_cursor.fetchmany(1000)
                         if not len(rows):
                             break
                         for row in rows:
-                            peptide = Peptide(row[1], row[2], row[0])
+                            peptide = Peptide(row[0], row[1])
                             if peptide_mass_validator.validate(peptide):
                                 validated_matching_peptide_sequences.add(peptide.sequence)
 
