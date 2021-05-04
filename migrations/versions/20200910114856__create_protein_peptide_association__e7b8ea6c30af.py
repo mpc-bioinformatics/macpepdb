@@ -26,7 +26,7 @@ def upgrade():
         sa.PrimaryKeyConstraint('protein_accession', 'mass', 'peptide_sequence')
     )
 
-    op.create_index('proteins_peptides_peptide_seqeunce_idx', 'proteins_peptides', ['peptide_sequence'])
+    op.create_index('proteins_peptides_peptide_mass_seqeunce_idx', 'proteins_peptides', ['mass', 'peptide_sequence'])
 
     connection = op.get_bind()
     connection.execute("SELECT create_distributed_table('proteins_peptides', 'mass', colocate_with => 'peptides');",)
