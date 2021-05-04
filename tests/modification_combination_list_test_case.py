@@ -81,7 +81,7 @@ PEPTIDES_FOR_MODIFIED_SEARCH = {
 }
 
 class ModifiedPeptideWhereClauseBuilderTestCase(AbstractDatabaseTestCase):
-    WEIGHT_TOLERANCE_REGEX = re.compile(r"BETWEEN\W(?P<lower>\d+)\WAND\W(?P<upper>\d+)(\W|$)")
+    MASS_TOLERANCE_REGEX = re.compile(r"BETWEEN\W(?P<lower>\d+)\WAND\W(?P<upper>\d+)(\W|$)")
 
     def test_without_modifications(self):
         # Add peptides to database
@@ -99,7 +99,7 @@ class ModifiedPeptideWhereClauseBuilderTestCase(AbstractDatabaseTestCase):
 
                 select_conditions = modification_combination_list.to_sql()
                 select_conditions_string = database_cursor.mogrify(select_conditions[0], select_conditions[1]).decode('utf-8')
-                matches = re.findall(self.__class__.WEIGHT_TOLERANCE_REGEX, select_conditions_string)
+                matches = re.findall(self.__class__.MASS_TOLERANCE_REGEX, select_conditions_string)
                 # Without modifications there is only one between-condition.
                 self.assertEqual(len(matches), 1)
 

@@ -24,7 +24,7 @@ class PeptideMassValidatorTestCase(unittest.TestCase):
         peptide = Peptide(LEPTIN_PEPTIDE_SEQUENCE, 2)
 
         # Static carbamidomethylation of C
-        expected_peptide_mass = peptide.weight + peptide.c_count * static_carbamidomethylation_of_c.delta
+        expected_peptide_mass = peptide.mass + peptide.c_count * static_carbamidomethylation_of_c.delta
         modification_collection = ModificationCollection([static_carbamidomethylation_of_c])
         precursor_range = PrecursorRange(expected_peptide_mass, 0, 0)
         validator = PeptideMassValidator(modification_collection, 0, precursor_range)
@@ -32,7 +32,7 @@ class PeptideMassValidatorTestCase(unittest.TestCase):
 
         # This should als match with allowed variable modification (where actually none is applied)
         # Static carbamidomethylation of C
-        # Variable oxidation of M (not considered in expected_weight)
+        # Variable oxidation of M (not considered in expected_mass)
         modification_collection = ModificationCollection([static_carbamidomethylation_of_c, variable_oxidation_of_m])
         validator = PeptideMassValidator(modification_collection, 3, precursor_range)
         self.assertTrue(validator.validate(peptide))
@@ -40,7 +40,7 @@ class PeptideMassValidatorTestCase(unittest.TestCase):
 
         # Static carbamidomethylation of C
         # 1 variable oxidation of M
-        expected_peptide_mass = peptide.weight \
+        expected_peptide_mass = peptide.mass \
             + peptide.c_count * static_carbamidomethylation_of_c.delta \
             + 1 * variable_oxidation_of_m.delta
         modification_collection = ModificationCollection([static_carbamidomethylation_of_c, variable_oxidation_of_m])
@@ -50,7 +50,7 @@ class PeptideMassValidatorTestCase(unittest.TestCase):
 
         # This should not match if no variable modifiations are allowed
         # Static carbamidomethylation of C
-        # Variable oxidation of M (considered in expected_weight but no variable modification allowed in validation)
+        # Variable oxidation of M (considered in expected_mass but no variable modification allowed in validation)
         validator.set_maximum_number_of_variable_modifications(0)
         self.assertFalse(validator.validate(peptide))
 
@@ -58,7 +58,7 @@ class PeptideMassValidatorTestCase(unittest.TestCase):
         # Static carbamidomethylation of C
         # 3 Variable oxidation of M
         peptide = Peptide(LEPTIN_PEPTIDE_SEQUENCE.replace('J', 'M', 2), 2)
-        expected_peptide_mass = peptide.weight \
+        expected_peptide_mass = peptide.mass \
             + peptide.c_count * static_carbamidomethylation_of_c.delta \
             + 3 * variable_oxidation_of_m.delta
         modification_collection = ModificationCollection([static_carbamidomethylation_of_c, variable_oxidation_of_m])
@@ -75,7 +75,7 @@ class PeptideMassValidatorTestCase(unittest.TestCase):
         # Variable n-terminal modification of D
         # Static carbamidomethylation of C
         # 2 variable oxidation of M
-        expected_peptide_mass = peptide.weight \
+        expected_peptide_mass = peptide.mass \
             + variable_custom_modification_of_n_terminal_d.delta \
             + peptide.c_count * static_carbamidomethylation_of_c.delta \
             + 2 * variable_oxidation_of_m.delta
@@ -93,7 +93,7 @@ class PeptideMassValidatorTestCase(unittest.TestCase):
         # Static n-terminal modification of D
         # Static carbamidomethylation of C
         # 2 variable oxidation of M
-        expected_peptide_mass = peptide.weight \
+        expected_peptide_mass = peptide.mass \
             + static_custom_modification_of_n_terminal_d.delta \
             + peptide.c_count * static_carbamidomethylation_of_c.delta \
             + 2 * variable_oxidation_of_m.delta
@@ -106,7 +106,7 @@ class PeptideMassValidatorTestCase(unittest.TestCase):
         # Variable c-terminal modification of R
         # Static carbamidomethylation of C
         # 2 variable oxidation of M
-        expected_peptide_mass = peptide.weight \
+        expected_peptide_mass = peptide.mass \
             + variable_custom_modification_of_c_terminal_r.delta \
             + peptide.c_count * static_carbamidomethylation_of_c.delta \
             + 2 * variable_oxidation_of_m.delta
@@ -124,7 +124,7 @@ class PeptideMassValidatorTestCase(unittest.TestCase):
         # Static c-terminal modification of R
         # Static carbamidomethylation of C
         # 2 variable oxidation of M
-        expected_peptide_mass = peptide.weight \
+        expected_peptide_mass = peptide.mass \
             + static_custom_modification_of_c_terminal_r.delta \
             + peptide.c_count * static_carbamidomethylation_of_c.delta \
             + 2 * variable_oxidation_of_m.delta

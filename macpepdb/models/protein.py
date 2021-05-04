@@ -84,7 +84,7 @@ class Protein:
         referenced_peptides_query = (
             f"SELECT sequence, number_of_missed_cleavages "
             f"FROM {peptide_module.Peptide.TABLE_NAME} "
-            f"WHERE (weight, sequence) IN (SELECT peptide_weight, peptide_sequence FROM {ProteinPeptideAssociation.TABLE_NAME} WHERE protein_accession = %s)"
+            f"WHERE (mass, sequence) IN (SELECT peptide_mass, peptide_sequence FROM {ProteinPeptideAssociation.TABLE_NAME} WHERE protein_accession = %s)"
         )
         if order_by:
             order_type = "ASC" if not order_descending else "DESC"
@@ -324,11 +324,11 @@ class Protein:
         @return list Each element is a tuple which contains a peptide and the peptides metadata status
         """
 
-        # %s after VLAUES is substitutet by "(weight, sequence), (weight, sequence)"
+        # %s after VLAUES is substitutet by "(mass, sequence), (mass, sequence)"
         EXISTING_PEPTIDE_QUERY = (
             f"SELECT {peptide_module.Peptide.TABLE_NAME}.sequence, {peptide_module.Peptide.TABLE_NAME}.number_of_missed_cleavages, {peptide_module.Peptide.TABLE_NAME}.is_metadata_up_to_date "
             f"FROM {peptide_module.Peptide.TABLE_NAME} "
-            f"WHERE ({peptide_module.Peptide.TABLE_NAME}.weight, {peptide_module.Peptide.TABLE_NAME}.sequence) IN (VALUES %s);"
+            f"WHERE ({peptide_module.Peptide.TABLE_NAME}.mass, {peptide_module.Peptide.TABLE_NAME}.sequence) IN (VALUES %s);"
         )
         return [
             (
@@ -339,7 +339,7 @@ class Protein:
                 EXISTING_PEPTIDE_QUERY,
                 [
                     (
-                        peptide.weight,
+                        peptide.mass,
                         peptide.sequence
                     ) for peptide in peptides
                 ],

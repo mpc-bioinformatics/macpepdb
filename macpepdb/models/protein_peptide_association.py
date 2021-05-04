@@ -6,7 +6,7 @@ class ProteinPeptideAssociation:
     def __init__(self, protein, peptide):
         self.__protein_accession = protein.accession
         self.__peptide_sequence = peptide.sequence
-        self.__peptide_weight = peptide.weight
+        self.__peptide_mass = peptide.mass
 
     @property
     def protein_accession(self):
@@ -17,8 +17,8 @@ class ProteinPeptideAssociation:
         return self.__peptide_sequence
 
     @property
-    def peptide_weight(self):
-        return self.__peptide_weight
+    def peptide_mass(self):
+        return self.__peptide_mass
 
     @staticmethod
     def bulk_insert(database_cursor, protein_peptide_associations: list):
@@ -26,11 +26,11 @@ class ProteinPeptideAssociation:
         @param database_cursor Database cursor with open transaction.
         @param protein_peptide_associations List of ProteinPeptideAssciation.
         """
-        BULK_INSERT_QUERY = f"INSERT INTO {ProteinPeptideAssociation.TABLE_NAME} (protein_accession, peptide_sequence, peptide_weight) VALUES %s ON CONFLICT DO NOTHING;"
+        BULK_INSERT_QUERY = f"INSERT INTO {ProteinPeptideAssociation.TABLE_NAME} (protein_accession, peptide_sequence, peptide_mass) VALUES %s ON CONFLICT DO NOTHING;"
         execute_values(
             database_cursor,
             BULK_INSERT_QUERY,
-            [(association.protein_accession, association.peptide_sequence, association.peptide_weight) for association in protein_peptide_associations ]
+            [(association.protein_accession, association.peptide_sequence, association.peptide_mass) for association in protein_peptide_associations ]
         )
     
     @staticmethod

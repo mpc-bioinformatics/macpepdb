@@ -37,7 +37,7 @@ class ModificationCombination:
         # Used terminus modification of the form [modification, is_applied], e.g.: [Modification, False]
         n_terminus_modification = None
         c_terminus_modification = None
-        # Sum of the weight delta by the applied modifications
+        # Sum of the mass delta by the applied modifications
         delta_sum = 0
 
         for counter in modification_counters:
@@ -80,12 +80,12 @@ class ModificationCombination:
                 c_terminus_modification[0].amino_acid.one_letter_code
             )
 
-        # Add the weight between condition
+        # Add the mass between condition
         self.__precursor_range = PrecursorRange(precursor - delta_sum, lower_precursor_tolerance_ppm, upper_precursor_tolerance_ppm)
 
     def to_sql(self) -> tuple:
-        # Begin with weight
-        query_string = "weight BETWEEN %s AND %s"
+        # Begin with mass
+        query_string = "mass BETWEEN %s AND %s"
         values = [self.precursor_range.lower_limit, self.precursor_range.upper_limit]
         # Add each additional column condition
         for column_name, (operator, value) in self.column_conditions.items():
@@ -236,4 +236,4 @@ class ModificationCombinationList:
             return (" OR ".join(query_string), values)
         else:
             precursor_range = PrecursorRange(self.__precursor, self.__lower_precursor_tolerance_ppm, self.__upper_precursor_tolerance_ppm)
-            return ("weight BETWEEN %s AND %s", [precursor_range.lower_limit, precursor_range.upper_limit])
+            return ("mass BETWEEN %s AND %s", [precursor_range.lower_limit, precursor_range.upper_limit])

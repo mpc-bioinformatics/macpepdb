@@ -46,11 +46,11 @@ class PeptideMassValidator:
 
     def __current_peptide_mass(self) -> int:
         """
-        Returns the current peptide weight inclusively the applied modifications
+        Returns the current peptide mass inclusively the applied modifications
         @return int Returns the mass of the modified peptide
         """
         modifications_delta_sum = sum(modification.delta for modification in self.__applied_modifications if modification)
-        return self.__peptide.weight + modifications_delta_sum 
+        return self.__peptide.mass + modifications_delta_sum 
 
     def __validate(self, current_mod_idx: int, number_of_variable_modifications: int) -> bool:
         """
@@ -59,7 +59,7 @@ class PeptideMassValidator:
         @param number_of_variable_modifications Current number of variable modifications
         @return bool True if the peptide + a combindation of modifications matches the precursor range 
         """
-        # Return True if weight matches
+        # Return True if mass matches
         if self.__current_peptide_mass() in self.__precursor_range:
             return True
         # Return False if index is out of bounds

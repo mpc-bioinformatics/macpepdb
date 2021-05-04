@@ -13,7 +13,7 @@ class PeptideBase:
     def __init__(self, sequence: str, number_of_missed_cleavages: int):
         self.__sequence = sequence.upper()
         self.__number_of_missed_cleavages = number_of_missed_cleavages
-        self.__weight = self.__class__.calculate_weight(self.__sequence)
+        self.__mass = self.__class__.calculate_mass(self.__sequence)
         # On demand values
         self.__amino_acid_counter = None
 
@@ -22,8 +22,8 @@ class PeptideBase:
         return self.__sequence
 
     @property
-    def weight(self):
-        return self.__weight
+    def mass(self):
+        return self.__mass
 
     @property
     def number_of_missed_cleavages(self):
@@ -191,20 +191,20 @@ class PeptideBase:
     def length(self):
         return len(self.sequence)
 
-    # Calculats the weight of a sequence
+    # Calculats the mass of a sequence
     @classmethod
-    def calculate_weight(cls, sequence: str) -> int:
-        weight = H2O.mono_mass
+    def calculate_mass(cls, sequence: str) -> int:
+        mass = H2O.mono_mass
         for amino_acid_one_letter_code in sequence:
-            weight += AminoAcid.get_by_one_letter_code(amino_acid_one_letter_code).mono_mass
-        return weight
+            mass += AminoAcid.get_by_one_letter_code(amino_acid_one_letter_code).mono_mass
+        return mass
 
     def __count_amino_acids(self):
         self.__amino_acid_counter = Counter(self.__sequence)
 
     # This method is implemented to make sure only the sequence is used as hash when a protein is stored in a hashable collection (Set, Dictionary, ...)
     def __hash__(self):
-        return hash((self.weight, self.sequence))
+        return hash((self.mass, self.sequence))
 
     # According to the Python documentation this should be implemented if __hash__() is implemented.
     def __eq__(self, other):
@@ -220,7 +220,7 @@ class PeptideBase:
         return {
             'sequence': self.sequence,
             'number_of_missed_cleavages': self.number_of_missed_cleavages,
-            'weight': self.weight
+            'mass': self.mass
         }
 
     @classmethod
@@ -258,13 +258,13 @@ class PeptideBase:
         @return int ID of inserted peptide
         """
         INSERT_QUERY = (
-            f"INSERT INTO {cls.TABLE_NAME} (weight, sequence, length, number_of_missed_cleavages, a_count, b_count, c_count, d_count, e_count, f_count, g_count, h_count, i_count, j_count, k_count, l_count, m_count, n_count, o_count, p_count, q_count, r_count, s_count, t_count, u_count, v_count, w_count, y_count, z_count, n_terminus, c_terminus) "
+            f"INSERT INTO {cls.TABLE_NAME} (mass, sequence, length, number_of_missed_cleavages, a_count, b_count, c_count, d_count, e_count, f_count, g_count, h_count, i_count, j_count, k_count, l_count, m_count, n_count, o_count, p_count, q_count, r_count, s_count, t_count, u_count, v_count, w_count, y_count, z_count, n_terminus, c_terminus) "
             "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) ON CONFLICT DO NOTHING;"
         )
         database_cursor.execute(
             INSERT_QUERY,
             (
-                peptide.weight,
+                peptide.mass,
                 peptide.sequence,
                 peptide.length,
                 peptide.number_of_missed_cleavages,
@@ -305,7 +305,7 @@ class PeptideBase:
         @param peptides Peptides for bulk insert.
         """
         BULK_INSERT_QUERY = (
-            f"INSERT INTO {cls.TABLE_NAME} (weight, sequence, length, number_of_missed_cleavages, a_count, b_count, c_count, d_count, e_count, f_count, g_count, h_count, i_count, j_count, k_count, l_count, m_count, n_count, o_count, p_count, q_count, r_count, s_count, t_count, u_count, v_count, w_count, y_count, z_count, n_terminus, c_terminus) "
+            f"INSERT INTO {cls.TABLE_NAME} (mass, sequence, length, number_of_missed_cleavages, a_count, b_count, c_count, d_count, e_count, f_count, g_count, h_count, i_count, j_count, k_count, l_count, m_count, n_count, o_count, p_count, q_count, r_count, s_count, t_count, u_count, v_count, w_count, y_count, z_count, n_terminus, c_terminus) "
             "VALUES %s ON CONFLICT DO NOTHING;"
         )
         # Bulk insert the new peptides
@@ -314,7 +314,7 @@ class PeptideBase:
             BULK_INSERT_QUERY,
             [
                 (
-                    peptide.weight,
+                    peptide.mass,
                     peptide.sequence,
                     peptide.length,
                     peptide.number_of_missed_cleavages,

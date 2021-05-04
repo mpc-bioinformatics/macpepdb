@@ -70,7 +70,7 @@ class PeptideTestCase(unittest.TestCase):
 
         self.assertEqual(len(fictional_peptide.sequence), amino_acid_sum)
 
-    def test_weight_calculation(self):
+    def test_mass_calculation(self):
         fictional_peptide = Peptide(FICTIONAL_SEQUENCE, 0)
 
         # If the amino acid cound test passes, we can use the counts to calculate the mass manally.
@@ -102,5 +102,5 @@ class PeptideTestCase(unittest.TestCase):
             + fictional_peptide.z_count * AminoAcid.get_by_one_letter_code('Z').mono_mass \
             + H2O.mono_mass
 
-        self.assertEqual(mass, fictional_peptide.weight)
+        self.assertEqual(mass, fictional_peptide.mass)
 

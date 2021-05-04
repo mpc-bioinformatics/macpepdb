@@ -21,7 +21,7 @@ depends_on = None
 def upgrade():
     op.create_table(
         'peptides',
-        sa.Column('weight', sa.BigInteger, nullable=False),
+        sa.Column('mass', sa.BigInteger, nullable=False),
         sa.Column('sequence', sa.VARCHAR(60), nullable=False),
         sa.Column('length', sa.SmallInteger, nullable=False),
         sa.Column('number_of_missed_cleavages', sa.SmallInteger, nullable=False),
@@ -60,15 +60,15 @@ def upgrade():
         sa.Column('taxonomy_ids', sa.dialects.postgresql.ARRAY(sa.Integer), server_default='{}', nullable=False),
         sa.Column('unique_taxonomy_ids', sa.dialects.postgresql.ARRAY(sa.Integer), server_default='{}', nullable=False),
         sa.Column('proteome_ids', sa.dialects.postgresql.ARRAY(sa.VARCHAR(11)), server_default='{}', nullable=False),
-        sa.PrimaryKeyConstraint('weight', 'sequence'),
-        postgresql_partition_by='RANGE (weight)'
+        sa.PrimaryKeyConstraint('mass', 'sequence'),
+        postgresql_partition_by='RANGE (mass)'
     )
 
     # The migration folder is not a Python module, so we need to import the partition_boundaries file directly
     partition_boundaries = imp.load_source('partition_boundaries', str(pathlib.Path(__file__).parent.parent.joinpath('constants').joinpath('partition_boundaries.py')))
 
     connection = op.get_bind()
-    for idx, (lower, upper) in enumerate(partition_boundaries.PEPTIDE_WEIGHTS):
+    for idx, (lower, upper) in enumerate(partition_boundaries.PEPTIDE_MASSES):
         connection.execute(f"CREATE TABLE peptides_{str(idx).zfill(3)} PARTITION OF peptides FOR VALUES FROM ('{lower}') TO ('{upper}');")
 
     op.create_index('peptide_sequence_idx', 'peptides', ['sequence'])
