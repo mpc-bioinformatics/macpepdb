@@ -2,11 +2,72 @@ from .peptide_base import PeptideBase
 from .protein_peptide_association import ProteinPeptideAssociation
 from . import protein
 
+class Metadata:
+    def __init__(self, is_swiss_prot: bool, is_trembl: bool, taxonomy_ids: list, unique_taxonomy_ids: list, proteome_ids: list):
+        self.__is_swiss_prot = is_swiss_prot
+        self.__is_trembl = is_trembl
+        self.__taxonomy_ids = taxonomy_ids
+        self.__unique_taxonomy_ids = unique_taxonomy_ids
+        self.__proteome_ids = proteome_ids
+
+    @property
+    def is_swiss_prot(self):
+        return self.__is_swiss_prot
+    
+    @property
+    def is_trembl(self):
+        return self.__is_trembl
+    
+    @property
+    def taxonomy_ids(self):
+        return self.__taxonomy_ids
+    
+    @property
+    def unique_taxonomy_ids(self):
+        return self.__unique_taxonomy_ids
+    
+    @property
+    def proteome_ids(self):
+        return self.__proteome_ids
+    
+
 class Peptide(PeptideBase):
     TABLE_NAME = 'peptides'
     
-    def __init__(self, sequence: str, number_of_missed_cleavages: int):
+    def __init__(self, sequence: str, number_of_missed_cleavages: int, metadata: Metadata = None):
         PeptideBase.__init__(self, sequence, number_of_missed_cleavages)
+        self.__metadata = metadata
+
+    @property
+    def metadata(self):
+        return self.__metadata
+
+    @classmethod
+    def select(cls, database_cursor, select_conditions: tuple = ("", []), fetchall: bool = False, include_metadata: bool = False):
+        """
+        @param database_cursor
+        @param select_conditions A tupel with the where statement (without WHERE) and a list of parameters, e.g. ("accession = %s AND taxonomy_id = %s",["Q257X2", 6909])
+        @param fetchall Indicates if multiple rows should be fetched
+        @param include_metadata Indicates if peptides is returned with metadata (is_swiss_prot, is_trembl, taxonomy_ids, unique_taxonomy_ids, proteome_ids)
+        @return Petide or list of peptides
+        """
+        if not include_metadata:
+            return super().select(database_cursor, select_conditions, fetchall)
+        else:
+            select_query = f"SELECT sequence, number_of_missed_cleavages, is_swiss_prot, is_trembl, taxonomy_ids, unique_taxonomy_ids, proteome_ids FROM {cls.TABLE_NAME}"
+            if len(select_conditions) == 2 and len(select_conditions[0]):
+                select_query += f" WHERE {select_conditions[0]}"
+            select_query += ";"
+            database_cursor.execute(select_query, select_conditions[1])
+            if fetchall:
+                return [cls(row[0], row[1], Metadata(row[2], row[3], row[4], row[5], row[6])) for row in database_cursor.fetchall()]
+            else:
+                row = database_cursor.fetchone()
+                if row:
+                    return cls(row[0], row[1], Metadata(row[2], row[3], row[4], row[5], row[6]))
+                else:
+                    return None
+
 
     def proteins(self, database_cursor):
         PROTEIN_QUERY = (
