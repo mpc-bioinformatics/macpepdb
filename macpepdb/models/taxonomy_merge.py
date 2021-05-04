@@ -49,3 +49,26 @@ class TaxonomyMerge:
                 ) for taxonomy_merge in taxonomy_merges
             ]
         )
+    
+    @classmethod
+    def select(cls, database_cursor, select_conditions: tuple = ("", []), fetchall: bool = False):
+        """
+        @param database_cursor
+        @param select_conditions A tupel with the where statement (without WHERE) and a list of parameters, e.g. ("source_id = %s", [1])
+        @param fetchall Indicates if multiple rows should be fetched
+        @return TaxonomyMerge or list of taxonomy_merges
+        """
+        select_query = f"SELECT source_id, target_id FROM {cls.TABLE_NAME}"
+        if len(select_conditions) == 2 and len(select_conditions[0]):
+            select_query += f" WHERE {select_conditions[0]}"
+        select_query += ";"
+        database_cursor.execute(select_query, select_conditions[1])
+        
+        if fetchall:
+            return [cls(row[0], row[1]) for row in database_cursor.fetchall()]
+        else:
+            row = database_cursor.fetchone()
+            if row:
+                return cls(row[0], row[1])
+            else:
+                return None
