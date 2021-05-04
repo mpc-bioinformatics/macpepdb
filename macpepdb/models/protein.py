@@ -1,5 +1,7 @@
 import re
 
+from psycopg2.extras import execute_values
+
 from .protein_peptide_association import ProteinPeptideAssociation
 from ..proteomics.enzymes import digest_enzyme
 from . import peptide as peptide_module
@@ -191,13 +193,7 @@ class Protein:
             protein_peptide_associations = []
             peptides_for_metadata_update = []
 
-            stored_peptide_query = (
-                f"SELECT {peptide_module.Peptide.TABLE_NAME}.sequence, {peptide_module.Peptide.TABLE_NAME}.number_of_missed_cleavages, {peptide_module.Peptide.TABLE_NAME}.is_metadata_up_to_date "
-                f"FROM {peptide_module.Peptide.TABLE_NAME} "
-                f"WHERE {peptide_module.Peptide.TABLE_NAME}.sequence = ANY(%s);"
-            )
-            database_cursor.execute(stored_peptide_query, (list(new_peptides.keys()),))
-            stored_peptides = [(peptide_module.Peptide(row[0], row[1]), row[2]) for row in database_cursor.fetchall()]
+            stored_peptides = Protein.__select_existing_peptides_with_metadata_status(database_cursor, new_peptides.values())
 
             # Remove already existing peptides form new peptides and associate already stored peptides
             for peptide, is_metadata_up_to_date in stored_peptides:
@@ -282,13 +278,7 @@ class Protein:
             # Check if there are peptides left
             if len(new_peptides):
                 ### Remove already existing peptides from new peptides and create association value
-                stored_peptide_query = (
-                    f"SELECT {peptide_module.Peptide.TABLE_NAME}.sequence, {peptide_module.Peptide.TABLE_NAME}.number_of_missed_cleavages, {peptide_module.Peptide.TABLE_NAME}.is_metadata_up_to_date "
-                    f"FROM {peptide_module.Peptide.TABLE_NAME} "
-                    f"WHERE {peptide_module.Peptide.TABLE_NAME}.sequence = ANY(%s);"
-                )
-                database_cursor.execute(stored_peptide_query, (list(new_peptides.keys()),))
-                stored_peptides = [(peptide_module.Peptide(row[0], row[1]), row[2]) for row in database_cursor.fetchall()]
+                stored_peptides = Protein.__select_existing_peptides_with_metadata_status(database_cursor, new_peptides.values())
 
                 protein_peptide_associations = []
 
@@ -324,3 +314,37 @@ class Protein:
             database_cursor.execute(f"UPDATE proteins SET {update_columns} WHERE accession = %s", update_values)
 
         return number_of_new_peptides
+
+    @staticmethod
+    def __select_existing_peptides_with_metadata_status(database_cursor, peptides: list) -> list:
+        """
+        Updates the stored_protein with the updated_protein by comparing its attributes.
+        @param database_cursor Database cursor.
+        @param peptides List of peptides
+        @return list Each element is a tuple which contains a peptide and the peptides metadata status
+        """
+
+        # %s after VLAUES is substitutet by "(weight, sequence), (weight, sequence)"
+        EXISTING_PEPTIDE_QUERY = (
+            f"SELECT {peptide_module.Peptide.TABLE_NAME}.sequence, {peptide_module.Peptide.TABLE_NAME}.number_of_missed_cleavages, {peptide_module.Peptide.TABLE_NAME}.is_metadata_up_to_date "
+            f"FROM {peptide_module.Peptide.TABLE_NAME} "
+            f"WHERE ({peptide_module.Peptide.TABLE_NAME}.weight, {peptide_module.Peptide.TABLE_NAME}.sequence) IN (VALUES %s);"
+        )
+        return [
+            (
+                peptide_module.Peptide(row[0], row[1]), 
+                row[2]
+            ) for row in execute_values(
+                database_cursor,
+                EXISTING_PEPTIDE_QUERY,
+                [
+                    (
+                        peptide.weight,
+                        peptide.sequence
+                    ) for peptide in peptides
+                ],
+                template="(%s, %s)",
+                page_size=len(peptides),
+                fetch=True
+            )
+        ]
