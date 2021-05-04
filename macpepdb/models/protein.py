@@ -78,14 +78,22 @@ class Protein:
             "is_reviewed": self.is_reviewed
         }
 
-    def peptides(self, database_cursor):
-        REFERENCED_PEPTIDES_QUERY = (
+    def peptides(self, database_cursor, order_by = None, order_descending: bool = False, offset: int = None, limit: int = None):
+        referenced_peptides_query = (
             f"SELECT sequence, number_of_missed_cleavages "
             f"FROM {peptide_module.Peptide.TABLE_NAME} "
-            f"WHERE (weight, sequence) IN (SELECT peptide_weight, peptide_sequence FROM {ProteinPeptideAssociation.TABLE_NAME} WHERE protein_accession = %s);"
+            f"WHERE (weight, sequence) IN (SELECT peptide_weight, peptide_sequence FROM {ProteinPeptideAssociation.TABLE_NAME} WHERE protein_accession = %s)"
         )
+        if order_by:
+            order_type = "ASC" if not order_descending else "DESC"
+            referenced_peptides_query += f" ORDER BY {order_by} {order_type}"
+        if offset:
+            referenced_peptides_query += f" OFFSET {offset}"
+        if limit:
+            referenced_peptides_query += f" LIMIT {limit}"
+        referenced_peptides_query += ";"
         database_cursor.execute(
-            REFERENCED_PEPTIDES_QUERY,
+            referenced_peptides_query,
             (self.accession,)
         )
         return [
