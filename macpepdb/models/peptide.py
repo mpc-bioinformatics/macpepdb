@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .peptide_base import PeptideBase
 from .protein_peptide_association import ProteinPeptideAssociation
 from . import protein
@@ -85,34 +87,35 @@ class Peptide(PeptideBase):
         database_cursor.execute(f"UPDATE {Peptide.TABLE_NAME} SET is_metadata_up_to_date = %s WHERE sequence = ANY(%s);", (False, [peptide.sequence for peptide in peptides]))
 
     @staticmethod
-    def update_metadata(database_cursor, peptide_sequence: str):
-        update_values = Peptide.generate_metadata_update_values(database_cursor, peptide_sequence)
+    def update_metadata(database_cursor, peptide: Peptide):
+        update_values = Peptide.generate_metadata_update_values(database_cursor, peptide)
         database_cursor.execute(
-            f"UPDATE {Peptide.TABLE_NAME} SET is_metadata_up_to_date = true, is_swiss_prot = %s, is_trembl = %s, taxonomy_ids = %s, unique_taxonomy_ids = %s, proteome_ids = %s WHERE sequence = %s;",
+            f"UPDATE {Peptide.TABLE_NAME} SET is_metadata_up_to_date = true, is_swiss_prot = %s, is_trembl = %s, taxonomy_ids = %s, unique_taxonomy_ids = %s, proteome_ids = %s WHERE mass = %s AND sequence = %s;",
             (
                 update_values[0],
                 update_values[1],
                 update_values[2],
                 update_values[3],
                 update_values[4],
-                update_values[5]
+                update_values[5],
+                update_values[6]
             )
         )
 
     @staticmethod
-    def generate_metadata_update_values(database_cursor, peptide_sequence: str) -> tuple():
+    def generate_metadata_update_values(database_cursor, peptide: Peptide) -> tuple():
         """
         Generates a tuple with the updated metadata for peptides.
 
         @param database_cursor
-        @param peptide_sequence
-        @return tuple Form (is_swiss_prot, is_trembl, taxonomy_ids, unique_taxonomy_ids, proteome_ids, sequence)
+        @param peptide
+        @return tuple Form (is_swiss_prot, is_trembl, taxonomy_ids, unique_taxonomy_ids, proteome_ids, mass, sequence)
         """
         review_statuses = []
         proteome_ids = set()
         # Key is a taxonomy id, value is a counter which indicates how often the taxonomy among the referenced proteins
         taxonomy_id_count_map = {} 
-        database_cursor.execute(f"SELECT is_reviewed, taxonomy_id, proteome_id FROM {protein.Protein.TABLE_NAME} WHERE accession = ANY(SELECT protein_accession FROM {ProteinPeptideAssociation.TABLE_NAME} WHERE peptide_sequence = %s);", (peptide_sequence,))
+        database_cursor.execute(f"SELECT is_reviewed, taxonomy_id, proteome_id FROM {protein.Protein.TABLE_NAME} WHERE accession = ANY(SELECT protein_accession FROM {ProteinPeptideAssociation.TABLE_NAME} WHERE peptide_sequence = %s);", (peptide.sequence,))
         for row in database_cursor.fetchall():
             review_statuses.append(row[0])
             proteome_ids.add(row[2])
@@ -128,5 +131,6 @@ class Peptide(PeptideBase):
             list(taxonomy_id_count_map.keys()),
             unique_taxonomy_ids,
             list(proteome_ids),
-            peptide_sequence
+            peptide.mass,
+            peptide.sequence
         )

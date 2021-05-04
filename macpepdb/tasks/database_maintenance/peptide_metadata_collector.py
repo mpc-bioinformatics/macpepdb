@@ -90,14 +90,14 @@ class PeptideMetadataCollector:
             try:
                 with database_connection:
                     with database_connection.cursor(name='peptide_update') as database_cursor:
-                        database_cursor.execute(f"SELECT sequence FROM {Peptide.TABLE_NAME} WHERE is_metadata_up_to_date = false;")
+                        database_cursor.execute(f"SELECT sequence, number_of_missed_cleavages FROM {Peptide.TABLE_NAME} WHERE is_metadata_up_to_date = false;")
                         # Fetch loop
                         while True:
                             # Break fetch loop
                             if self.__stop_signal:
                                 break
                             # Fetch 1000 peptide IDs
-                            peptides_chunk = [row[0] for row in database_cursor.fetchmany(1000)]
+                            peptides_chunk = [Peptide(row[0], row[1]) for row in database_cursor.fetchmany(1000)]
                             # Break while loop if no more peptides were found
                             if not len(peptides_chunk):
                                 enqueued_all_updatedable_peptides = True

@@ -29,7 +29,7 @@ class PeptideMetadataCollectorProcess(GenericProcess):
         self.__log_connection.send(f"peptide update worker {self.__id} is online")
         database_connection = None
         PREPARED_STATEMENT_NAME = "updatepeptide_metadata"
-        PREPARE_STATEMENT_QUERY = f"PREPARE {PREPARED_STATEMENT_NAME} AS UPDATE {Peptide.TABLE_NAME} SET is_metadata_up_to_date = true, is_swiss_prot = $1, is_trembl = $2, taxonomy_ids = $3, unique_taxonomy_ids = $4, proteome_ids = $5 WHERE sequence = $6;"
+        PREPARE_STATEMENT_QUERY = f"PREPARE {PREPARED_STATEMENT_NAME} AS UPDATE {Peptide.TABLE_NAME} SET is_metadata_up_to_date = true, is_swiss_prot = $1, is_trembl = $2, taxonomy_ids = $3, unique_taxonomy_ids = $4, proteome_ids = $5 WHERE mass = $6 AND sequence = $7;"
 
         # Let the process run until empty_queue_and_stop_flag is true and peptide_sequence_queue is empty or immediate_stop_event is true.
         while (not self.__empty_queue_and_stop_flag.is_set() or not self.__peptide_sequence_queue.empty()) and not self.__immediate_stop_event.is_set():
@@ -40,20 +40,20 @@ class PeptideMetadataCollectorProcess(GenericProcess):
                     with database_connection:
                         with database_connection.cursor() as database_cursor:
                             database_cursor.execute(PREPARE_STATEMENT_QUERY)
-                # Wait 5 seconds for a new set of IDs
-                peptide_sequences = self.__peptide_sequence_queue.get(True, 5)
+                # Wait 5 seconds for a new set of peptides
+                peptides = self.__peptide_sequence_queue.get(True, 5)
                 while True:
                     try:
                         with database_connection:
                             with database_connection.cursor() as database_cursor:
                                 execute_batch(
                                     database_cursor,
-                                    f"EXECUTE {PREPARED_STATEMENT_NAME} (%s, %s, %s ,%s ,%s, %s);",
-                                    [Peptide.generate_metadata_update_values(database_cursor, peptide_sequence) for peptide_sequence in peptide_sequences],
-                                    page_size=len(peptide_sequences)
+                                    f"EXECUTE {PREPARED_STATEMENT_NAME} (%s, %s, %s ,%s ,%s, %s, %s);",
+                                    [Peptide.generate_metadata_update_values(database_cursor, peptide) for peptide in peptides],
+                                    page_size=len(peptides)
                                 )
                         with self.__update_counter:
-                            self.__update_counter[0] += len(peptide_sequences)
+                            self.__update_counter[0] += len(peptides)
                         break
                     except BaseException as error:
                         self.__log_connection.send(f"error occured, see:\n{error}\ntry again")
