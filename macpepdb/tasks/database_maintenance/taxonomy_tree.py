@@ -264,7 +264,8 @@ class TaxonomyTree:
             except QueueEmptyError:
                 # Catch queue empty error (thrown on timeout)
                 continue
-        database_connection.close()
+        if database_connection and database_connection.closed == 0:
+            database_connection.close()
         log_connection.send(f"insert worker {id} is stopping")
         # Close connection to logger
         log_connection.close()
@@ -301,7 +302,8 @@ class TaxonomyTree:
             except QueueEmptyError:
                 # Catch queue empty error (thrown on timeout)
                 continue
-        database_connection.close()
+        if database_connection and database_connection.closed == 0:
+            database_connection.close()
         log_connection.send(f"merge worker {id} is stopping")
         # Close connection to logger
         log_connection.close()
@@ -337,7 +339,8 @@ class TaxonomyTree:
             except QueueEmptyError:
                 # Catch queue empty error (thrown on timeout)
                 continue
-        database_connection.close()
+        if database_connection and database_connection.closed == 0:
+            database_connection.close()
         log_connection.send(f"deletion worker {id} is stopping")
         # Close connection to logger
         log_connection.close()
