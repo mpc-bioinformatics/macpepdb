@@ -4,8 +4,8 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-psycopg2 = "<= 3"
-alembic = "<= 1.5"
+alembic = ">=1, <2"
+psycopg2 = ">=2, <3"
 
 [dev-packages]
 pylint = "*"
