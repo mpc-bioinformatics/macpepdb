@@ -1,14 +1,20 @@
 # MaCPepDB - Mass Centric Peptide Database
 
 ## Description
-Creates a peptide databases by digesting proteins stored in FASTA-/Uniprot-Text-files. 
+Creates a peptide databases by digesting proteins stored in FASTA-/Uniprot-Text-files.
+
+## Dependencies
+Only necessary for development and non-Docker installation
+* GIT
+* Build tools (Ubuntu: `build-essential`, Arch Linux: `base-devel`)
+* C/C++-header for PostgreSQL (Ubuntu: `libpq-dev`, Arch Linux: `postgresql-libs`)
+* Docker & Docker Compose
+* Python 3.x
+* [pyenv](https://github.com/pyenv/pyenv)
 
 ## Development
 ### Prepare development environment
 ```bash
-# Install necessary dependencies for your distro
-sudo pacman -S python python-pip postgresql-libs docker docker-compose
-
 # It is recommended to use a pyenv to make sure the python version is matching
 # Follow the instruction to install pyenv on https://github.com/pyenv/pyenv#installation
 
