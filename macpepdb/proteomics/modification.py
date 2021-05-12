@@ -12,7 +12,7 @@ class ModificationPosition(IntEnum):
     C_TERMINUS = 3
 
     def __str__(self):
-        return self.name.lower()
+        return self.name.lower() # pylint: disable=no-member
 
     @classmethod
     def from_string(cls, position: str):
