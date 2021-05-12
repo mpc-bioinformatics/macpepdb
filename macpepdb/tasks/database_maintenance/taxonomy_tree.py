@@ -5,6 +5,7 @@ import random
 from multiprocessing import Process, Event, Queue, Pipe, get_context as get_processing_context
 from multiprocessing.connection import Connection, wait
 from queue import Full as QueueFullError, Empty as QueueEmptyError
+from typing import Tuple
 
 # 3rd party modules
 import psycopg2
@@ -38,7 +39,7 @@ class TaxonomyTree:
     # This will create working processes and one logger processes. The worker processes are connected with the logger process.
     # Make sure the worker function has the following argument list: id (int), database_url (str), stop_flag (Event) and log_connection (Connection).
     # Returns (array of worker processes, the logger process, the work queue, and a stop flag for the worker processes)
-    def __start_work_and_logger_processes(self, work_function, logger_write_mode) -> (list, Process, Queue, Event):
+    def __start_work_and_logger_processes(self, work_function, logger_write_mode) -> Tuple[list, Process, Queue, Event]:
         # Build processing context
         processing_context = get_processing_context("spawn")
 
