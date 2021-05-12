@@ -216,13 +216,6 @@ class PeptideBase:
     def to_fasta_entry(self):
         return "{}\n{}\n".format(self.__get_fasta_header(), self.sequence)
 
-    def to_dict(self):
-        return {
-            'sequence': self.sequence,
-            'number_of_missed_cleavages': self.number_of_missed_cleavages,
-            'mass': self.mass
-        }
-
     @classmethod
     def from_dict(cls, attributes: dict):
         return cls(attributes["sequence"], attributes["number_of_missed_cleavages"])

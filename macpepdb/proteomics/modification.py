@@ -173,16 +173,6 @@ class Modification:
     def is_static_as_string(self):
         return self.__class__.is_static_to_string(self.__is_static)
 
-    def to_dict(self):
-        return {
-            "accession": self.__accession,
-            "name": self.__name,
-            "amino_acid": self.__amino_acid.one_letter_code,
-            "delta": self.__delta,
-            "is_static": self.__is_static,
-            "position": str(self.__position)
-        }
-
     @classmethod
     def from_dict(cls, attributes: dict):
         return Modification(

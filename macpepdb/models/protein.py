@@ -69,17 +69,6 @@ class Protein:
             return False
         return self.accession == other.accession
 
-    def to_dict(self):
-        return {
-            "accession": self.accession,
-            "entry_name": self.entry_name,
-            "name": self.name,
-            "sequence": self.sequence,
-            "taxonomy_id": self.taxonomy_id,
-            "proteome_id": self.proteome_id,
-            "is_reviewed": self.is_reviewed
-        }
-
     def peptides(self, database_cursor, order_by = None, order_descending: bool = False, offset: int = None, limit: int = None):
         referenced_peptides_query = (
             f"SELECT sequence, number_of_missed_cleavages "
