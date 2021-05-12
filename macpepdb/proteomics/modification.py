@@ -104,8 +104,7 @@ class Modification:
     # Remember Comet allows only 9 variable modifications in total.
     def to_comet_parameter(self):
         if self.is_static and not self.is_terminus_modification:
-            amino_acid_name = self.amino_acid.name if self.amino_acid.one_letter_code != "O" else AminoAcid.COMET_NAME_FOR_PYRROLYSINE
-            return "add_{}_{} = {}".format(self.amino_acid.one_letter_code, amino_acid_name.lower().replace(" ", "_"), mass_to_float(self.delta))
+            return "add_{}_{} = {}".format(self.amino_acid.one_letter_code, self.amino_acid.name.lower().replace(" ", "_"), mass_to_float(self.delta))
         elif self.is_static and self.is_position_n_terminus:
             return "add_Nterm_peptide = {}".format(mass_to_float(self.delta))
         elif self.is_static and self.is_position_c_terminus:
