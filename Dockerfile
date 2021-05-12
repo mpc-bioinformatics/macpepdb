@@ -5,10 +5,10 @@ WORKDIR /usr/src/macpepdb
 
 COPY . .
 RUN apk update \
-    && apk add --no-cache libxml2-dev libxslt-dev postgresql-dev gcc libc-dev\
+    && apk add --no-cache libxml2-dev libxslt-dev postgresql-dev gcc g++ libc-dev\
     && pip install --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt \
-    && pip install .
+    && pip install pipenv \
+    && pipenv install --system
 
 
 

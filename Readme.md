@@ -15,37 +15,24 @@ Only necessary for development and non-Docker installation
 ## Development
 ### Prepare development environment
 ```bash
-# It is recommended to use a pyenv to make sure the python version is matching
-# Follow the instruction to install pyenv on https://github.com/pyenv/pyenv#installation
+# Install the correct python version
+pyenv install $(cat .python-version)
 
-# Install the correct python version. You can find the needed python version in .python-version at the beginning of the string (.python-version contains the actual name of the python environment).
-# The following command will extract the python version from .python-version for you and install it
-pyenv install $(cat .python-version | awk 'BEGIN { FS = "/" } ; { print $1 }')
-
-# Create an environment. The following command will extract the python version and environment name from .python-version for you and install it
-pyenv virtualenv $(cat .python-version | awk 'BEGIN { FS = "/" } ; { print $1 }') $(cat .python-version | awk 'BEGIN { FS = "/" } ; { print $3 }')
-
-# And activate the environment (later pyenv will do it for you if you visit a folder with a .python-version file)
-pyenv activate
-
-# Update pip (to make sure its the newest version)
-pip install --upgrade pip
-
-# Install needed python modules
-pip install -r ./requirements.txt
+# Create an environment
+pipenv install
 
 # Start the database
 docker-compose up
 
 # Run migrations
-MACPEPDB_DB_URL=postgresql://postgres:developer@127.0.0.1:5433/macpepdb_dev alembic upgrade head
+MACPEPDB_DB_URL=postgresql://postgres:developer@127.0.0.1:5433/macpepdb_dev pipenv run db-migrate
 ```
 
-If you add some new python modules, make sure you update `requirements.txt` by running `pip freeze > requirements.txt`
+Use `pipenv` to install or uninstall Python modules
 
 ### Running tests
 ```bash
-TEST_MACPEPDB_URL=postgresql://postgres:developer@127.0.0.1:5433/macpepdb_dev python -m unittest tests/*_test_case.py
+TEST_MACPEPDB_URL=postgresql://postgres:developer@127.0.0.1:5433/macpepdb_dev pipenv run tests
 ```
 ### Run the modules CLI
 Run `python -m macpepdb --help` in the root-folder of the repository.
