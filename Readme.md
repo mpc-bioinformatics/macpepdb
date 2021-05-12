@@ -19,7 +19,7 @@ Only necessary for development and non-Docker installation
 pyenv install $(cat .python-version)
 
 # Create an environment
-pipenv install
+pipenv install -d
 
 # Start the database
 docker-compose up
