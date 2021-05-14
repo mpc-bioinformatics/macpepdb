@@ -118,7 +118,9 @@ class Peptide(PeptideBase):
         database_cursor.execute(f"SELECT is_reviewed, taxonomy_id, proteome_id FROM {protein.Protein.TABLE_NAME} WHERE accession = ANY(SELECT protein_accession FROM {ProteinPeptideAssociation.TABLE_NAME} WHERE peptide_sequence = %s);", (peptide.sequence,))
         for row in database_cursor.fetchall():
             review_statuses.append(row[0])
-            proteome_ids.add(row[2])
+            # Some proteins do not seeem to have an proteome ID
+            if row[2] != None:
+                proteome_ids.add(row[2])
             if not row[1] in taxonomy_id_count_map:
                 taxonomy_id_count_map[row[1]] = 0
             taxonomy_id_count_map[row[1]] += 1
