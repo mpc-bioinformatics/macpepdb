@@ -11,6 +11,8 @@ Only necessary for development and non-Docker installation
 * Docker & Docker Compose
 * Python 3.x
 * [pyenv](https://github.com/pyenv/pyenv)
+* [pipenv](https://pipenv.pypa.io/en/latest/)
+
 
 ## Development
 ### Prepare development environment
