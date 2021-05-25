@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import List, Tuple, Any, Callable
 
 class ColumnConditionsList:
@@ -9,6 +10,9 @@ class ColumnConditionsList:
         self.__flatten_value_for_sql = []
         # Create a index for faster lookup
         self.__column_index = {}
+
+        # Iteration attributes
+        self.__iter_idx = -1
 
     @property
     def column_names(self) -> List[str]:
@@ -41,6 +45,32 @@ class ColumnConditionsList:
 
     def __len__(self):
         return len(self.__column_names) 
+    
+    def __iter__(self):
+        self.__iter_idx = -1
+        return self
+    
+    def __next__(self) -> Tuple[str, str, Callable[[Any, Any], bool], Any, bool]:
+        self.__iter_idx += 1
+        if self.__iter_idx == len(self.__column_names):
+            raise StopIteration
+        return (
+            self.__column_names[self.__iter_idx],
+            self.__sql_operatos[self.__iter_idx],
+            self.__func_operators[self.__iter_idx],
+            self.__values[self.__iter_idx],
+            self.__flatten_value_for_sql[self.__iter_idx]
+        )
+
+    def __add__(self, other) -> ColumnConditionsList:
+        new_column_conditions_list = self.__class__()
+        for column_name, sql_operator, func_operator, value, flatten_value in self:
+            new_column_conditions_list.append(column_name, sql_operator, func_operator, value, flatten_value)
+
+        for column_name, sql_operator, func_operator, value, flatten_value in other:
+            new_column_conditions_list.append(column_name, sql_operator, func_operator, value, flatten_value)
+
+        return new_column_conditions_list
 
     def to_sql(self) -> Tuple[str, List[Any]]:
         """Returns a tuple where the first element is a SQL-where-string with placeholders for the actual values
@@ -62,12 +92,14 @@ class ColumnConditionsList:
 
     def check_column_value(self, column_name: str, column_value: Any) -> bool:
         """Applies the operator on the given column value and the value given for this  
-        Throws a KeyError if the column has no condition.
+        Returns True if the column name has no conditions.
 
         Arguments:
         column_name -- Name of the column.
         column_value -- Value on the left side of the operator.
         """
-        column_idx = self.__column_index[column_name]
-        return self.__func_operators[column_idx](column_value, self.__values[column_idx])
+        if column_name in self.__column_index:
+            column_idx = self.__column_index[column_name]
+            return self.__func_operators[column_idx](column_value, self.__values[column_idx])
+        return True
 
