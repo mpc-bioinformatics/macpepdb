@@ -62,6 +62,9 @@ class ModificationCollection:
         if static_c_terminus_counter > self.__class__.MAX_STATIC_C_TERMINUS_MODIFICATIONS:
             raise ModificationLimitError("Only {} static c-terminus modification are allowed.".format(self.__class__.MAX_STATIC_C_TERMINUS_MODIFICATIONS))
 
+    def __len__(self):
+        return len(self.__modifications)
+
     @property
     def all(self):
         return self.__modifications
