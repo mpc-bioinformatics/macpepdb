@@ -53,12 +53,24 @@ class ProteinDigestionProcess(GenericProcess):
                         number_of_new_peptides = 0
                         with database_connection:
                             with database_connection.cursor() as database_cursor:
+                                skip_protein_creation = False
                                 # Check if the Protein exists by its accession or secondary accessions
                                 accessions = [protein.accession] + protein.secondary_accessions
-                                stored_protein = Protein.select(database_cursor, ("accession = ANY(%s)", [accessions]))
-                                if stored_protein:
-                                    number_of_new_peptides = stored_protein.update(database_cursor, protein, self.__enzyme)
-                                else:
+                                found_proteins = Protein.select(database_cursor, ("accession = ANY(%s)", [accessions]), fetchall=True)
+                                if len(found_proteins):
+                                    # If more than one protein were found and the first protein is the same protein as the current one from the queue ...
+                                    if found_proteins[0].accession == protein.accession:
+                                        # ... delete the other other proteins, because they are merged with this one.
+                                        for protein in found_proteins[1:]:
+                                            Protein.delete(database_cursor, protein)
+                                        skip_protein_creation = True
+                                        number_of_new_peptides = found_proteins[0].update(database_cursor, protein, self.__enzyme)
+                                    else:
+                                        # If the first protein from the found proteins has not the same accession as the one current one from the queue
+                                        # each of the found proteins are merged with the current protein. So delete them.
+                                        for protein in found_proteins:
+                                            Protein.delete(database_cursor, protein)
+                                if not skip_protein_creation:
                                     number_of_new_peptides = Protein.create(database_cursor, protein, self.__enzyme)
                                     count_protein = True
 
