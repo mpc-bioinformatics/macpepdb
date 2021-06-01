@@ -7,6 +7,7 @@ import psycopg2
 
 from ctypes import c_ulonglong
 from queue import Full as FullQueueError
+from typing import Tuple
 
 from .multiprocessing.logger_process import LoggerProcess
 from .multiprocessing.protein_digestion_process import ProteinDigestionProcess
@@ -34,7 +35,7 @@ class ProteinDigestion:
         self.__statistics_csv_file_path = log_dir_path.joinpath(f"statistics_{run_count}.csv")
         self.__stop_signal = False
 
-    def run(self, database_url: str) -> (int, bool):
+    def run(self, database_url: str) -> Tuple[int, bool]:
         """
         Reads the protein files in `work_dir/protein_data` and updates the database.
         @param database_url Datebase
