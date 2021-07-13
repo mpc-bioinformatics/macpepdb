@@ -3,6 +3,7 @@
 
 # Local development files like database files
 /.db
+/tmp
 
 # Files produced by tests
 /digestion_test.*

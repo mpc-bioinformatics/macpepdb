@@ -15,6 +15,7 @@ from macpepdb.peptide_mass_validator import PeptideMassValidator
 from macpepdb.proteomics.mass.precursor_range import PrecursorRange
 
 from .abstract_database_test_case import AbstractDatabaseTestCase
+from .database_maintenance_workdir import DatabaseMaintenanceWorkdir
 
 # Values from scan 3224 in test file
 MASS_TO_CHARGE_RATIO = 442.970306396484
@@ -80,7 +81,7 @@ PEPTIDES_FOR_MODIFIED_SEARCH = {
     ]
 }
 
-class ModifiedPeptideWhereClauseBuilderTestCase(AbstractDatabaseTestCase):
+class ModifiedPeptideWhereClauseBuilderTestCase(AbstractDatabaseTestCase, DatabaseMaintenanceWorkdir):
     MASS_TOLERANCE_REGEX = re.compile(r"BETWEEN\W(?P<lower>\d+)\WAND\W(?P<upper>\d+)(\W|$)")
 
     def test_without_modifications(self):
@@ -142,73 +143,63 @@ class ModifiedPeptideWhereClauseBuilderTestCase(AbstractDatabaseTestCase):
 
         modifications_file_path = pathlib.Path('./test_files/modifications.csv')
 
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            work_dir = pathlib.Path(tmp_dir)
-            test_files_path = pathlib.Path('./test_files')
-            protein_data_test_file_path = test_files_path.joinpath('proteins.txt')
-            
+        work_dir = pathlib.Path(f"./tmp/{self.id()}")
+        test_files_path = pathlib.Path('./test_files')
+        protein_data_test_file_path = test_files_path.joinpath('proteins.txt')
+        
 
-            # Prepare work directory for test
-            ## Add protein data
-            protein_data_path = work_dir.joinpath('protein_data/')
-            protein_data_path.mkdir()
-            shutil.copy(str(protein_data_test_file_path), str(protein_data_path))
-            ## Add taxonomy data
-            taxonomy_data_path = work_dir.joinpath('taxonomy_data/')
-            taxonomy_data_path.mkdir()
-            for dmp_file_path in test_files_path.glob('*.dmp'):
-                shutil.copy(str(dmp_file_path), str(taxonomy_data_path))
+        self.prepare_workdir(work_dir, test_files_path, protein_data_test_file_path)
 
-            maintenance = DatabaseMaintenance(
-                os.getenv("TEST_MACPEPDB_URL"),
-                work_dir,
-                4,
-                5,
-                'Trypsin',
-                2,
-                5,
-                40
-            )
+        maintenance = DatabaseMaintenance(
+            os.getenv("TEST_MACPEPDB_URL"),
+            work_dir,
+            4,
+            5,
+            'Trypsin',
+            2,
+            5,
+            40
+        )
 
-            maintenance.start()
+        maintenance.start()
 
-            modification_collection = ModificationCollection.read_from_csv_file(modifications_file_path)
-            peptide_mass_validator = PeptideMassValidator(modification_collection, VARIABLE_MODIFICATION_LIMIT, PrecursorRange(PRECURSOR, PRECURSOR_TOLERANCE, PRECURSOR_TOLERANCE))
+        modification_collection = ModificationCollection.read_from_csv_file(modifications_file_path)
+        peptide_mass_validator = PeptideMassValidator(modification_collection, VARIABLE_MODIFICATION_LIMIT, PrecursorRange(PRECURSOR, PRECURSOR_TOLERANCE, PRECURSOR_TOLERANCE))
 
-            validated_matching_peptide_sequences = set()
+        validated_matching_peptide_sequences = set()
 
-            with self.database_connection:
-                with self.database_connection.cursor() as database_cursor:
-                    # Run through all peptides (in batches of 1000 peptides) and check which matchs the precursor and modification requirements
-                    database_cursor.execute(f"SELECT sequence, number_of_missed_cleavages FROM {Peptide.TABLE_NAME};")
-                    while True:
-                        rows = database_cursor.fetchmany(1000)
-                        if not len(rows):
-                            break
-                        for row in rows:
-                            peptide = Peptide(row[0], row[1])
-                            if peptide_mass_validator.validate(peptide):
-                                validated_matching_peptide_sequences.add(peptide.sequence)
+        with self.database_connection:
+            with self.database_connection.cursor() as database_cursor:
+                # Run through all peptides (in batches of 1000 peptides) and check which matchs the precursor and modification requirements
+                database_cursor.execute(f"SELECT sequence, number_of_missed_cleavages FROM {Peptide.TABLE_NAME};")
+                while True:
+                    rows = database_cursor.fetchmany(1000)
+                    if not len(rows):
+                        break
+                    for row in rows:
+                        peptide = Peptide(row[0], row[1])
+                        if peptide_mass_validator.validate(peptide):
+                            validated_matching_peptide_sequences.add(peptide.sequence)
 
-            with self.database_connection:
-                with self.database_connection.cursor() as database_cursor:
-                    modification_combination_list =  ModificationCombinationList(modification_collection, PRECURSOR, PRECURSOR_TOLERANCE, PRECURSOR_TOLERANCE, VARIABLE_MODIFICATION_LIMIT)
-                    select_conditions = modification_combination_list.to_sql()
-                    peptides = Peptide.select(database_cursor, select_conditions, True)
+        with self.database_connection:
+            with self.database_connection.cursor() as database_cursor:
+                modification_combination_list =  ModificationCombinationList(modification_collection, PRECURSOR, PRECURSOR_TOLERANCE, PRECURSOR_TOLERANCE, VARIABLE_MODIFICATION_LIMIT)
+                select_conditions = modification_combination_list.to_sql()
+                peptides = Peptide.select(database_cursor, select_conditions, True)
 
-                    queried_matching_peptide_sequences = set()
-                    for peptide in peptides:
-                        queried_matching_peptide_sequences.add(peptide.sequence)
+                queried_matching_peptide_sequences = set()
+                for peptide in peptides:
+                    queried_matching_peptide_sequences.add(peptide.sequence)
 
-                    # Check length of both manually validated set and the queried set
-                    self.assertEqual(len(validated_matching_peptide_sequences), len(queried_matching_peptide_sequences))
+                # Check length of both manually validated set and the queried set
+                self.assertEqual(len(validated_matching_peptide_sequences), len(queried_matching_peptide_sequences))
 
-                    # Cross check if peptide from one set is in the other set
-                    for sequence in queried_matching_peptide_sequences:
-                        self.assertIn(sequence, validated_matching_peptide_sequences)
+                # Cross check if peptide from one set is in the other set
+                for sequence in queried_matching_peptide_sequences:
+                    self.assertIn(sequence, validated_matching_peptide_sequences)
 
-                    for sequence in validated_matching_peptide_sequences:
-                        self.assertIn(sequence, queried_matching_peptide_sequences)
+                for sequence in validated_matching_peptide_sequences:
+                    self.assertIn(sequence, queried_matching_peptide_sequences)
 
 
 
