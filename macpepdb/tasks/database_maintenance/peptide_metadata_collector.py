@@ -2,6 +2,7 @@ import pathlib
 import psycopg2
 import signal
 
+from multiprocessing import Event
 from queue import Full as FullQueueError
 from ctypes import c_ulonglong
 
@@ -16,13 +17,12 @@ class PeptideMetadataCollector:
     STATISTIC_FILE_HEADER = ["seconds", "updated_peptides", "peptide_update_rate"]
     STATISTIC_PRINT_MIN_COLUMN_WIDTH = 12
 
-    def __init__(self, log_dir_path: pathlib.Path, statistics_write_period: int, number_of_threads: int):
+    def __init__(self, termination_event: Event, log_dir_path: pathlib.Path, statistics_write_period: int, number_of_threads: int):
         self.__log_file_path = log_dir_path.joinpath(f"metadata_collector.log")
         self.__number_of_threads = number_of_threads
         self.__statistics_write_period = statistics_write_period
         self.__statistics_csv_file_path = log_dir_path.joinpath(f"metadata_collector_statistics.csv")
-        self.__stop_signal = False
-
+        self.__termination_event = termination_event
 
     def run(self, database_url: str) -> bool:
         """
@@ -30,21 +30,20 @@ class PeptideMetadataCollector:
         @param database_url
         @return bool Returns the status of the stop flag
         """
+        # Initialize signal handler for TERM and INT
+        signal.signal(signal.SIGTERM, self.__termination_event_handler)
+        signal.signal(signal.SIGINT, self.__termination_event_handler)
+        
         print("Update protein information on peptides. This may take a while.")
 
         # Events to control processes
-        empty_queue_and_stop_flag = process_context.Event()
-        logger_stop_flag = process_context.Event()
-        immediate_stop_event = process_context.Event()
+        finish_update_event = process_context.Event()
+        logger_stop_event = process_context.Event()
 
         # Providing a maximum size prevents overflowing RAM and makes sure every process has enough work to do.
         peptide_queue = process_context.Queue(3 * self.__number_of_threads)
         # Counter for updates
         update_counter = process_context.Array(c_ulonglong, 1)
-
-        # Initialize signal handler for TERM and INT
-        signal.signal(signal.SIGTERM, self.__stop_signal_handler)
-        signal.signal(signal.SIGINT, self.__stop_signal_handler)
 
         log_connections = []
 
@@ -53,7 +52,7 @@ class PeptideMetadataCollector:
         for worker_id in range(0, self.__number_of_threads):
             general_log_connection_read, general_log_connection_write = process_context.Pipe(duplex=False)
             log_connections.append(general_log_connection_read)
-            update_peptide_worker = PeptideMetadataCollectorProcess(worker_id, database_url, peptide_queue, update_counter, general_log_connection_write, empty_queue_and_stop_flag, immediate_stop_event)
+            update_peptide_worker = PeptideMetadataCollectorProcess(self.__termination_event, worker_id, database_url, peptide_queue, update_counter, general_log_connection_write, finish_update_event)
             update_peptide_worker.start()
             peptide_update_processes.append(update_peptide_worker)
             # Close these copies of the writeable site of the channel, so only the processes have working copies.
@@ -67,7 +66,7 @@ class PeptideMetadataCollector:
 
         # Statistic writer
         general_log_connection_read, general_log_connection_write = process_context.Pipe(duplex=False)
-        statistics_logger_process = StatisticsLoggerProcess(update_counter, self.__statistics_csv_file_path, self.__statistics_write_period, self.__class__.STATISTIC_FILE_HEADER, self.__class__.STATISTIC_PRINT_MIN_COLUMN_WIDTH, general_log_connection_write, logger_stop_flag)
+        statistics_logger_process = StatisticsLoggerProcess(self.__termination_event, update_counter, self.__statistics_csv_file_path, self.__statistics_write_period, self.__class__.STATISTIC_FILE_HEADER, self.__class__.STATISTIC_PRINT_MIN_COLUMN_WIDTH, general_log_connection_write, logger_stop_event)
         statistics_logger_process.start()
         log_connections.append(general_log_connection_read)
         # Close this copy
@@ -77,7 +76,7 @@ class PeptideMetadataCollector:
         general_log_connection_read, general_log_connection = process_context.Pipe(duplex=False)
         log_connections.append(general_log_connection_read)
 
-        logger_process = LoggerProcess(self.__log_file_path, "w", log_connections)
+        logger_process = LoggerProcess(self.__termination_event, self.__log_file_path, "w", log_connections)
         logger_process.start()
 
         general_log_connection.send("Start enqueuing peptides.")
@@ -85,7 +84,7 @@ class PeptideMetadataCollector:
         enqueued_all_updatedable_peptides = False
         while not enqueued_all_updatedable_peptides:
             # Break main loop
-            if self.__stop_signal:
+            if self.__termination_event.is_set():
                 break
             try:
                 with database_connection:
@@ -94,7 +93,7 @@ class PeptideMetadataCollector:
                         # Fetch loop
                         while True:
                             # Break fetch loop
-                            if self.__stop_signal:
+                            if self.__termination_event.is_set():
                                 break
                             # Fetch 1000 peptide IDs
                             peptides_chunk = [Peptide(row[0], row[1]) for row in database_cursor.fetchmany(1000)]
@@ -107,7 +106,7 @@ class PeptideMetadataCollector:
                             while slice_start < len(peptides_chunk):
                                 while True:
                                     # Break retry loop
-                                    if self.__stop_signal:
+                                    if self.__termination_event.is_set():
                                         break
                                     try:
                                         # Try to enqueue the ID slice, wait 5 seconds for a free slot
@@ -130,21 +129,18 @@ class PeptideMetadataCollector:
 
         general_log_connection.close()
 
-        # Signalling all processes to 
-        if self.__stop_signal:
-            immediate_stop_event.set()
-        empty_queue_and_stop_flag.set()
+        # Signalling all processes to finish
+        if not self.__termination_event.is_set():
+            finish_update_event.set()
 
         # Wait for all digest workers to stop
         for update_peptide_worker in peptide_update_processes:
             update_peptide_worker.join()
 
-        logger_stop_flag.set()
+        logger_stop_event.set()
         statistics_logger_process.join()
 
         logger_process.join()
 
-        return self.__stop_signal
-
-    def __stop_signal_handler(self, signal_number, frame):
-        self.__stop_signal = True
+    def __termination_event_handler(self, signal_number, frame):
+        self.__termination_event.set()

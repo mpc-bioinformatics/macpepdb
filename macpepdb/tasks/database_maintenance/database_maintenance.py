@@ -14,6 +14,7 @@ from ...proteomics.enzymes.digest_enzyme import DigestEnzyme
 from .taxonomy_tree import TaxonomyTree
 from .protein_digestion import ProteinDigestion
 from .peptide_metadata_collector import PeptideMetadataCollector
+from macpepdb import process_context
 
 @unique
 class DatabaseStatus(Enum):
@@ -39,9 +40,7 @@ class DatabaseMaintenance():
         self.__logs_path = work_dir.joinpath('logs/')
         self.__temporary_protein_data_path = self.__work_dir.joinpath('.temp_protein_data/')
 
-        self.__stop_signal = False
-        signal.signal(signal.SIGTERM, self.__stop_signal_handler)
-        signal.signal(signal.SIGINT, self.__stop_signal_handler)
+        self.__termination_event = process_context.Event()
 
     def start(self):
         """
@@ -49,9 +48,12 @@ class DatabaseMaintenance():
         Note: Depending on the size of the input files, the maintenance can be a long running process. You can stop it at any time by sending the TERM- or INT-signal to the main process. The maintenance will then gracefully stop.
               If you use the maintenance from another library or script it may be good to wrap the maintenance into a separat process with the multiprocessing module, so you can stop it gracfully if you have to.
         """
+        signal.signal(signal.SIGTERM, self.__termination_event_handler)
+        signal.signal(signal.SIGINT, self.__termination_event_handler)
+
         self.__prepare_logs_directory()
         self.__validate_folders()
-        print(f"To stop the database maintenance gracefully, send TERM or INT signal to process {os.getpid()}")
+        print(f"Hit CTRC-C or send TERM or INT to process {os.getpid()} to stop the maintenance gracefully. ")
         self.__maintain_taxonomy_tree()
         self.__maintain_proteins_digestion()
     
@@ -92,6 +94,7 @@ class DatabaseMaintenance():
         Builds/Updates the taxonmy tree
         """
         tree = TaxonomyTree(
+            self.__termination_event,
             self.__taxonomy_data_path.joinpath('nodes.dmp'),
             self.__taxonomy_data_path.joinpath('names.dmp'),
             self.__taxonomy_data_path.joinpath('merged.dmp'),
@@ -113,6 +116,7 @@ class DatabaseMaintenance():
         number_of_threads = self.__number_of_threads
         while True:
             digestion = ProteinDigestion(
+                self.__termination_event,
                 protein_data_path,
                 self.__logs_path,
                 self.__statistics_write_period,
@@ -123,13 +127,13 @@ class DatabaseMaintenance():
                 self.__maximum_peptide_length,
                 run_count
             )
-            error_count, self.__stop_signal = digestion.run(self.__database_url)
+            error_count = digestion.run(self.__database_url)
 
             # If no errors occure break while-loop
             if not error_count:
                 break
 
-            if self.__stop_signal:
+            if self.__termination_event.is_set():
                 return
             
             # If loop continues, there were errors. Create temporary workdir
@@ -158,21 +162,22 @@ class DatabaseMaintenance():
 
             print(f"Digest ended with {error_count} errors. Digest the remaining proteins with {number_of_threads} threads.")
 
-        if self.__stop_signal:
+        if self.__termination_event.is_set():
             return
 
         self.__set_database_status(self.__database_url, DatabaseStatus.METADATA_COLLECTION, False)
 
         # Collect peptide meta data
         collector = PeptideMetadataCollector(
+            self.__termination_event,
             self.__logs_path,
             # Increase the number of threads by one third. The peptide updates are independent from one another, so there are no deadlocks to be expected.
             self.__statistics_write_period,
             int(self.__number_of_threads * 1.33)
         )
-        self.__stop_signal = collector.run(self.__database_url)
+        collector.run(self.__database_url)
 
-        if self.__stop_signal:
+        if self.__termination_event.is_set():
             return
 
         now = datetime.datetime.utcnow()
@@ -243,5 +248,5 @@ class DatabaseMaintenance():
         parser.add_argument("--database-url", "-d", type=str, required=True, help="Database url for postgres")
         parser.set_defaults(func=cls.maintain_from_command_line)
 
-    def __stop_signal_handler(self, signal_number, frame):
-        self.__stop_signal = True
+    def __termination_event_handler(self, signal_number, frame):
+        self.__termination_event.set()

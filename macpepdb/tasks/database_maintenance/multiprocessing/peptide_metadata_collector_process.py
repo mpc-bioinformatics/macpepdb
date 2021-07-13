@@ -7,32 +7,33 @@ from psycopg2.extras import execute_batch
 from queue import Empty as EmptyQueueError
 
 
+
 from ....models.peptide import Peptide
 from ....utilities.generic_process import GenericProcess
 
 
 class PeptideMetadataCollectorProcess(GenericProcess):
-    def __init__(self, id: int, database_url: str, peptide_sequence_queue: Queue, update_counter: Array, log_connection: ProcessConnection, empty_queue_and_stop_flag: Event, immediate_stop_event: Event):
-        super().__init__()
+    def __init__(self, termination_event: Event, id: int, database_url: str, peptide_sequence_queue: Queue, update_counter: Array, log_connection: ProcessConnection, empty_queue_and_stop_flag: Event):
+        super().__init__(termination_event)
         self.__id = id
         self.__database_url = database_url
         self.__peptide_sequence_queue = peptide_sequence_queue
         self.__update_counter = update_counter
         self.__log_connection = log_connection
         self.__empty_queue_and_stop_flag = empty_queue_and_stop_flag
-        self.__immediate_stop_event = immediate_stop_event
 
     def run(self):
         """
         Collects the information from the referenced peptides und set update flag to false.
         """
+        self.activate_signal_handling()
         self.__log_connection.send(f"peptide update worker {self.__id} is online")
         database_connection = None
         PREPARED_STATEMENT_NAME = "updatepeptide_metadata"
         PREPARE_STATEMENT_QUERY = f"PREPARE {PREPARED_STATEMENT_NAME} AS UPDATE {Peptide.TABLE_NAME} SET is_metadata_up_to_date = true, is_swiss_prot = $1, is_trembl = $2, taxonomy_ids = $3, unique_taxonomy_ids = $4, proteome_ids = $5 WHERE mass = $6 AND sequence = $7;"
 
-        # Let the process run until empty_queue_and_stop_flag is true and peptide_sequence_queue is empty or immediate_stop_event is true.
-        while (not self.__empty_queue_and_stop_flag.is_set() or not self.__peptide_sequence_queue.empty()) and not self.__immediate_stop_event.is_set():
+        # Let the process run until empty_queue_and_stop_flag is true and peptide_sequence_queue is empty or database_maintenance_stop_event is true.
+        while (not self.__empty_queue_and_stop_flag.is_set() or not self.__empty_queue_and_stop_flag.is_set()) and not self.__empty_queue_and_stop_flag.is_set():
             try:
                 # Open/reopen database connection
                 if not database_connection or (database_connection and database_connection.closed != 0):

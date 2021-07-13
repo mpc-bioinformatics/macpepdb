@@ -16,8 +16,8 @@ class ProteinDigestionProcess(GenericProcess):
     """
     Sequentially digests proteins from the given queue and inserts them and their proteins into the given database.
     """
-    def __init__(self, id: int, database_url: str, protein_queue: Queue, enzyme: DigestEnzyme, general_log: ProcessConnection, unprocessable_protein_log: ProcessConnection, statistics: Array, clear_queue_and_stop_event: Event, immediate_stop_event: Event):
-        super().__init__()
+    def __init__(self, termination_event: Event, id: int, database_url: str, protein_queue: Queue, enzyme: DigestEnzyme, general_log: ProcessConnection, unprocessable_protein_log: ProcessConnection, statistics: Array, finish_event: Event):
+        super().__init__(termination_event)
         self.__id = id
         self.__database_url = database_url
         self.__protein_queue = protein_queue
@@ -25,15 +25,15 @@ class ProteinDigestionProcess(GenericProcess):
         self.__unprocessable_protein_log = unprocessable_protein_log
         self.__statistics = statistics
         self.__enzyme = enzyme
-        self.__clear_queue_and_stop_event = clear_queue_and_stop_event
-        self.__immediate_stop_event = immediate_stop_event
+        self.__finish_event = finish_event
 
     def run(self):
+        self.activate_signal_handling()
         self.__general_log.send("digest worker {} is online".format(self.__id))
         database_connection = None
 
-        # Let the process run until clear_queue_and_stop_event is true and protein_queue is empty or immediate_stop_event is true.
-        while (not self.__clear_queue_and_stop_event.is_set() or not self.__protein_queue.empty()) and not self.__immediate_stop_event.is_set():
+        # Let the process run until finish_event is true and protein_queue is empty or termination_event is true.
+        while (not self.__finish_event.is_set() or not self.__protein_queue.empty()) and not self.termination_event.is_set():
             try:
                 # Open/reopen database connection
                 if not database_connection or (database_connection and database_connection.closed != 0):

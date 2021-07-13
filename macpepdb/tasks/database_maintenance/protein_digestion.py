@@ -6,6 +6,7 @@ import json
 import psycopg2
 
 from ctypes import c_ulonglong
+from multiprocessing import Event
 from queue import Full as FullQueueError
 from typing import Tuple
 
@@ -23,7 +24,7 @@ class ProteinDigestion:
     STATISTIC_PRINT_MIN_COLUMN_WIDTH = 12
     
 
-    def __init__(self, protein_data_dir: pathlib.Path, log_dir_path: pathlib.Path, statistics_write_period: int, number_of_threads: int, enzyme_name: str, maximum_number_of_missed_cleavages: int, minimum_peptide_length: int, maximum_peptide_length: int, run_count: int):
+    def __init__(self, termination_event: Event, protein_data_dir: pathlib.Path, log_dir_path: pathlib.Path, statistics_write_period: int, number_of_threads: int, enzyme_name: str, maximum_number_of_missed_cleavages: int, minimum_peptide_length: int, maximum_peptide_length: int, run_count: int):
         self.__log_file_path = log_dir_path.joinpath(f"digest_{run_count}.log")
         self.__unprocessible_proteins_embl_file_path = log_dir_path.joinpath(f"unprocessible_proteins_{run_count}.txt")
         self.__number_of_threads = number_of_threads
@@ -33,7 +34,7 @@ class ProteinDigestion:
         self.__input_file_paths += [pathlib.Path(path) for path in protein_data_dir.glob('*.dat')]
         self.__statistics_write_period = statistics_write_period
         self.__statistics_csv_file_path = log_dir_path.joinpath(f"statistics_{run_count}.csv")
-        self.__stop_signal = False
+        self.__termination_event = termination_event
 
     def run(self, database_url: str) -> Tuple[int, bool]:
         """
@@ -41,20 +42,19 @@ class ProteinDigestion:
         @param database_url Datebase
         @return tupel First element isthe number of errors and the second element is the status of the stop flag
         """
+        # Initialize signal handler for TERM and INT
+        signal.signal(signal.SIGTERM, self.__termination_event_handler)
+        signal.signal(signal.SIGINT, self.__termination_event_handler)
+
         self.__load_or_set_digestion_informations(database_url)
 
         # Events to control processes
-        clear_queue_and_stop_event = process_context.Event()
-        logger_stop_flag = process_context.Event()
-        immediate_stop_event = process_context.Event()
+        finish_digestion_event = process_context.Event()
+        stop_logging_event = process_context.Event()
         # Providing a maximum size prevents overflowing RAM and makes sure every process has enough work to do.
         protein_queue = process_context.Queue(3 * self.__number_of_threads)
         # Array for statistics [created_proteins, failed_proteins, created_peptides, processed_peptides]
         statistics = process_context.Array(c_ulonglong, 3)
-
-        # Initialize signal handler for TERM and INT
-        signal.signal(signal.SIGTERM, self.__stop_signal_handler)
-        signal.signal(signal.SIGINT, self.__stop_signal_handler)
 
         unprocessable_log_connection = []
         general_log_connections = []
@@ -66,7 +66,7 @@ class ProteinDigestion:
             unprocessable_log_connection.append(unprocessible_connection_read)
             general_log_connection_read, general_log_connection_write = process_context.Pipe(duplex=False)
             general_log_connections.append(general_log_connection_read)
-            digest_worker = ProteinDigestionProcess(worker_id, database_url, protein_queue, self.__enzyme, general_log_connection_write, unprocessible_connection_write, statistics, clear_queue_and_stop_event, immediate_stop_event)
+            digest_worker = ProteinDigestionProcess(self.__termination_event, worker_id, database_url, protein_queue, self.__enzyme, general_log_connection_write, unprocessible_connection_write, statistics, finish_digestion_event)
             digest_worker.start()
             digest_processes.append(digest_worker)
             # Close these copies of the writeable site of the channels, so only the processes have working copies.
@@ -75,7 +75,7 @@ class ProteinDigestion:
 
         # Start logger for unprocessible proteins
         general_log_connection_read, general_log_connection_write = process_context.Pipe(duplex=False)
-        unprocessible_proteins_process = UnprocessableProteinLoggerProcess(self.__unprocessible_proteins_embl_file_path, unprocessable_log_connection, general_log_connection_write)
+        unprocessible_proteins_process = UnprocessableProteinLoggerProcess(self.__termination_event, self.__unprocessible_proteins_embl_file_path, unprocessable_log_connection, general_log_connection_write)
         unprocessible_proteins_process.start()
         general_log_connections.append(general_log_connection_read)
         # Close this copy
@@ -83,30 +83,30 @@ class ProteinDigestion:
 
         # Statistic writer
         general_log_connection_read, general_log_connection_write = process_context.Pipe(duplex=False)
-        statistics_logger_process = StatisticsLoggerProcess(statistics, self.__statistics_csv_file_path, self.__statistics_write_period, self.__class__.STATISTIC_FILE_HEADER, self.__class__.STATISTIC_PRINT_MIN_COLUMN_WIDTH, general_log_connection_write, logger_stop_flag)
+        statistics_logger_process = StatisticsLoggerProcess(self.__termination_event, statistics, self.__statistics_csv_file_path, self.__statistics_write_period, self.__class__.STATISTIC_FILE_HEADER, self.__class__.STATISTIC_PRINT_MIN_COLUMN_WIDTH, general_log_connection_write, stop_logging_event)
         statistics_logger_process.start()
         general_log_connections.append(general_log_connection_read)
         # Close this copy
         general_log_connection_write.close()
 
-        logger_process = LoggerProcess(self.__log_file_path, "w", general_log_connections)
+        logger_process = LoggerProcess(self.__termination_event, self.__log_file_path, "w", general_log_connections)
         logger_process.start()
 
         for input_file_path in self.__input_file_paths:
             # Break file loop
-            if self.__stop_signal:
+            if self.__termination_event.is_set():
                 break
             with input_file_path.open("r") as input_file:
                 input_file_reader = UniprotTextReader(input_file)
                 # Enqueue proteins
                 for protein in input_file_reader:
                     # Break protein read loop
-                    if self.__stop_signal:
+                    if self.__termination_event.is_set():
                         break
                     # Retry lopp
                     while True:
                         # Break retry loop
-                        if self.__stop_signal:
+                        if self.__termination_event.is_set():
                             break
                         try:
                             # Try to queue a protein for digestion, wait 5 seconds for a free slot
@@ -118,10 +118,9 @@ class ProteinDigestion:
                             # Try again
                             pass
 
-        # Signalling all processes to 
-        if self.__stop_signal:
-            immediate_stop_event.set()
-        clear_queue_and_stop_event.set()
+        # Signal processes to finish work
+        if not self.__termination_event.is_set():
+            finish_digestion_event.set()
 
         # Wait for all digest workers to stop
         for digest_worker in digest_processes:
@@ -131,7 +130,7 @@ class ProteinDigestion:
         time.sleep(1)
 
         # Stop logger after each digest worker is finished
-        logger_stop_flag.set()
+        stop_logging_event.set()
         
         # Wait for the logger processes to stop
         statistics_logger_process.join()
@@ -139,7 +138,7 @@ class ProteinDigestion:
 
         logger_process.join()
 
-        return statistics[2], self.__stop_signal
+        return statistics[2]
 
     def __load_or_set_digestion_informations(self, database_url: str):
         """
@@ -170,5 +169,5 @@ class ProteinDigestion:
                 database_connection.commit()
         database_connection.close()
 
-    def __stop_signal_handler(self, signal_number, frame):
-        self.__stop_signal = True
+    def __termination_event_handler(self, signal_number, frame):
+        self.__termination_event.set()

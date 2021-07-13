@@ -2,6 +2,8 @@
 import pathlib
 import time
 import random
+import signal
+
 from multiprocessing import Process, Event, Queue, Pipe, get_context as get_processing_context
 from multiprocessing.connection import Connection, wait
 from queue import Full as QueueFullError, Empty as QueueEmptyError
@@ -18,7 +20,8 @@ from ...models.protein import Protein
 
 class TaxonomyTree:
 
-    def __init__(self, nodes_dmp_path: pathlib.Path, names_dmp_path: pathlib.Path, merge_dmp_path: pathlib.Path, delete_dmp_path: pathlib.Path, database_url: str, log_file: pathlib.Path, number_of_threads: int):
+    def __init__(self, termination_event: Event, nodes_dmp_path: pathlib.Path, names_dmp_path: pathlib.Path, merge_dmp_path: pathlib.Path, delete_dmp_path: pathlib.Path, database_url: str, log_file: pathlib.Path, number_of_threads: int):
+        self.__termination_event = termination_event
         self.__nodes_dmp_path = nodes_dmp_path
         self.__names_dmp_path = names_dmp_path
         self.__merge_dmp_path = merge_dmp_path
@@ -31,10 +34,16 @@ class TaxonomyTree:
         """
         Updates the taxonomy tables.
         """
+        # Initialize signal handler for TERM and INT
+        signal.signal(signal.SIGTERM, self.__termination_event_handler)
+        signal.signal(signal.SIGINT, self.__termination_event_handler)
+
         self.__build_taxonomies()
         self.__merge_taxonomies()
         self.__delete_taxonomies()
 
+    def __termination_event_handler(self, signal_number, frame):
+        self.__termination_event.set()
 
     # This will create working processes and one logger processes. The worker processes are connected with the logger process.
     # Make sure the worker function has the following argument list: id (int), database_url (str), stop_flag (Event) and log_connection (Connection).
@@ -62,7 +71,7 @@ class TaxonomyTree:
             log_connection_write.close()
             procs.append(proc)
 
-        logger = LoggerProcess(self.__log_file, logger_write_mode, log_connections)
+        logger = LoggerProcess(self.__termination_event, self.__log_file, logger_write_mode, log_connections)
         logger.start()
 
         return procs, logger, queue, stop_flag
