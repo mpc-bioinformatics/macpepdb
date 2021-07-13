@@ -5,6 +5,7 @@ class ProteinPeptideAssociation:
 
     def __init__(self, protein, peptide):
         self.__protein_accession = protein.accession
+        self.__peptide_partition = peptide.partition
         self.__peptide_sequence = peptide.sequence
         self.__peptide_mass = peptide.mass
 
@@ -19,6 +20,10 @@ class ProteinPeptideAssociation:
     @property
     def peptide_mass(self):
         return self.__peptide_mass
+    
+    @property
+    def peptide_partition(self):
+        return self.__peptide_partition
 
     @staticmethod
     def bulk_insert(database_cursor, protein_peptide_associations: list) -> int:
@@ -26,11 +31,11 @@ class ProteinPeptideAssociation:
         @param database_cursor Database cursor with open transaction.
         @param protein_peptide_associations List of ProteinPeptideAssciation.
         """
-        BULK_INSERT_QUERY = f"INSERT INTO {ProteinPeptideAssociation.TABLE_NAME} (protein_accession, peptide_sequence, mass) VALUES %s;"
+        BULK_INSERT_QUERY = f"INSERT INTO {ProteinPeptideAssociation.TABLE_NAME} (protein_accession, partition, peptide_mass, peptide_sequence) VALUES %s;"
         execute_values(
             database_cursor,
             BULK_INSERT_QUERY,
-            [(association.protein_accession, association.peptide_sequence, association.peptide_mass) for association in protein_peptide_associations ],
+            [(association.protein_accession, association.peptide_partition, association.peptide_mass, association.peptide_sequence) for association in protein_peptide_associations ],
             page_size=len(protein_peptide_associations)
         )
         # rowcount is only accurate, because the page size is as high as the number of inserted data. If the page size would be smaller rowcount would only return the rowcount of the last processed page.

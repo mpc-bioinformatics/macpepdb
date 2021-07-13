@@ -21,6 +21,7 @@ depends_on = None
 def upgrade():
     op.create_table(
         'peptides',
+        sa.Column('partition', sa.SmallInteger, nullable=False),
         sa.Column('mass', sa.BigInteger, nullable=False),
         sa.Column('sequence', sa.VARCHAR(60), nullable=False),
         sa.Column('length', sa.SmallInteger, nullable=False),
@@ -60,14 +61,16 @@ def upgrade():
         sa.Column('taxonomy_ids', sa.dialects.postgresql.ARRAY(sa.Integer), server_default='{}', nullable=False),
         sa.Column('unique_taxonomy_ids', sa.dialects.postgresql.ARRAY(sa.Integer), server_default='{}', nullable=False),
         sa.Column('proteome_ids', sa.dialects.postgresql.ARRAY(sa.VARCHAR(11)), server_default='{}', nullable=False),
-        sa.PrimaryKeyConstraint('mass', 'sequence')
+        sa.PrimaryKeyConstraint('partition', 'mass', 'sequence')
     )
 
     # Distribute 'peptides' by mass
     connection = op.get_bind()
-    connection.execute("SELECT create_distributed_table('peptides', 'mass');")
+    connection.execute("SELECT create_distributed_table('peptides', 'partition');")
 
+    op.create_index('peptide_mass_idx', 'peptides', ['mass'])
     op.create_index('peptide_sequence_idx', 'peptides', ['sequence'])
+    
 
 def downgrade():
     op.drop_table('peptides')
