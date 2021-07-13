@@ -9,13 +9,12 @@ from macpepdb import process_context
 from macpepdb.utilities.generic_process import GenericProcess
 
 class StatisticsLoggerProcess(GenericProcess):
-    def __init__(self, termination_event: Event, statistics: Array, statistics_file_path: pathlib.Path, write_period: int, file_header: str, output_min_column_width: int, log_connection: ProcessConnection, stop_logging_event: Event):
+    def __init__(self, termination_event: Event, statistics: Array, statistics_file_path: pathlib.Path, write_period: int, file_header: str, log_connection: ProcessConnection, stop_logging_event: Event):
         super().__init__(termination_event)
         self.__statistics = statistics
         self.__statistics_file_path = statistics_file_path
         self.__write_period = write_period
         self.__file_header = file_header
-        self.__output_min_column_width = output_min_column_width
         self.__log_connection = log_connection
         self.__stop_logging_event = stop_logging_event
 
@@ -25,7 +24,6 @@ class StatisticsLoggerProcess(GenericProcess):
         # Snapshot of last written statistic to calculate difference
         last_statistics = [0] * len(self.__statistics)
         start_at = time.time()
-        self.__print_statistic_row(self.__file_header, False)
         with self.__statistics_file_path.open("w") as statistics_file:
             statistics_writer = csv.writer(statistics_file)
             statistics_writer.writerow(self.__file_header)
@@ -50,21 +48,7 @@ class StatisticsLoggerProcess(GenericProcess):
                 # Write csv row to csv file
                 statistics_writer.writerow(csv_row)
                 statistics_file.flush()
-                # Output to console, when the stop flag is not set, make line replaceable
-                self.__print_statistic_row(csv_row, not self.__stop_logging_event.is_set())
                 # Assign new 'snapshot'
                 last_statistics = current_statistics
-        print("\n")
         self.__log_connection.send("statistics logger is offline")
         self.__log_connection.close()
-
-    def __print_statistic_row(self, row: list, is_replaceable: bool):
-        line_end = "\r" if is_replaceable else "\n"
-        output = []
-        for idx in range(0, len(self.__file_header)):
-            column_width = max(
-                self.__output_min_column_width,
-                len(self.__file_header[idx])
-            )
-            output.append(f"{row[idx]:>{column_width}}")
-        print("\t".join(output), end=line_end)

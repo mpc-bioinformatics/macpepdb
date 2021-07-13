@@ -33,7 +33,7 @@ class PeptideMetadataCollectorProcess(GenericProcess):
         PREPARE_STATEMENT_QUERY = f"PREPARE {PREPARED_STATEMENT_NAME} AS UPDATE {Peptide.TABLE_NAME} SET is_metadata_up_to_date = true, is_swiss_prot = $1, is_trembl = $2, taxonomy_ids = $3, unique_taxonomy_ids = $4, proteome_ids = $5 WHERE mass = $6 AND sequence = $7;"
 
         # Let the process run until empty_queue_and_stop_flag is true and peptide_sequence_queue is empty or database_maintenance_stop_event is true.
-        while (not self.__empty_queue_and_stop_flag.is_set() or not self.__empty_queue_and_stop_flag.is_set()) and not self.__empty_queue_and_stop_flag.is_set():
+        while (not self.__empty_queue_and_stop_flag.is_set() or not self.__peptide_sequence_queue.empty()) and not self.termination_event.is_set():
             try:
                 # Open/reopen database connection
                 if not database_connection or (database_connection and database_connection.closed != 0):
