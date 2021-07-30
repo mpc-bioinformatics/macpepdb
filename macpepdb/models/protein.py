@@ -134,7 +134,7 @@ class Protein:
         )
 
     @staticmethod
-    def insert(database_cursor, protein):
+    def insert(database_cursor, protein) -> int:
         INSERT_QUERY = f"INSERT INTO {Protein.TABLE_NAME} (accession, secondary_accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);"
         database_cursor.execute(
             INSERT_QUERY,
@@ -149,6 +149,7 @@ class Protein:
                 protein.is_reviewed
             )
         )
+        return database_cursor.rowcount
 
     @staticmethod
     def delete(database_cursor, protein):
@@ -172,7 +173,8 @@ class Protein:
         """
         # Create protein and get protein ID
         Protein.insert(database_cursor, protein)
-        
+
+        inserted_peptide_count = 0
 
         # Digest protein and create sequence => peptide map
         new_peptides = {peptide.sequence: peptide for peptide in enzyme.digest(protein)}
@@ -194,7 +196,7 @@ class Protein:
             # Convert sequence => peptide map to peptide list
             new_peptides = list(new_peptides.values())
 
-            peptide_module.Peptide.bulk_insert(database_cursor, new_peptides)
+            inserted_peptide_count = peptide_module.Peptide.bulk_insert(database_cursor, new_peptides)
 
             for peptide in new_peptides:
                 protein_peptide_associations.append(ProteinPeptideAssociation(protein, peptide))
@@ -203,7 +205,7 @@ class Protein:
             if len(peptides_for_metadata_update):
                 peptide_module.Peptide.flag_for_metadata_update(database_cursor, peptides_for_metadata_update)
 
-        return len(new_peptides)
+        return inserted_peptide_count
 
     def update(self, database_cursor, updated_protein: 'Protein', enzyme) -> int:
         """
@@ -214,7 +216,7 @@ class Protein:
         @param enzyme Digest enzym
         @return int First element indicates if the session needs to commit, seconds is the number of newly inserted peptides
         """
-        number_of_new_peptides = 0
+        inserted_peptide_count = 0
 
         update_columns = []
         update_values = []
@@ -279,12 +281,9 @@ class Protein:
                         protein_peptide_associations.append(ProteinPeptideAssociation(self, peptide))
                         if is_metadata_up_to_date:
                             peptides_for_metadata_update.append(peptide)
-
-                ### At this point new_peptides should only contain peptides which not exist in the database
-                number_of_new_peptides = len(new_peptides)
                 
                 # Insert new peptides
-                peptide_module.Peptide.bulk_insert(database_cursor, new_peptides.values())
+                inserted_peptide_count = peptide_module.Peptide.bulk_insert(database_cursor, new_peptides.values())
 
                 # Create association values for new peptides
                 for peptide in new_peptides.values():
@@ -302,7 +301,7 @@ class Protein:
             update_values.append(self.accession)
             database_cursor.execute(f"UPDATE proteins SET {update_columns} WHERE accession = %s", update_values)
 
-        return number_of_new_peptides
+        return inserted_peptide_count
 
     @staticmethod
     def __select_existing_peptides_with_metadata_status(database_cursor, peptides: list) -> list:

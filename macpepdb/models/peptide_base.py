@@ -290,9 +290,10 @@ class PeptideBase:
                 peptide.c_terminus
             )
         )
+        return database_cursor.rowcount
 
     @classmethod
-    def bulk_insert(cls, database_cursor, peptides: list):
+    def bulk_insert(cls, database_cursor, peptides: list) -> int:
         """
         @param database_cursor Database cursor with open transaction.
         @param peptides Peptides for bulk insert.
@@ -339,5 +340,8 @@ class PeptideBase:
                     peptide.n_terminus,
                     peptide.c_terminus
                 ) for peptide in peptides
-            ]
+            ],
+            page_size=len(peptides)
         )
+        # rowcount is only accurate, because the page size is as high as the number of inserted data. If the page size would be smaller rowcount would only return the rowcount of the last processed page.
+        return database_cursor.rowcount

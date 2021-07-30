@@ -29,7 +29,7 @@ class TaxonomyMerge:
         )
 
     @classmethod
-    def bulk_insert(cls, database_cursor, taxonomy_merges: list):
+    def bulk_insert(cls, database_cursor, taxonomy_merges: list) -> int:
         """
         @param database_cursor Database cursor with open transaction.
         @param taxonomy_merges TaxonomyMerges for bulk insert.
@@ -47,8 +47,11 @@ class TaxonomyMerge:
                     taxonomy_merge.source_id, 
                     taxonomy_merge.target_id
                 ) for taxonomy_merge in taxonomy_merges
-            ]
+            ],
+            page_size=len(taxonomy_merges)
         )
+        # rowcount is only accurate, because the page size is as high as the number of inserted data. If the page size would be smaller rowcount would only return the rowcount of the last processed page.
+        return database_cursor.rowcount
     
     @classmethod
     def select(cls, database_cursor, select_conditions: tuple = ("", []), fetchall: bool = False):

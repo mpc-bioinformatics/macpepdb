@@ -21,7 +21,7 @@ class ProteinPeptideAssociation:
         return self.__peptide_mass
 
     @staticmethod
-    def bulk_insert(database_cursor, protein_peptide_associations: list):
+    def bulk_insert(database_cursor, protein_peptide_associations: list) -> int:
         """
         @param database_cursor Database cursor with open transaction.
         @param protein_peptide_associations List of ProteinPeptideAssciation.
@@ -30,8 +30,11 @@ class ProteinPeptideAssociation:
         execute_values(
             database_cursor,
             BULK_INSERT_QUERY,
-            [(association.protein_accession, association.peptide_sequence, association.peptide_mass) for association in protein_peptide_associations ]
+            [(association.protein_accession, association.peptide_sequence, association.peptide_mass) for association in protein_peptide_associations ],
+            page_size=len(protein_peptide_associations)
         )
+        # rowcount is only accurate, because the page size is as high as the number of inserted data. If the page size would be smaller rowcount would only return the rowcount of the last processed page.
+        return database_cursor.rowcount
     
     @staticmethod
     def delete(database_cursor, where_conditions: list):

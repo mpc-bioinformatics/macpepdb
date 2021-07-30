@@ -110,7 +110,7 @@ class Taxonomy:
         )
 
     @classmethod
-    def bulk_insert(cls, database_cursor, taxonomies: list):
+    def bulk_insert(cls, database_cursor, taxonomies: list) -> int:
         """
         @param database_cursor Database cursor with open transaction.
         @param taxonomies Taxonomies for bulk insert.
@@ -130,8 +130,11 @@ class Taxonomy:
                     taxonomy.name,
                     taxonomy.rank.value
                 ) for taxonomy in taxonomies
-            ]
+            ],
+            page_size=len(taxonomies)
         )
+        # rowcount is only accurate, because the page size is as high as the number of inserted data. If the page size would be smaller rowcount would only return the rowcount of the last processed page.
+        return database_cursor.rowcount
         
     @classmethod
     def select(cls, database_cursor, select_conditions: tuple = ("", []), fetchall: bool = False):
