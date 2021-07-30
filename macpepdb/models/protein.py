@@ -196,12 +196,15 @@ class Protein:
             # Convert sequence => peptide map to peptide list
             new_peptides = list(new_peptides.values())
 
-            inserted_peptide_count = peptide_module.Peptide.bulk_insert(database_cursor, new_peptides)
+            if len(new_peptides):
+                inserted_peptide_count = peptide_module.Peptide.bulk_insert(database_cursor, new_peptides)
 
-            for peptide in new_peptides:
-                protein_peptide_associations.append(ProteinPeptideAssociation(protein, peptide))
+                for peptide in new_peptides:
+                    protein_peptide_associations.append(ProteinPeptideAssociation(protein, peptide))
 
-            ProteinPeptideAssociation.bulk_insert(database_cursor, protein_peptide_associations)
+            if len(protein_peptide_associations):
+                ProteinPeptideAssociation.bulk_insert(database_cursor, protein_peptide_associations)
+                
             if len(peptides_for_metadata_update):
                 peptide_module.Peptide.flag_for_metadata_update(database_cursor, peptides_for_metadata_update)
 
@@ -282,15 +285,17 @@ class Protein:
                         if is_metadata_up_to_date:
                             peptides_for_metadata_update.append(peptide)
                 
-                # Insert new peptides
-                inserted_peptide_count = peptide_module.Peptide.bulk_insert(database_cursor, new_peptides.values())
+                if len(new_peptides):
+                    # Insert new peptides
+                    inserted_peptide_count = peptide_module.Peptide.bulk_insert(database_cursor, new_peptides.values())
 
                 # Create association values for new peptides
                 for peptide in new_peptides.values():
                     protein_peptide_associations.append(ProteinPeptideAssociation(self, peptide))
 
-                # Bulk insert new peptides
-                ProteinPeptideAssociation.bulk_insert(database_cursor, protein_peptide_associations)
+                if len(protein_peptide_associations):
+                    # Bulk insert new peptides
+                    ProteinPeptideAssociation.bulk_insert(database_cursor, protein_peptide_associations)
 
             if len(peptides_for_metadata_update):
                 peptide_module.Peptide.flag_for_metadata_update(database_cursor, peptides_for_metadata_update)
