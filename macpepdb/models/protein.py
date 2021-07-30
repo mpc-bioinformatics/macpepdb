@@ -1,6 +1,10 @@
+from __future__ import annotations
+
 import re
 
+from datetime import datetime
 from psycopg2.extras import execute_values
+from typing import List, Tuple
 
 from .protein_peptide_association import ProteinPeptideAssociation
 from ..proteomics.enzymes import digest_enzyme
@@ -10,10 +14,25 @@ class Protein:
     EMBL_AMINO_ACID_GROUPS_PER_LINE = 6
     EMBL_AMINO_ACID_GROUP_LEN = 10
     EMBL_ACCESSIONS_PER_LINE = 8
+    # Lookup for month name by number. So no locale change is necessary
+    DT_MONTH_LOOKUP_TABLE = {
+        1:  "JAN",
+        2:  "FEB",
+        3:  "MAR",
+        4:  "APR",
+        5:  "MAY",
+        6:  "JUN",
+        7:  "JUL",
+        8:  "AUG",
+        9:  "SEP",
+        10: "OCT",
+        11: "NOV",
+        12: "DEC"
+    }
 
     TABLE_NAME = 'proteins'
 
-    def __init__(self, accession: str, secondary_accessions: list, entry_name: str, name: str, sequence: str, taxonomy_id: int, proteome_id: str, is_reviewed: bool):
+    def __init__(self, accession: str, secondary_accessions: list, entry_name: str, name: str, sequence: str, taxonomy_id: int, proteome_id: str, is_reviewed: bool, updated_at: int):
         self.accession = accession
         self.secondary_accessions = secondary_accessions
         self.entry_name = entry_name
@@ -22,6 +41,7 @@ class Protein:
         self.taxonomy_id = taxonomy_id
         self.proteome_id = proteome_id
         self.is_reviewed = is_reviewed
+        self.updated_at = updated_at
 
     def to_embl_entry(self) -> str:
         embl_entry = f"ID   {self.entry_name}    {'Reviewed' if self.is_reviewed else 'Unreviewed'};    {len(self.sequence)}\n"
@@ -35,6 +55,10 @@ class Protein:
                 embl_entry += f" {accession};"
             embl_entry += "\n"
             embl_accessions_start += Protein.EMBL_ACCESSIONS_PER_LINE
+        
+
+        last_update = datetime.utcfromtimestamp(self.updated_at)
+        embl_entry += f"DT   {last_update.day}-{self.__class__.DT_MONTH_LOOKUP_TABLE.get(last_update.month, 'JAN')}-{last_update.year};\n"
 
         embl_entry += f"OX   NCBI_TaxID={self.taxonomy_id};\n"
         embl_entry += f"DR   Proteomes; {self.proteome_id};\n"
@@ -102,7 +126,7 @@ class Protein:
         @param fetchall Indicates if multiple rows should be fetched
         @return Protein or list of proteins
         """
-        select_query = f"SELECT accession, secondary_accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed FROM {Protein.TABLE_NAME}"
+        select_query = f"SELECT accession, secondary_accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed, updated_at FROM {Protein.TABLE_NAME}"
         if len(select_conditions) == 2 and len(select_conditions[0]):
             select_query += f" WHERE {select_conditions[0]}"
         select_query += ";"
@@ -117,10 +141,16 @@ class Protein:
                 return None
 
     @staticmethod
-    def from_sql_row(sql_row):
+    def from_sql_row(sql_row: Tuple[str, List[str], str, str, str, int, str, bool, int]) -> Protein:
         """
-        @param sql_row Contains the protein columns in the following order: accession, secondary_accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed
-        @return Protein
+        Parameters
+        ----------
+        sql_row : tuple
+            Contains the protein columns in the following order: accession, secondary_accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed, updated_at
+
+        Return
+        ------
+        Protein
         """
         return Protein(
             sql_row[0],
@@ -130,12 +160,13 @@ class Protein:
             sql_row[4],
             sql_row[5],
             sql_row[6],
-            sql_row[7]
+            sql_row[7],
+            sql_row[8]
         )
 
     @staticmethod
     def insert(database_cursor, protein) -> int:
-        INSERT_QUERY = f"INSERT INTO {Protein.TABLE_NAME} (accession, secondary_accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);"
+        INSERT_QUERY = f"INSERT INTO {Protein.TABLE_NAME} (accession, secondary_accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed, updated_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);"
         database_cursor.execute(
             INSERT_QUERY,
             (
@@ -146,7 +177,8 @@ class Protein:
                 protein.sequence,
                 protein.taxonomy_id,
                 protein.proteome_id,
-                protein.is_reviewed
+                protein.is_reviewed,
+                protein.updated_at
             )
         )
         return database_cursor.rowcount
@@ -204,7 +236,7 @@ class Protein:
 
             if len(protein_peptide_associations):
                 ProteinPeptideAssociation.bulk_insert(database_cursor, protein_peptide_associations)
-                
+
             if len(peptides_for_metadata_update):
                 peptide_module.Peptide.flag_for_metadata_update(database_cursor, peptides_for_metadata_update)
 

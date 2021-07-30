@@ -26,7 +26,8 @@ def upgrade():
         sa.Column('sequence', sa.Text, nullable=False),
         sa.Column('taxonomy_id', sa.Integer),
         sa.Column('proteome_id', sa.VARCHAR(11)),
-        sa.Column('is_reviewed', sa.Boolean, nullable=False)
+        sa.Column('is_reviewed', sa.Boolean, nullable=False),
+        sa.Column('updated_at', sa.BigInteger, nullable=False, server_default="0")
     )
     op.create_index('protein_secondary_accessions_idx', 'proteins', ['secondary_accessions'], postgresql_using='gin')
     op.create_index('protein_taxonomy_id_idx', 'proteins', ['taxonomy_id'])

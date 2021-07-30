@@ -1,4 +1,5 @@
 import re
+from datetime import datetime, timedelta
 
 from macpepdb.models.protein import Protein
 
@@ -7,6 +8,21 @@ class UniprotTextReader():
     NAME_REGEX = re.compile(r"Full=(?P<name>.*?)(\{|;)")
     WHITESPACE_REGEX = re.compile(r"\s")
     SERIAL_WHITESPACES_REGEX = re.compile(r"\s{2,}")
+    # Lookup for month number by name. So no locale change is necessary
+    DT_MONTH_LOOKUP_TABLE = {
+        "JAN": 1,
+        "FEB": 2,
+        "MAR": 3,
+        "APR": 4,
+        "MAY": 5,
+        "JUN": 6,
+        "JUL": 7,
+        "AUG": 8,
+        "SEP": 9,
+        "OCT": 10,
+        "NOV": 11,
+        "DEC": 12
+    }
 
 
     def __init__(self, file):
@@ -24,6 +40,7 @@ class UniprotTextReader():
         taxonomy_id = None
         sequence = ""
         proteome_id = None
+        last_update = "01-JAN-1970"
 
         
         while True:
@@ -47,9 +64,11 @@ class UniprotTextReader():
                 elif line.startswith("DE"):
                     if name == "" and line[5:].startswith("RecName") or line[5:].startswith("AltName") or line[5:].startswith("Sub"):
                         name = self.__process_de_name(line[5:])
+                elif line.startswith("DT"):
+                    last_update = line[5:16]
                 elif line.startswith("//"):
                     primary_accession = accessions.pop(0)
-                    return Protein(primary_accession, accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed)
+                    return Protein(primary_accession, accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed, self.__dt_date_to_utc_timestamp(last_update))
 
 
     # Returns the the uniprot entry name and the review status (ture|false)
@@ -86,3 +105,21 @@ class UniprotTextReader():
         if matches:
             return matches["name"].strip()
         return ""
+
+    def __dt_date_to_utc_timestamp(self, dt_date: str) -> int:
+        """
+        Calculate UTC timestamp, see: https://docs.python.org/3/library/datetime.html#datetime.datetime.timestamp 
+
+        Arguments
+        ---------
+        dt_date : str
+            Date in the form 01-JAN-1970
+
+        Return
+        ------
+        UTC unix timestamp
+        """
+        dt_date = dt_date.upper()
+        day, month, year = dt_date.split("-")
+        date = datetime(int(year), self.__class__.DT_MONTH_LOOKUP_TABLE.get(month, 1), int(day))
+        return (date - datetime(1970, 1, 1)) / timedelta(seconds=1)
