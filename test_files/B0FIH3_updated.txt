@@ -3,6 +3,7 @@ AC   NEWACC; B0FIH3;
 DT   29-APR-2015, integrated into UniProtKB/Swiss-Prot.
 DT   26-FEB-2008, sequence version 1.
 DT   22-APR-2020, entry version 25.
+DT   22-APR-2021, fake update.
 DE   RecName: Full=Major capsid protein {ECO:0000305};
 DE   AltName: Full=Gene product 11 {ECO:0000305};
 DE            Short=gp11;

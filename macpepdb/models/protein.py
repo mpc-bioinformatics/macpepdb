@@ -58,7 +58,8 @@ class Protein:
         
 
         last_update = datetime.utcfromtimestamp(self.updated_at)
-        embl_entry += f"DT   {last_update.day}-{self.__class__.DT_MONTH_LOOKUP_TABLE.get(last_update.month, 'JAN')}-{last_update.year};\n"
+        dt_day = str(last_update.day).zfill(2)
+        embl_entry += f"DT   {dt_day}-{self.__class__.DT_MONTH_LOOKUP_TABLE.get(last_update.month, 'JAN')}-{last_update.year}\n"
 
         embl_entry += f"OX   NCBI_TaxID={self.taxonomy_id};\n"
         embl_entry += f"DR   Proteomes; {self.proteome_id};\n"
@@ -242,15 +243,30 @@ class Protein:
 
         return inserted_peptide_count
 
-    def update(self, database_cursor, updated_protein: 'Protein', enzyme) -> int:
+    def update(self, database_cursor, updated_protein: Protein, enzyme: digest_enzyme.DigestEnzyme) -> int:
         """
-        Updates the stored_protein with the updated_protein by comparing its attributes.
-        @param database_cursor Database cursor with open transaction.
-        @param updated_protein Protein with updates from file
-        @param stored_protein Protein from database
-        @param enzyme Digest enzym
-        @return int First element indicates if the session needs to commit, seconds is the number of newly inserted peptides
+        Updates the protein with the updated_protein if the updated_at timestamp of the given protein is higher than the updated_at timestamp from the current protein.
+        
+        Parameters
+        ----------
+        database_cursor : DatabaseCursor
+            Database cursor with open transaction.
+        updated_protein : Protein
+            Protein with updates from file
+        stored_protein : Protein
+            Protein from database
+        enzyme : Digest
+            Digest enzym
+
+        Return
+        ------
+        Number of newly inserted peptides
         """
+        # This protein has the more current update date skip the update
+        if self.updated_at >= updated_protein.updated_at:
+            return 0
+
+
         inserted_peptide_count = 0
 
         update_columns = []
@@ -271,6 +287,9 @@ class Protein:
         if updated_protein.sequence != self.sequence:
             update_columns.append('sequence = %s')
             update_values.append(updated_protein.sequence)
+        if updated_protein.updated_at != self.updated_at:
+            update_columns.append('updated_at = %s')
+            update_values.append(updated_protein.updated_at)
 
             # Create sequence => peptide map
             new_peptides = {peptide.sequence: peptide for peptide in enzyme.digest(updated_protein)}
