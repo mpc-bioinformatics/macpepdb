@@ -1,34 +1,52 @@
 from __future__ import annotations
-import pathlib
-import csv
-import operator
+
+from dataclasses import dataclass
 from math import floor
 from typing import Tuple, List, Any
 
 from ..proteomics.modification_collection import ModificationCollection
 from ..proteomics.mass.precursor_range import PrecursorRange
-from .column_conditions_list import ColumnConditionsList
+from macpepdb.models.peptide import Peptide
+from macpepdb.database.query_helpers.column_condition import ColumnCondition
+from macpepdb.database.query_helpers.database_index_where_clause_builder import DatabaseIndexWhereClauseBuilder
+from macpepdb.database.indexes.post_translational_modification_search_index import PostTranslationalModificationSearchIndex as PTMSearchIndex
+from macpepdb.proteomics.modification import Modification
 
-# Only a simple helper class to build the combination matrix in ModifiedPeptideQueryFilter
+@dataclass
 class ModificationCounter:
-    def __init__(self, modification):
+    """
+    Only a simple helper class to build the combination matrix in ModificationCombinationList
+    """
+    __slots__ = ["modification", "count"]
+
+    modification: Modification
+    count: int
+
+    def __init__(self, modification: Modification):
         self.modification = modification
         self.count = 0
 
+
+@dataclass
 class ModificationCombination:
     """
     This class keeps all information for querying peptides with a specific modification combination.
     The property `precursor_range` holds the PrecursorRange (mass tolerance) for the query and `column_conditions_list` contains a ColumnConditionsList
     to check the values of SQL row for additional conditions.
     """
+    __slots__ = ["__column_conditions", "__precursor_range"]
+
+    __column_conditions: List[ColumnCondition]
+    __precursor_range: PrecursorRange
+
     def __init__(self, modification_counters: list, precursor: int, lower_precursor_tolerance_ppm: int, upper_precursor_tolerance_ppm: int):
-        self.__column_conditions_list = ColumnConditionsList()
-        self.__precursor_range = (0, 0)
+        self.__column_conditions = []
+        self.__precursor_range = None
         self.__calculate_columns_and_precursor_range(modification_counters, precursor, lower_precursor_tolerance_ppm, upper_precursor_tolerance_ppm)
 
     @property
-    def column_conditions_list(self) -> ColumnConditionsList:
-        return self.__column_conditions_list
+    def where_conditions(self) -> List[ColumnCondition]:
+        return self.__column_conditions
 
     @property
     def precursor_range(self):
@@ -64,49 +82,76 @@ class ModificationCombination:
             # Build the column name, e.g. a_count
             column_name = "{}_count".format(one_letter_code.lower())
             # Add condition. In case the modification is fix we want equals the amino acid, if the modification is variable it could be more.
-            sql_representation, func_operator = ("= %s", operator.eq) if count_and_type[1] else (">= %s", operator.ge)
-            self.__column_conditions_list.append(
-                column_name,
-                sql_representation,
-                func_operator,
-                count_and_type[0]
+            sql_operator = "= %s" if count_and_type[1] else ">= %s"
+            self.__column_conditions.append(
+                ColumnCondition(
+                    column_name,
+                    sql_operator,
+                    (count_and_type[0], )
+                )
             )
 
         # For n- and c-terminus modification check if there is one:
         # * If the modification is variable and applied check for presence (absence is uninteresting because it is a variable modification)
         if n_terminus_modification and (n_terminus_modification[0].is_variable and n_terminus_modification[1]):
-            self.__column_conditions_list.append(
-                'n_terminus',
-                "= %s",
-                operator.eq,
-                n_terminus_modification[0].amino_acid.one_letter_code
+            self.__column_conditions.append(
+                ColumnCondition(
+                    "n_terminus",
+                    "= %s",
+                    (n_terminus_modification[0].amino_acid.one_letter_code, )
+                )
             )
 
         if c_terminus_modification and (c_terminus_modification[0].is_variable and c_terminus_modification[1]):
-            self.__column_conditions_list.append(
-                'c_terminus',
-                "= %s",
-                operator.eq,
-                c_terminus_modification[0].amino_acid.one_letter_code
+            self.__column_conditions.append(
+                ColumnCondition(
+                    "c_terminus",
+                    "= %s",
+                    (c_terminus_modification[0].amino_acid.one_letter_code, )
+                )
             )
 
         # Add the mass between condition
         self.__precursor_range = PrecursorRange(precursor - delta_sum, lower_precursor_tolerance_ppm, upper_precursor_tolerance_ppm)
 
-    def to_sql(self) -> Tuple[str, List[Any]]:
-        """Returns the SQL where condition for this combination.
-        """
-        # Begin with mass
-        where_string = "mass BETWEEN %s AND %s"
-        where_values = [self.precursor_range.lower_limit, self.precursor_range.upper_limit]
-        # Check len of column_conditions 
-        if len(self.__column_conditions_list):
-            # Create string and values from the condition list
-            additionl_conditions, additional_condition_values = self.__column_conditions_list.to_sql()
-            where_string += f" AND {additionl_conditions}"
-            where_values += additional_condition_values
-        return (where_string, where_values)
+        self.__column_conditions.append(
+            ColumnCondition(
+                "mass",
+                "BETWEEN %s AND %s",
+                (self.__precursor_range.lower_limit, self.__precursor_range.upper_limit)
+            )
+        )
 
+        first_partition = Peptide.get_partition(self.__precursor_range.lower_limit)
+        last_partition = Peptide.get_partition(self.__precursor_range.upper_limit)
+        conditions_operator = ""
+        conditions_values = ()
+        if first_partition == last_partition:
+            conditions_operator = "= %s"
+            conditions_values = (first_partition,)
+        else:
+            conditions_operator = "BETWEEN %s AND %s"
+            conditions_values = (first_partition, last_partition)
+        self.__column_conditions.append(
+            ColumnCondition(
+                "partition",
+                conditions_operator,
+                conditions_values
+            )
+        )
+
+    def to_sql(self) -> Tuple[str, List[Any]]:
+        """
+        Creats a SQL-query WHERE-clause for the PTM/MASS-combination.
+
+        Return
+        ======
+        Tuple with the WHERE-part of the SQL-query and a list of values for the query.
+        """
+        where_clause_builder = DatabaseIndexWhereClauseBuilder(PTMSearchIndex)
+        for column_condition in self.__column_conditions:
+            where_clause_builder.set_condition(column_condition)
+        return where_clause_builder.to_sql()
 
 class ModificationCombinationList:
     """
@@ -250,4 +295,4 @@ class ModificationCombinationList:
             return (" OR ".join(query_string), values)
         else:
             precursor_range = PrecursorRange(self.__precursor, self.__lower_precursor_tolerance_ppm, self.__upper_precursor_tolerance_ppm)
-            return ("mass BETWEEN %s AND %s", [precursor_range.lower_limit, precursor_range.upper_limit])
+            return (f"partition BETWEEN %s AND %s AND mass BETWEEN %s AND %s", [Peptide.get_partition(precursor_range.lower_limit), Peptide.get_partition(precursor_range.upper_limit), precursor_range.lower_limit, precursor_range.upper_limit])
