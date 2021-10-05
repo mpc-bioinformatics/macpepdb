@@ -70,6 +70,38 @@ def upgrade():
 
     op.create_index('peptide_mass_idx', 'peptides', ['mass'])
     op.create_index('peptide_sequence_idx', 'peptides', ['sequence'])
+    op.create_index("peptides_mass_aa_count_idx", "peptides", [
+        "partition",
+        "mass",
+        "m_count",
+        "c_count",
+        "s_count",
+        "t_count",
+        "y_count",
+        "n_terminus",
+        "c_terminus",
+        "r_count", 
+        "k_count",
+        "a_count",
+        "b_count",
+        "d_count",
+        "e_count",
+        "f_count",
+        "g_count",
+        "h_count",
+        "i_count",
+        "j_count",
+        "l_count",
+        "n_count",
+        "o_count",
+        "p_count",
+        "q_count",
+        "u_count",
+        "v_count",
+        "w_count",
+        "z_count"
+    ])
+
     
 
 def downgrade():
