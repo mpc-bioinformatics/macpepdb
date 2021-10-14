@@ -4,8 +4,8 @@ from macpepdb.database.indexes.column_definition import ColumnDefinition
 class PostTranslationalModificationSearchIndex(AbstractIndex):
     AMINO_ACID_COUNT_OPERATOR = ">= %s"
     AMINO_ACID_COUNT_VALUE = (0,)
-    TERMINI_OPERATOR = "!= %s"
-    TERMINI_VALUE = ("0",)
+    TERMINI_OPERATOR = ">= %s"
+    TERMINI_VALUE = (0,)
     COLUMN_CONDITIONS_TEMPLATE = [
         ColumnDefinition("partition",   ">= %s",                    (0,)),
         ColumnDefinition("mass",        ">= %s",                    (0,)),

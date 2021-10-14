@@ -98,7 +98,7 @@ class ModificationCombination:
                 ColumnCondition(
                     "n_terminus",
                     "= %s",
-                    (n_terminus_modification[0].amino_acid.one_letter_code, )
+                    (n_terminus_modification[0].amino_acid.get_one_letter_code_ascii_dec(), )
                 )
             )
 
@@ -107,7 +107,7 @@ class ModificationCombination:
                 ColumnCondition(
                     "c_terminus",
                     "= %s",
-                    (c_terminus_modification[0].amino_acid.one_letter_code, )
+                    (c_terminus_modification[0].amino_acid.get_one_letter_code_ascii_dec(), )
                 )
             )
 

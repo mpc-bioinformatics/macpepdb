@@ -295,6 +295,12 @@ class PeptideBase:
     def c_terminus(self):
         return self.sequence[-1]
 
+    def get_n_terminus_ascii_dec(self) -> int:
+        return ord(self.sequence[0])
+
+    def get_c_terminus_ascii_dec(self) -> int:
+        return ord(self.sequence[-1])
+
     @property
     def length(self):
         return len(self.sequence)
@@ -395,8 +401,8 @@ class PeptideBase:
                 peptide.w_count,
                 peptide.y_count,
                 peptide.z_count,
-                peptide.n_terminus,
-                peptide.c_terminus
+                peptide.get_n_terminus_ascii_dec(),
+                peptide.get_c_terminus_ascii_dec()
             )
         )
         return database_cursor.rowcount
@@ -447,8 +453,8 @@ class PeptideBase:
                     peptide.w_count,
                     peptide.y_count,
                     peptide.z_count,
-                    peptide.n_terminus,
-                    peptide.c_terminus
+                    peptide.get_n_terminus_ascii_dec(),
+                    peptide.get_c_terminus_ascii_dec()
                 ) for peptide in peptides
             ],
             page_size=len(peptides)

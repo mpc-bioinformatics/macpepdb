@@ -51,8 +51,8 @@ def upgrade():
         sa.Column('w_count', sa.SmallInteger, default=0, nullable=False),
         sa.Column('y_count', sa.SmallInteger, default=0, nullable=False),
         sa.Column('z_count', sa.SmallInteger, default=0, nullable=False),
-        sa.Column('n_terminus', sa.CHAR(1), nullable=False),
-        sa.Column('c_terminus', sa.CHAR(1), nullable=False),
+        sa.Column('n_terminus', sa.SmallInteger, nullable=False),
+        sa.Column('c_terminus', sa.SmallInteger, nullable=False),
         # Flag to mark peptide for metadata update
         sa.Column('is_metadata_up_to_date', sa.Boolean, server_default=sa.text('false'), nullable=False),
         # Peptide metadata, collected/duplicated from proteins-table in a second step.

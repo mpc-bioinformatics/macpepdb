@@ -11,6 +11,14 @@ class AminoAcid:
         self.mono_mass = mass_to_int(mono_mass)
         self.average_mass = mass_to_int(average_mass)
 
+    def get_one_letter_code_ascii_dec(self) -> int:
+        """
+        Return
+        ======
+        Decimal ASCII represenation of the amino acids one letter code
+        """
+        return ord(self.one_letter_code)
+
     # Returns an amino acid by one letter code.
     # If the given one letter code is unknown Unknown Amino Acid (X) is returned.
     @classmethod
