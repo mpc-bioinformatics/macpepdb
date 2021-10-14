@@ -63,12 +63,12 @@ class ModificationCombination:
 
         for counter in modification_counters:
             # If counter is for static non terminus modification or a variable modification with a count higher than zero. Add it to the occurances
-            if counter.modification.is_static and not counter.modification.is_terminus_modification or (counter.modification.is_variable and counter.count):
+            if not counter.modification.is_terminus_modification and (counter.modification.is_static or (counter.modification.is_variable and counter.count > 0)):
                 if counter.modification.amino_acid.one_letter_code in amino_acid_occurences:
                     amino_acid_occurences[counter.modification.amino_acid.one_letter_code][0] += counter.count
                 else:
                     amino_acid_occurences[counter.modification.amino_acid.one_letter_code] = [counter.count, counter.modification.is_static]
-
+            elif counter.modification.is_terminus_modification and counter.modification.is_variable:
                 if counter.modification.is_position_n_terminus:
                     n_terminus_modification = [counter.modification, counter.count > 0]
                 if counter.modification.is_position_c_terminus:
