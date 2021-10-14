@@ -68,8 +68,6 @@ def upgrade():
     connection = op.get_bind()
     connection.execute("SELECT create_distributed_table('peptides', 'partition');")
 
-    op.create_index('peptide_mass_idx', 'peptides', ['mass'])
-    op.create_index('peptide_sequence_idx', 'peptides', ['sequence'])
     op.create_index("peptides_mass_aa_count_idx", "peptides", [
         "partition",
         "mass",
