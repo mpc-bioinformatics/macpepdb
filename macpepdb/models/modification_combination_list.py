@@ -31,8 +31,6 @@ class ModificationCounter:
 class ModificationCombination:
     """
     This class keeps all information for querying peptides with a specific modification combination.
-    The property `precursor_range` holds the PrecursorRange (mass tolerance) for the query and `column_conditions_list` contains a ColumnConditionsList
-    to check the values of SQL row for additional conditions.
     """
     __slots__ = ["__column_conditions", "__precursor_range"]
 
