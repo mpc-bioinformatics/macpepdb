@@ -1,20 +1,21 @@
+# std imports
 import datetime
 import json
 import pathlib
-import glob
 import shutil
 import os
 import psycopg2
 import signal
-
 from enum import unique, Enum
 
-from ...models.maintenance_information import MaintenanceInformation
-from ...proteomics.enzymes.digest_enzyme import DigestEnzyme
-from .taxonomy_tree import TaxonomyTree
-from .protein_digestion import ProteinDigestion
-from .peptide_metadata_collector import PeptideMetadataCollector
+# internal imports
 from macpepdb import process_context
+from macpepdb.models.maintenance_information import MaintenanceInformation
+from macpepdb.proteomics.enzymes.digest_enzyme import DigestEnzyme
+from macpepdb.tasks.database_maintenance.peptide_metadata_collector import PeptideMetadataCollector
+from macpepdb.tasks.database_maintenance.protein_digestion import ProteinDigestion
+from macpepdb.tasks.database_maintenance.taxonomy_tree import TaxonomyTree
+
 
 @unique
 class DatabaseStatus(Enum):

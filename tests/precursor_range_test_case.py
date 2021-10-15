@@ -1,5 +1,7 @@
+# std imports
 import unittest
 
+# internal imports
 from macpepdb.proteomics.mass.precursor_range import PrecursorRange
 
 PRECURSOR = 1325887444084

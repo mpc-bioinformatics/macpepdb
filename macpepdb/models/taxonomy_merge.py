@@ -1,4 +1,7 @@
-from __future__ import annotations#
+# std imports
+from __future__ import annotations
+
+# external imports
 from psycopg2.extras import execute_values
 
 class TaxonomyMerge:

@@ -1,14 +1,17 @@
-import psycopg2
+# std imports
 import random
 import time
-
 from multiprocessing import Event, Queue, Array
 from multiprocessing.connection import Connection as ProcessConnection
 from queue import Empty as EmptyQueueError
 
-from ....models.protein import Protein
-from ....proteomics.enzymes.digest_enzyme import DigestEnzyme
-from ....utilities.generic_process import GenericProcess
+# external imports
+import psycopg2
+
+# internal imports
+from macpepdb.models.protein import Protein
+from macpepdb.proteomics.enzymes.digest_enzyme import DigestEnzyme
+from macpepdb.utilities.generic_process import GenericProcess
 
 
 class ProteinDigestionProcess(GenericProcess):

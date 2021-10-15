@@ -1,17 +1,18 @@
+# std imports
 import pathlib
 import signal
 import shutil
 import time
-
+from ctypes import c_ulonglong
 from datetime import datetime
 from multiprocessing import Event, Value, Queue
-from ctypes import c_ulonglong
 
-from .multiprocessing.updatable_peptide_collector_process import UpdatablePeptideCollectorProcess
-from .multiprocessing.logger_process import LoggerProcess
-from .multiprocessing.peptide_metadata_collector_process import PeptideMetadataCollectorProcess
-from .multiprocessing.statistics_logger_process import StatisticsLoggerProcess
-from ... import process_context
+# internal imports
+from macpepdb import process_context
+from macpepdb.tasks.database_maintenance.multiprocessing.logger_process import LoggerProcess
+from macpepdb.tasks.database_maintenance.multiprocessing.peptide_metadata_collector_process import PeptideMetadataCollectorProcess
+from macpepdb.tasks.database_maintenance.multiprocessing.statistics_logger_process import StatisticsLoggerProcess
+from macpepdb.tasks.database_maintenance.multiprocessing.updatable_peptide_collector_process import UpdatablePeptideCollectorProcess
 
 
 class PeptideMetadataCollector:

@@ -1,7 +1,8 @@
+# std imports
 import pathlib
-import csv
 
-from .modification import Modification
+# internal imports
+from macpepdb.proteomics.modification import Modification
 
 class ModificationLimitError(BaseException):
     pass

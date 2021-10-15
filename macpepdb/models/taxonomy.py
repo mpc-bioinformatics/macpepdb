@@ -1,5 +1,8 @@
+# internal imports
 from __future__ import annotations
 from enum import IntEnum, unique
+
+# external imports
 from psycopg2.extras import execute_values
 
 @unique

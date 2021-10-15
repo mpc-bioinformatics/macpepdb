@@ -1,25 +1,26 @@
+# std imports
 import pathlib
 import time
 import signal
 import shutil
 import json
-
-import psycopg2
-
 from ctypes import c_ulonglong
 from datetime import datetime
 from multiprocessing import Event, Array, Queue
 from typing import Tuple
 
-from .multiprocessing.embl_file_reader_process import EmblFileReaderProcess
-from .multiprocessing.logger_process import LoggerProcess
-from .multiprocessing.protein_digestion_process import ProteinDigestionProcess
-from .multiprocessing.statistics_logger_process import StatisticsLoggerProcess
-from .multiprocessing.unprocessable_protein_logger_process import UnprocessableProteinLoggerProcess
+# external imports
+import psycopg2
 
-from ...proteomics.enzymes.digest_enzyme import DigestEnzyme
-from ...models.maintenance_information import MaintenanceInformation
-from ... import process_context
+# internal imports
+from macpepdb import process_context
+from macpepdb.models.maintenance_information import MaintenanceInformation
+from macpepdb.proteomics.enzymes.digest_enzyme import DigestEnzyme
+from macpepdb.tasks.database_maintenance.multiprocessing.embl_file_reader_process import EmblFileReaderProcess
+from macpepdb.tasks.database_maintenance.multiprocessing.logger_process import LoggerProcess
+from macpepdb.tasks.database_maintenance.multiprocessing.protein_digestion_process import ProteinDigestionProcess
+from macpepdb.tasks.database_maintenance.multiprocessing.statistics_logger_process import StatisticsLoggerProcess
+from macpepdb.tasks.database_maintenance.multiprocessing.unprocessable_protein_logger_process import UnprocessableProteinLoggerProcess
 
 class ProteinDigestion:
     STATISTIC_FILE_HEADER = ["seconds", "inserted_proteins", "inserted_peptides", "unsolvable_errors", "protein_insert_rate", "peptide_insert_rate", "error_rate"]

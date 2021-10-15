@@ -1,8 +1,10 @@
+# std imports
 import unittest
 
+# internal imports
 from macpepdb.models.peptide import Peptide
-from macpepdb.proteomics.mass.convert import to_float as mass_to_float
 from macpepdb.proteomics.amino_acid import AminoAcid
+from macpepdb.proteomics.mass.convert import to_float as mass_to_float
 from macpepdb.proteomics.neutral_loss import H2O
 
 # Fictional sequence 

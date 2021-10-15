@@ -1,21 +1,21 @@
-import unittest
+# std imports
 import pathlib
 import re
 import os
-import shutil
-import tempfile
 
-from macpepdb.proteomics.modification_collection import ModificationCollection
+# internal imports
 from macpepdb.models.modification_combination_list import ModificationCombinationList
-from macpepdb.proteomics.mass.convert import to_int as mass_to_int, thomson_to_dalton
 from macpepdb.models.peptide import Peptide
-from macpepdb.tasks.database_maintenance.database_maintenance import DatabaseMaintenance
-from macpepdb.proteomics.enzymes.digest_enzyme import DigestEnzyme
 from macpepdb.peptide_mass_validator import PeptideMassValidator
+from macpepdb.proteomics.mass.convert import to_int as mass_to_int, thomson_to_dalton
 from macpepdb.proteomics.mass.precursor_range import PrecursorRange
+from macpepdb.proteomics.modification_collection import ModificationCollection
+from macpepdb.tasks.database_maintenance.database_maintenance import DatabaseMaintenance
 
-from .abstract_database_test_case import AbstractDatabaseTestCase
-from .database_maintenance_workdir import DatabaseMaintenanceWorkdir
+
+# test imports
+from tests.abstract_database_test_case import AbstractDatabaseTestCase
+from tests.database_maintenance_workdir import DatabaseMaintenanceWorkdir
 
 # Values from scan 3224 in test file
 MASS_TO_CHARGE_RATIO = 442.970306396484

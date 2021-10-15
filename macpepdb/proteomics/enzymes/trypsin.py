@@ -1,4 +1,5 @@
-from .digest_enzyme import DigestEnzyme
+# internal imports
+from macpepdb.proteomics.enzymes.digest_enzyme import DigestEnzyme
 
 class Trypsin(DigestEnzyme):
     NAME = "Trypsin"

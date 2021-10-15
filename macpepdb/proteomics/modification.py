@@ -1,9 +1,11 @@
+# std imports
 import pathlib
 import csv
 from enum import IntEnum, unique
 
-from .mass.convert import to_int as mass_to_int, to_float as mass_to_float
-from .amino_acid import AminoAcid
+# internal imports
+from macpepdb.proteomics.mass.convert import to_int as mass_to_int, to_float as mass_to_float
+from macpepdb.proteomics.amino_acid import AminoAcid
 
 @unique
 class ModificationPosition(IntEnum):

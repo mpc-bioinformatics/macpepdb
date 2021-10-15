@@ -1,4 +1,5 @@
-from .mass.convert import to_int as mass_to_int
+# internal imports
+from macpepdb.proteomics.mass.convert import to_int as mass_to_int
 
 AMINO_ACIDS_FOR_COUNTING = ["A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "Y"]
 

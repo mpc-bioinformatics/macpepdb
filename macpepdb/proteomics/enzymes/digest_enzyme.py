@@ -1,8 +1,10 @@
+# std imports
 import re
 
-from ...models import peptide
-from ...models import protein
-from ...proteomics.amino_acid import AminoAcid, X as UnknwonAminoAcid, REPLACEABLE_AMBIGIOUS_AMINO_ACID_LOOKUP
+# internal imports
+from macpepdb.models import peptide
+from macpepdb.models import protein
+from macpepdb.proteomics.amino_acid import X as UnknwonAminoAcid, REPLACEABLE_AMBIGIOUS_AMINO_ACID_LOOKUP
 
 class DigestEnzyme:
     def __init__(self, name: str = "Abstract Digest Enzym", shortcut: str = "", regex: re = r".", max_number_of_missed_cleavages: int = 0, minimum_peptide_length: int = 0, maximum_peptide_length: int = 1):

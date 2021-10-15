@@ -1,6 +1,8 @@
+# std imports
 import re
 from datetime import datetime, timedelta
 
+# internal imports
 from macpepdb.models.protein import Protein
 
 class UniprotTextReader():

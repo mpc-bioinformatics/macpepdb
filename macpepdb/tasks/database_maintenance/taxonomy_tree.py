@@ -1,22 +1,20 @@
-# Python modules
+# std imports
 import pathlib
 import time
 import random
 import signal
-
 from multiprocessing import Process, Event, Queue, Pipe, get_context as get_processing_context
 from multiprocessing.connection import Connection, wait
 from queue import Full as QueueFullError, Empty as QueueEmptyError
 from typing import Tuple
 
-# 3rd party modules
+# external imports
 import psycopg2
 
-# Internal imports
-from .multiprocessing.logger_process import LoggerProcess
-from ...models.taxonomy import Taxonomy, TaxonomyRank
-from ...models.taxonomy_merge import TaxonomyMerge
-from ...models.protein import Protein
+# internal imports
+from macpepdb.tasks.database_maintenance.multiprocessing.logger_process import LoggerProcess
+from macpepdb.models.taxonomy import Taxonomy, TaxonomyRank
+from macpepdb.models.taxonomy_merge import TaxonomyMerge
 
 class TaxonomyTree:
 

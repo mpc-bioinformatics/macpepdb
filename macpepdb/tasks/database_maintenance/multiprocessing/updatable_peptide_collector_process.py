@@ -1,12 +1,11 @@
-from os import terminal_size
-import psycopg2
-
+# std imports
 from multiprocessing import Event, Queue
 from multiprocessing.connection import Connection as ProcessConnection
 from queue import Full as FullQueueError
 from typing import List
-from macpepdb.models import peptide
 
+# external imports
+import psycopg2
 
 from macpepdb.models.peptide import Peptide
 from macpepdb.utilities.generic_process import GenericProcess

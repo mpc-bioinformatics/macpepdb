@@ -1,11 +1,11 @@
+# std imports
 import csv
-import macpepdb
 import pathlib
 import time
 from multiprocessing import Array, Event
 from multiprocessing.connection import Connection as ProcessConnection
 
-from macpepdb import process_context
+# internal imports
 from macpepdb.utilities.generic_process import GenericProcess
 
 class StatisticsLoggerProcess(GenericProcess):

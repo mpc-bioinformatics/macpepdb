@@ -1,7 +1,8 @@
+# std imports
 import unittest
 import os
-import time
 
+# external imports
 import psycopg2
 
 # Abstrct class for database dependent test cases.

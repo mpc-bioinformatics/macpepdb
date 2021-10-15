@@ -1,4 +1,5 @@
-from .mass.convert import to_int as mass_to_int
+# internal imports
+from macpepdb.proteomics.mass.convert import to_int as mass_to_int
 
 class NeutralLoss:
     def __init__(self, name: str, mono_mass: float, average_mass: float):

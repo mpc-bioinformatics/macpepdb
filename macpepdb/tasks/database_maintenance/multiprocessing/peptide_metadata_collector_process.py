@@ -1,15 +1,15 @@
-import psycopg2
-import traceback
-
+# std imports
 from multiprocessing import Queue, Event, Array
 from multiprocessing.connection import Connection as ProcessConnection
 from psycopg2.extras import execute_batch
 from queue import Empty as EmptyQueueError
 
+# external imports
+import psycopg2
 
-
-from ....models.peptide import Peptide
-from ....utilities.generic_process import GenericProcess
+# internal imports
+from macpepdb.models.peptide import Peptide
+from macpepdb.utilities.generic_process import GenericProcess
 
 
 class PeptideMetadataCollectorProcess(GenericProcess):

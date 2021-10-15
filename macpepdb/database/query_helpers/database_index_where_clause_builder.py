@@ -1,9 +1,11 @@
+# std imports
 import itertools
-
 from dataclasses import dataclass
+from typing import List, Any, Tuple, Type
+
+# internal imports
 from macpepdb.database.indexes.abstract_index import AbstractIndex
 from macpepdb.database.query_helpers.column_condition import ColumnCondition
-from typing import List, Any, Tuple, Type
 
 @dataclass
 class DatabaseIndexWhereClauseBuilder:

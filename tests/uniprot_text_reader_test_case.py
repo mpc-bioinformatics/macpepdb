@@ -1,7 +1,9 @@
-import unittest
+# std imports
 import pathlib
 import re
+import unittest
 
+# internal imports
 from macpepdb.proteomics.file_reader.uniprot_text_reader import UniprotTextReader
 
 class UniprotTextReaderTestCase(unittest.TestCase):

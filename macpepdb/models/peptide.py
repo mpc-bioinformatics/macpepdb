@@ -1,8 +1,10 @@
+# std imports
 from __future__ import annotations
 
-from .peptide_base import PeptideBase
-from .protein_peptide_association import ProteinPeptideAssociation
-from . import protein
+# internal imports
+from macpepdb.models.peptide_base import PeptideBase
+from macpepdb.models.protein_peptide_association import ProteinPeptideAssociation
+from macpepdb.models import protein
 
 class Metadata:
     def __init__(self, is_swiss_prot: bool, is_trembl: bool, taxonomy_ids: list, unique_taxonomy_ids: list, proteome_ids: list):

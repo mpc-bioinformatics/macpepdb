@@ -1,7 +1,9 @@
+# std imports
 import unittest
 import tempfile
 import pathlib
 
+# internal imports
 from macpepdb.proteomics.modification_collection import ModificationCollection, ModificationLimitError, InvalidModificationCombinationError
 
 CORRECT = """

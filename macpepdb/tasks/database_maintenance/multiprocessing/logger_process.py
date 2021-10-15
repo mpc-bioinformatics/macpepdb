@@ -1,7 +1,9 @@
+# std imports
 import pathlib 
 from multiprocessing import Event
 from multiprocessing.connection import wait
 
+# internal imports
 from macpepdb.utilities.generic_process import GenericProcess
 
 class LoggerProcess(GenericProcess):

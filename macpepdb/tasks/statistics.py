@@ -1,7 +1,11 @@
+# std imports
 import re
+
+# external imports
 import psycopg2
 
-from ..models.peptide import Peptide
+# internal imports
+from macpepdb.models.peptide import Peptide
 
 class Statistics:
     # Can be overriden in subclasses to change the peptide tables

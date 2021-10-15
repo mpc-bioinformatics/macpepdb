@@ -1,20 +1,18 @@
+# std imports
 import pathlib
 import os
-import shutil
-import tempfile
 
-from sqlalchemy import func, distinct
-from sqlalchemy.sql import exists
-
-from macpepdb.tasks.database_maintenance.database_maintenance import DatabaseMaintenance, DatabaseStatus
-from macpepdb.proteomics.enzymes.digest_enzyme import DigestEnzyme
-from macpepdb.proteomics.file_reader.uniprot_text_reader import UniprotTextReader
+# internal imports
+from macpepdb.models.maintenance_information import MaintenanceInformation
 from macpepdb.models.peptide import Peptide
 from macpepdb.models.protein import Protein
-from macpepdb.models.maintenance_information import MaintenanceInformation
+from macpepdb.proteomics.enzymes.digest_enzyme import DigestEnzyme
+from macpepdb.proteomics.file_reader.uniprot_text_reader import UniprotTextReader
+from macpepdb.tasks.database_maintenance.database_maintenance import DatabaseMaintenance, DatabaseStatus
 
-from .abstract_database_test_case import AbstractDatabaseTestCase
-from .database_maintenance_workdir import DatabaseMaintenanceWorkdir
+# test imports
+from tests.abstract_database_test_case import AbstractDatabaseTestCase
+from tests.database_maintenance_workdir import DatabaseMaintenanceWorkdir
 
 TRYPSIN_MAX_MISSED_CLEAVAGES = 2
 TRYPSIN_MIN_PEPTIDE_LENGTH = 5

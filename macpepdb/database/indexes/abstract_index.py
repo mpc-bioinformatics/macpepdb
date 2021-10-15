@@ -1,9 +1,11 @@
-import sys
-import itertools
-from copy import deepcopy
+# std imports
 from dataclasses import dataclass
-from macpepdb.database.indexes.column_definition import ColumnDefinition
 from typing import ClassVar, List
+
+
+# inner imports
+from macpepdb.database.indexes.column_definition import ColumnDefinition
+
 
 @dataclass
 class AbstractIndex:

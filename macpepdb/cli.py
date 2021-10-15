@@ -1,8 +1,10 @@
+# std imports
 import argparse
 
-from .tasks.database_maintenance.database_maintenance import DatabaseMaintenance
-from .tasks.precursor_range_calculation import PrecursorRangeCalculation
-from .tasks.statistics import Statistics
+# internal imports
+from macpepdb.tasks.database_maintenance.database_maintenance import DatabaseMaintenance
+from macpepdb.tasks.precursor_range_calculation import PrecursorRangeCalculation
+from macpepdb.tasks.statistics import Statistics
 
 class ComandLineInterface():
     def __init__(self):

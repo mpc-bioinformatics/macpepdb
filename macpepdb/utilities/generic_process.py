@@ -1,6 +1,8 @@
+# std imports
 import signal
 
-from .. import process_context
+# internal imports
+from macpepdb import process_context
 
 class GenericProcess(process_context.Process):
     """

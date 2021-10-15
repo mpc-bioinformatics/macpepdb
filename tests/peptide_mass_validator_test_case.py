@@ -1,13 +1,14 @@
+# std imports
 import unittest
-import pathlib
 
+# internal imports
 from macpepdb.models.peptide import Peptide
-from macpepdb.proteomics.modification import Modification, ModificationPosition
+from macpepdb.peptide_mass_validator import PeptideMassValidator
 from macpepdb.proteomics.amino_acid import AminoAcid
 from macpepdb.proteomics.mass.convert import to_int as mass_to_int
 from macpepdb.proteomics.mass.precursor_range import PrecursorRange
+from macpepdb.proteomics.modification import Modification, ModificationPosition
 from macpepdb.proteomics.modification_collection import ModificationCollection
-from macpepdb.peptide_mass_validator import PeptideMassValidator
 
 # Leptin peptide with 2 missed cleavages with a weigh of 5818137657950 (5818.137657950 Da)
 LEPTIN_PEPTIDE_SEQUENCE = "DJJHJJAASKSCPJPQVRAJESJESJGVVJEASJYSTEVVAJSRJQGSJQDMJR"

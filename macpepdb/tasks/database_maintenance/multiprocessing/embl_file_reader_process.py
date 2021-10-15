@@ -1,11 +1,11 @@
+# std imports
 import pathlib
-import time
-
 from queue import Full as FullQueueError
 from multiprocessing import Event, Queue
 from multiprocessing.connection import Connection as ProcessConnection
 from typing import List
 
+# internal imports
 from macpepdb.utilities.generic_process import GenericProcess
 from macpepdb.proteomics.file_reader.uniprot_text_reader import UniprotTextReader
 

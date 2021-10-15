@@ -1,9 +1,11 @@
+# internal imports
+from macpepdb.models.peptide import Peptide
 from macpepdb.models.protein import Protein
 from macpepdb.models.protein_peptide_association import ProteinPeptideAssociation
-from macpepdb.models.peptide import Peptide
 from macpepdb.proteomics.enzymes.trypsin import Trypsin
 
-from .abstract_database_test_case import AbstractDatabaseTestCase
+# test imports
+from tests.abstract_database_test_case import AbstractDatabaseTestCase
 
 class ProteinTestCase(AbstractDatabaseTestCase):
     def test_lifecycle(self):

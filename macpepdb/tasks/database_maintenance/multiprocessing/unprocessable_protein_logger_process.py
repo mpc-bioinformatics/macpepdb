@@ -1,8 +1,10 @@
+# std imports
 import pathlib 
 from multiprocessing import Event
 from multiprocessing.connection import wait, Connection as ProcessConnection
 
-from ....utilities.generic_process import GenericProcess
+# internal imports
+from macpepdb.utilities.generic_process import GenericProcess
 
 class UnprocessableProteinLoggerProcess(GenericProcess):
     def __init__(self, termination_event: Event, unprocessible_proteins_fasta_path: pathlib.Path, process_connections: list, log_connection: ProcessConnection):

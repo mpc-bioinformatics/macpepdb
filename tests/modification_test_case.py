@@ -1,8 +1,9 @@
+# std imports
 import unittest
 import pathlib
 
+# internal imports
 from macpepdb.proteomics.modification import Modification, ModificationPosition
-from macpepdb.proteomics.amino_acid import AminoAcid
 
 class ModificationTestCase(unittest.TestCase):
     def test_csv_read(self):

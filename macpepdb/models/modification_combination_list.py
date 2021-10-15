@@ -1,11 +1,12 @@
+# std imports
 from __future__ import annotations
-
 from dataclasses import dataclass
 from math import floor
 from typing import Tuple, List, Any
 
-from ..proteomics.modification_collection import ModificationCollection
-from ..proteomics.mass.precursor_range import PrecursorRange
+# inner imports
+from macpepdb.proteomics.modification_collection import ModificationCollection
+from macpepdb.proteomics.mass.precursor_range import PrecursorRange
 from macpepdb.models.peptide import Peptide
 from macpepdb.database.query_helpers.column_condition import ColumnCondition
 from macpepdb.database.query_helpers.database_index_where_clause_builder import DatabaseIndexWhereClauseBuilder

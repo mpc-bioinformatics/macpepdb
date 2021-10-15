@@ -1,6 +1,6 @@
-from .proteomics.modification_collection import ModificationCollection
-from .proteomics.modification import Modification
-from .proteomics.mass.precursor_range import PrecursorRange
+# internal imports
+from macpepdb.proteomics.modification_collection import ModificationCollection
+from macpepdb.proteomics.mass.precursor_range import PrecursorRange
 
 class PeptideMassValidator:
     def __init__(self, modification_collection: ModificationCollection, maximum_number_of_variable_modifications: int, precursor_range: PrecursorRange):

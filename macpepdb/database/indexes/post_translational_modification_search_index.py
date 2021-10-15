@@ -1,3 +1,4 @@
+# internal imports
 from macpepdb.database.indexes.abstract_index import AbstractIndex
 from macpepdb.database.indexes.column_definition import ColumnDefinition
 

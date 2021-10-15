@@ -1,8 +1,11 @@
+# std imports
 from __future__ import annotations
-
 from dataclasses import dataclass
-from macpepdb.database.indexes.column_definition import ColumnDefinition
 from typing import Any, Tuple
+
+# internal imports
+from macpepdb.database.indexes.column_definition import ColumnDefinition
+
 
 @dataclass
 class ColumnCondition(ColumnDefinition):

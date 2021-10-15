@@ -1,9 +1,12 @@
+# std imports
 from collections import Counter
+
+# external imports
 from psycopg2.extras import execute_values
 
-from ..proteomics.neutral_loss import H2O
-from ..proteomics.amino_acid import AminoAcid
-from ..proteomics.amino_acid import AMINO_ACIDS_FOR_COUNTING
+# internal imports
+from macpepdb.proteomics.neutral_loss import H2O
+from macpepdb.proteomics.amino_acid import AminoAcid
 
 # This class is only a super class acutal peptide classes e.g. Peptide
 class PeptideBase:

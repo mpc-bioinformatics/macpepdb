@@ -1,5 +1,7 @@
+# std imports
 import unittest
 
+# internal imports
 from macpepdb.proteomics.enzymes.digest_enzyme import DigestEnzyme
 
 class DigestEnzymeTestCase(unittest.TestCase):

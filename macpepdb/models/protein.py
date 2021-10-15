@@ -1,14 +1,15 @@
 from __future__ import annotations
-
 import re
-
 from datetime import datetime
-from psycopg2.extras import execute_values
 from typing import List, Tuple
 
-from .protein_peptide_association import ProteinPeptideAssociation
-from ..proteomics.enzymes import digest_enzyme
-from . import peptide as peptide_module
+# external imports
+from psycopg2.extras import execute_values
+
+
+# internal imports
+from macpepdb.models.protein_peptide_association import ProteinPeptideAssociation
+from macpepdb.models import peptide as peptide_module
 
 class Protein:
     EMBL_AMINO_ACID_GROUPS_PER_LINE = 6

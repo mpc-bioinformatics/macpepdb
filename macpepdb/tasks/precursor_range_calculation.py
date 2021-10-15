@@ -1,5 +1,6 @@
-from ..proteomics.mass.precursor_range import PrecursorRange
-from ..proteomics.mass.convert import to_float as mass_to_float, to_int as mass_to_int
+# internal imports
+from macpepdb.proteomics.mass.precursor_range import PrecursorRange
+from macpepdb.proteomics.mass.convert import to_float as mass_to_float, to_int as mass_to_int
 
 
 class PrecursorRangeCalculation:
