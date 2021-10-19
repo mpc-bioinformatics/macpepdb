@@ -333,9 +333,6 @@ class PeptideBase:
     def to_fasta_entry(self):
         return "{}\n{}\n".format(self.__get_fasta_header(), self.sequence)
 
-    @classmethod
-    def from_dict(cls, attributes: dict):
-        return cls(attributes["sequence"], attributes["number_of_missed_cleavages"])
 
     @classmethod
     def select(cls, database_cursor, select_conditions: tuple = ("", []), fetchall: bool = False):
