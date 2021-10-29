@@ -5,6 +5,7 @@ import os
 # internal imports
 from macpepdb.models.maintenance_information import MaintenanceInformation
 from macpepdb.models.peptide import Peptide
+from macpepdb.models.peptide_metadata import PeptideMetadata
 from macpepdb.models.protein import Protein
 from macpepdb.proteomics.enzymes.digest_enzyme import DigestEnzyme
 from macpepdb.proteomics.file_reader.uniprot_text_reader import UniprotTextReader
@@ -64,14 +65,45 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase, DatabaseMaintenanceW
                 self.assertEqual(len(peptides), database_cursor.fetchone()[0])
                 # Check if all peptides from Set exists in database and their metadata are up to date
                 for peptide in peptides:
-                    database_cursor.execute(f"SELECT true FROM {Peptide.TABLE_NAME} WHERE sequence = %s AND is_metadata_up_to_date = true AND array_length(taxonomy_ids, 1) > 0 AND array_length(proteome_ids, 1) > 0;", (peptide.sequence,))
+                    database_cursor.execute(f"SELECT true FROM {Peptide.TABLE_NAME} WHERE sequence = %s AND is_metadata_up_to_date = true;", (peptide.sequence,))
                     self.assertTrue(database_cursor.fetchone()[0])
-                # Check if all peptides in database are present in Set
-                for peptide in Peptide.select(database_cursor, fetchall=True):
-                    self.assertTrue(peptide in peptides)
+                # Check if peptide metadata equals peptides
+                database_cursor.execute(f"SELECT count(*) FROM {PeptideMetadata.TABLE_NAME};")
+                self.assertEqual(len(peptides), database_cursor.fetchone()[0])
+                for peptide in peptides:
+                    peptide.fetch_metadata_from_proteins(database_cursor)
+                    metadata_record = PeptideMetadata.select(database_cursor, peptide)
+                    self.assertIsNotNone(
+                        metadata_record,
+                        f"metadata for peptide '{peptide.sequence}' is missing"
+                    )
+                    if metadata_record:
+                        self.assertEqual(
+                            metadata_record.is_swiss_prot,
+                            peptide.metadata.is_swiss_prot
+                        )
+                        self.assertEqual(
+                            metadata_record.is_trembl,
+                            peptide.metadata.is_trembl
+                        )
+                        self.assertEqual(
+                            sorted(metadata_record.taxonomy_ids),
+                            sorted(peptide.metadata.taxonomy_ids)
+                        )
+                        self.assertEqual(
+                            sorted(metadata_record.unique_taxonomy_ids),
+                            sorted(peptide.metadata.unique_taxonomy_ids)
+                        )
+                        self.assertEqual(
+                            sorted(metadata_record.proteome_ids),
+                            sorted(peptide.metadata.proteome_ids)
+                        )
 
                 # Check if maintenance mode is false and update timestamp is greater zero
-                database_status = MaintenanceInformation.select(database_cursor, MaintenanceInformation.DATABASE_STATUS_KEY)
+                database_status = MaintenanceInformation.select(
+                    database_cursor,
+                    MaintenanceInformation.DATABASE_STATUS_KEY
+                )
                 self.assertNotEqual(database_status, None)
                 self.assertGreater(database_status.values['last_update'], 0)
                 self.assertEqual(database_status.values['status'], DatabaseStatus.READY.value)

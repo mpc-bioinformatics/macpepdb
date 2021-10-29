@@ -3,12 +3,14 @@ from multiprocessing import Queue, Event, Array
 from multiprocessing.connection import Connection as ProcessConnection
 from psycopg2.extras import execute_batch
 from queue import Empty as EmptyQueueError
+from typing import ClassVar
 
 # external imports
 import psycopg2
 
 # internal imports
 from macpepdb.models.peptide import Peptide
+from macpepdb.models.peptide_metadata import PeptideMetadata
 from macpepdb.utilities.generic_process import GenericProcess
 
 
@@ -34,6 +36,31 @@ class PeptideMetadataCollectorProcess(GenericProcess):
         Event which indicates that the process can stop as soon as the queue is empty.
     """
 
+
+    DECLARED_PEPTIDE_METADATA_UPSERT_NAME: ClassVar[str] = "update_peptide_metadata"
+    """Name of the prepared statement for peptide metadata insert/update (upsert)
+    """
+
+    DECLARED_PEPTIDE_METADATA_UPSERT: ClassVar[str] = (
+        f"PREPARE {DECLARED_PEPTIDE_METADATA_UPSERT_NAME} AS "
+        f"INSERT INTO {PeptideMetadata.TABLE_NAME} (partition, mass, sequence, is_swiss_prot, is_trembl, taxonomy_ids, unique_taxonomy_ids, proteome_ids) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) "
+        "ON CONFLICT (partition, mass, sequence) DO "
+        f"UPDATE SET is_swiss_prot = $4, is_trembl = $5, taxonomy_ids = $6, unique_taxonomy_ids = $7, proteome_ids = $8 WHERE {PeptideMetadata.TABLE_NAME}.partition = $1 AND {PeptideMetadata.TABLE_NAME}.mass = $2 AND {PeptideMetadata.TABLE_NAME}.sequence = $3;"
+    )
+    """Query to prepare statement for prepared statement for peptide metadata insert/update (upsert).  Order of placeholder: partition, mass, sequence, is_swiss_prot, is_trembl, taxonomy_ids, unique_taxonomy_ids, proteome_ids
+    """
+
+    DECLARED_PEPTIDE_UPDATE_METADATA_STATUS_NAME: ClassVar[str] = "update_peptide_metadata_update_flag"
+    """Name of the prepared statement for flagging the peptide as updated.
+    """
+
+    DECLARED_PEPTIDE_UPDATE_METADATA_STATUS: ClassVar[str] = (
+        f"PREPARE {DECLARED_PEPTIDE_UPDATE_METADATA_STATUS_NAME} AS "
+        f"UPDATE {Peptide.TABLE_NAME} SET is_metadata_up_to_date = true WHERE partition = $1 AND mass = $2 AND sequence = $3;"
+    )
+    """Query to prepare statement for flagging the peptide as updated. Order of placeholder: partition, mass, sequence
+    """
+
     def __init__(self, termination_event: Event, id: int, database_url: str, peptides_queue: Queue, update_counter: Array, log_connection: ProcessConnection, empty_queue_and_stop_flag: Event):
         super().__init__(termination_event)
         self.__id = id
@@ -50,8 +77,6 @@ class PeptideMetadataCollectorProcess(GenericProcess):
         self.activate_signal_handling()
         self.__log_connection.send(f"peptide update worker {self.__id} is online")
         database_connection = None
-        PREPARED_STATEMENT_NAME = "updatepeptide_metadata"
-        PREPARE_STATEMENT_QUERY = f"PREPARE {PREPARED_STATEMENT_NAME} AS UPDATE {Peptide.TABLE_NAME} SET is_metadata_up_to_date = true, is_swiss_prot = $1, is_trembl = $2, taxonomy_ids = $3, unique_taxonomy_ids = $4, proteome_ids = $5 WHERE partition = $6 AND mass = $7 AND sequence = $8;"
 
         # Let the process run until empty_queue_and_stop_flag is true and peptides_queue is empty or database_maintenance_stop_event is true.
         while (not self.__empty_queue_and_stop_flag.is_set() or not self.__peptides_queue.empty()) and not self.termination_event.is_set():
@@ -61,17 +86,28 @@ class PeptideMetadataCollectorProcess(GenericProcess):
                     database_connection = psycopg2.connect(self.__database_url)
                     with database_connection:
                         with database_connection.cursor() as database_cursor:
-                            database_cursor.execute(PREPARE_STATEMENT_QUERY)
+                            database_cursor.execute(self.__class__.DECLARED_PEPTIDE_METADATA_UPSERT)
+                            database_cursor.execute(self.__class__.DECLARED_PEPTIDE_UPDATE_METADATA_STATUS)
                 # Wait 5 seconds for a new set of peptides
                 peptides = self.__peptides_queue.get(True, 5)
                 while True:
                     try:
                         with database_connection:
                             with database_connection.cursor() as database_cursor:
+                                # Make sure each peptides contains its metadata
+                                for peptide in peptides:
+                                    peptide.fetch_metadata_from_proteins(database_cursor)
+                                PeptideMetadata.bulk_insert(
+                                    database_cursor,
+                                    peptides,
+                                    # Override statement with the prepared statement
+                                    statement=f"EXECUTE {self.__class__.DECLARED_PEPTIDE_METADATA_UPSERT_NAME} (%s, %s, %s ,%s ,%s, %s, %s, %s);",
+                                    is_prepared_statement=True
+                                )
                                 execute_batch(
                                     database_cursor,
-                                    f"EXECUTE {PREPARED_STATEMENT_NAME} (%s, %s, %s ,%s ,%s, %s, %s, %s);",
-                                    [Peptide.generate_metadata_update_values(database_cursor, peptide) for peptide in peptides],
+                                    f"EXECUTE {self.__class__.DECLARED_PEPTIDE_UPDATE_METADATA_STATUS_NAME} (%s, %s, %s)",
+                                    [(peptide.partition, peptide.mass, peptide.sequence) for peptide in peptides],
                                     page_size=len(peptides)
                                 )
                         with self.__update_counter:
@@ -90,6 +126,7 @@ class PeptideMetadataCollectorProcess(GenericProcess):
         if database_connection and database_connection.closed != 0:
             with database_connection:
                 with database_connection.cursor() as database_cursor:
-                    database_cursor.execute(f"DEALLOCATE {PREPARED_STATEMENT_NAME};")
+                    database_cursor.execute(f"DEALLOCATE {self.__class__.DECLARED_PEPTIDE_METADATA_UPSERT_NAME};")
+                    database_cursor.execute(f"DEALLOCATE {self.__class__.DECLARED_PEPTIDE_UPDATE_METADATA_STATUS_NAME};")
             database_connection.close()
         self.__log_connection.close()

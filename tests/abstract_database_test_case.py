@@ -17,7 +17,7 @@ class AbstractDatabaseTestCase(unittest.TestCase):
         """
         Removes data from all tables after each tests.
         """
-        for table in ['proteins_peptides', 'peptides', 'proteins', 'taxonomies', 'taxonomy_merges', 'maintenance_information']:
+        for table in ['proteins_peptides', 'peptides', 'proteins', 'taxonomies', 'taxonomy_merges', 'maintenance_information', 'peptide_metadata']:
             with self.database_connection:
                 with self.database_connection.cursor() as database_cursor:
                     database_cursor.execute(f"delete from {table};")

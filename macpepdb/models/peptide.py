@@ -1,39 +1,13 @@
 # std imports
 from __future__ import annotations
+from typing import Optional
 
 # internal imports
 from macpepdb.models.peptide_base import PeptideBase
 from macpepdb.models.protein_peptide_association import ProteinPeptideAssociation
 from macpepdb.models import protein
-
-class Metadata:
-    def __init__(self, is_swiss_prot: bool, is_trembl: bool, taxonomy_ids: list, unique_taxonomy_ids: list, proteome_ids: list):
-        self.__is_swiss_prot = is_swiss_prot
-        self.__is_trembl = is_trembl
-        self.__taxonomy_ids = taxonomy_ids
-        self.__unique_taxonomy_ids = unique_taxonomy_ids
-        self.__proteome_ids = proteome_ids
-
-    @property
-    def is_swiss_prot(self):
-        return self.__is_swiss_prot
-    
-    @property
-    def is_trembl(self):
-        return self.__is_trembl
-    
-    @property
-    def taxonomy_ids(self):
-        return self.__taxonomy_ids
-    
-    @property
-    def unique_taxonomy_ids(self):
-        return self.__unique_taxonomy_ids
-    
-    @property
-    def proteome_ids(self):
-        return self.__proteome_ids
-    
+# Do no import PeptideMetadata directly to prevent circula import
+from macpepdb.models import peptide_metadata as metadata_module
 
 class Peptide(PeptideBase):
     """
@@ -53,12 +27,12 @@ class Peptide(PeptideBase):
     """Database table name
     """
     
-    def __init__(self, sequence: str, number_of_missed_cleavages: int, metadata: Metadata = None):
+    def __init__(self, sequence: str, number_of_missed_cleavages: int, metadata: metadata_module.PeptideMetadata = None):
         PeptideBase.__init__(self, sequence, number_of_missed_cleavages)
         self.__metadata = metadata
 
     @property
-    def metadata(self):
+    def metadata(self) -> Optional[metadata_module.PeptideMetadata]:
         """
         Returns
         -------
@@ -88,17 +62,20 @@ class Peptide(PeptideBase):
         if not include_metadata:
             return super().select(database_cursor, select_conditions, fetchall)
         else:
-            select_query = f"SELECT sequence, number_of_missed_cleavages, is_swiss_prot, is_trembl, taxonomy_ids, unique_taxonomy_ids, proteome_ids FROM {cls.TABLE_NAME}"
+            select_query = (
+                "SELECT peps.partition, peps.mass, peps.sequence, peps.number_of_missed_cleavages, meta.is_swiss_prot, meta.is_trembl, meta.taxonomy_ids, meta.unique_taxonomy_ids, meta.proteome_ids FROM {cls.TABLE_NAME} "
+                f"INNER JOIN {metadata_module.PeptideMetadata.TABLE_NAME} as meta ON meta.partition = peps.partition AND meta.mass = peps.mass AND meta.sequence = peps.sequence"
+            )
             if len(select_conditions) == 2 and len(select_conditions[0]):
                 select_query += f" WHERE {select_conditions[0]}"
             select_query += ";"
             database_cursor.execute(select_query, select_conditions[1])
             if fetchall:
-                return [cls(row[0], row[1], Metadata(row[2], row[3], row[4], row[5], row[6])) for row in database_cursor.fetchall()]
+                return [cls(row[2], row[3], metadata_module.PeptideMetadata(row[4], row[5], row[6], row[7], row[8])) for row in database_cursor.fetchall()]
             else:
                 row = database_cursor.fetchone()
                 if row:
-                    return cls(row[0], row[1], Metadata(row[2], row[3], row[4], row[5], row[6]))
+                    return cls(row[2], row[3], metadata_module.PeptideMetadata(row[4], row[5], row[6], row[7], row[8]))
                 else:
                     return None
 
@@ -135,62 +112,39 @@ class Peptide(PeptideBase):
         """
         database_cursor.execute(f"UPDATE {Peptide.TABLE_NAME} SET is_metadata_up_to_date = %s WHERE sequence = ANY(%s);", (False, [peptide.sequence for peptide in peptides]))
 
-    @staticmethod
-    def update_metadata(database_cursor, peptide: Peptide):
-        update_values = Peptide.generate_metadata_update_values(database_cursor, peptide)
-        database_cursor.execute(
-            f"UPDATE {Peptide.TABLE_NAME} SET is_metadata_up_to_date = true, is_swiss_prot = %s, is_trembl = %s, taxonomy_ids = %s, unique_taxonomy_ids = %s, proteome_ids = %s WHERE mass = %s AND sequence = %s;",
-            (
-                update_values[0],
-                update_values[1],
-                update_values[2],
-                update_values[3],
-                update_values[4],
-                update_values[5],
-                update_values[6],
-                update_values[7]
-            )
-        )
-
-    @staticmethod
-    def generate_metadata_update_values(database_cursor, peptide: Peptide) -> tuple:
+    def fetch_metadata_from_proteins(self, database_cursor):
         """
-        Generates a tuple with the updated metadata for peptides.
+        Fetches and set metadata from proteins if metadata is currently.
 
         Parameters
         ----------
         database_cursor
             Active database cursor
-        peptide : Peptide
-            Peptide for which the metadata is to be updated
-
-        Returns
-        -------
-        Tuple (is_swiss_prot, is_trembl, taxonomy_ids, unique_taxonomy_ids, proteome_ids, mass, sequence)
         """
-        review_statuses = []
-        proteome_ids = set()
-        # Key is a taxonomy id, value is a counter which indicates how often the taxonomy among the referenced proteins
-        taxonomy_id_count_map = {} 
-        database_cursor.execute(f"SELECT is_reviewed, taxonomy_id, proteome_id FROM {protein.Protein.TABLE_NAME} WHERE accession = ANY(SELECT protein_accession FROM {ProteinPeptideAssociation.TABLE_NAME} WHERE partition = %s AND peptide_mass = %s AND peptide_sequence = %s);", (peptide.partition, peptide.mass, peptide.sequence))
-        for row in database_cursor.fetchall():
-            review_statuses.append(row[0])
-            # Some proteins do not seeem to have an proteome ID
-            if row[2] != None:
-                proteome_ids.add(row[2])
-            if not row[1] in taxonomy_id_count_map:
-                taxonomy_id_count_map[row[1]] = 0
-            taxonomy_id_count_map[row[1]] += 1
-        unique_taxonomy_ids = [taxonomy_id for taxonomy_id, taxonomy_counter in taxonomy_id_count_map.items() if taxonomy_counter == 1]
-        return (
-            # is_swiss_prot when at least one status is true
-            any(review_statuses),
-            # is_trembl when not all are true
-            not all(review_statuses),
-            list(taxonomy_id_count_map.keys()),
-            unique_taxonomy_ids,
-            list(proteome_ids),
-            peptide.partition,
-            peptide.mass,
-            peptide.sequence
-        )
+        if self.metadata is None:
+            review_statuses = []
+            proteome_ids = set()
+            # Key is a taxonomy id, value is a counter which indicates how often the taxonomy among the referenced proteins
+            taxonomy_id_count_map = {} 
+            database_cursor.execute(
+                f"SELECT is_reviewed, taxonomy_id, proteome_id FROM {protein.Protein.TABLE_NAME} WHERE accession = ANY(SELECT protein_accession FROM {ProteinPeptideAssociation.TABLE_NAME} WHERE partition = %s AND peptide_mass = %s AND peptide_sequence = %s);", 
+                (self.partition, self.mass, self.sequence)
+            )
+            for row in database_cursor.fetchall():
+                review_statuses.append(row[0])
+                # Some proteins do not seeem to have an proteome ID
+                if row[2] is not None:
+                    proteome_ids.add(row[2])
+                if not row[1] in taxonomy_id_count_map:
+                    taxonomy_id_count_map[row[1]] = 0
+                taxonomy_id_count_map[row[1]] += 1
+            unique_taxonomy_ids = [taxonomy_id for taxonomy_id, taxonomy_counter in taxonomy_id_count_map.items() if taxonomy_counter == 1]
+            self.__metadata = metadata_module.PeptideMetadata(
+                # is_swiss_prot when at least one status is true
+                any(review_statuses),
+                # is_trembl when not all are true
+                not all(review_statuses),
+                list(taxonomy_id_count_map.keys()),
+                unique_taxonomy_ids,
+                list(proteome_ids)
+            )

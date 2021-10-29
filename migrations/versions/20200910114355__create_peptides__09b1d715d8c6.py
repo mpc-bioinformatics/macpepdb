@@ -55,12 +55,6 @@ def upgrade():
         sa.Column('c_terminus', sa.SmallInteger, nullable=False),
         # Flag to mark peptide for metadata update
         sa.Column('is_metadata_up_to_date', sa.Boolean, server_default=sa.text('false'), nullable=False),
-        # Peptide metadata, collected/duplicated from proteins-table in a second step.
-        sa.Column('is_swiss_prot', sa.Boolean, server_default=sa.text('false'), nullable=False),
-        sa.Column('is_trembl', sa.Boolean, server_default=sa.text('false'), nullable=False),
-        sa.Column('taxonomy_ids', sa.dialects.postgresql.ARRAY(sa.Integer), server_default='{}', nullable=False),
-        sa.Column('unique_taxonomy_ids', sa.dialects.postgresql.ARRAY(sa.Integer), server_default='{}', nullable=False),
-        sa.Column('proteome_ids', sa.dialects.postgresql.ARRAY(sa.VARCHAR(11)), server_default='{}', nullable=False),
         sa.PrimaryKeyConstraint('partition', 'mass', 'sequence')
     )
 
