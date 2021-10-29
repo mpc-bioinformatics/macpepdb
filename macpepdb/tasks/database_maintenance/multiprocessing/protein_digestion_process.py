@@ -67,7 +67,7 @@ class ProteinDigestionProcess(GenericProcess):
                     database_connection = psycopg2.connect(self.__database_url)
 
                 # Try to get a protein from the queue, timeout is 2 seconds
-                protein = self.__protein_queue.get(True, 5)
+                new_protein = self.__protein_queue.get(True, 5)
                 
                 # Variables for loop control
                 unsolvable_error_factor = 0
@@ -80,11 +80,26 @@ class ProteinDigestionProcess(GenericProcess):
                         number_of_new_peptides = 0
                         with database_connection:
                             with database_connection.cursor() as database_cursor:
-                                existing_protein = Protein.select(database_cursor, ("accession = %s", (protein.accession,)))
-                                if existing_protein is not None:
-                                    number_of_new_peptides = existing_protein.update(database_cursor, protein, self.__enzyme)
-                                else:
-                                    number_of_new_peptides = Protein.create(database_cursor, protein, self.__enzyme)
+                                skip_protein_creation = False
+                                # Check if the Protein exists by its accession or secondary accessions
+                                accessions = [new_protein.accession] + new_protein.secondary_accessions
+                                existing_proteins = Protein.select(database_cursor, ("accession = ANY(%s)", [accessions]), fetchall=True)
+                                if len(existing_proteins) > 0:
+                                    # If more than one protein were found and the first protein is the same protein as the current one from the queue ...
+                                    if existing_proteins[0].accession == new_protein.accession:
+                                        updateable_protein = existing_proteins.pop(0)
+                                        # ... delete the other other proteins, because they are merged with this one.
+                                        for existing_protein in existing_proteins:
+                                            Protein.delete(database_cursor, existing_protein)
+                                        skip_protein_creation = True
+                                        number_of_new_peptides = updateable_protein.update(database_cursor, new_protein, self.__enzyme)
+                                    else:
+                                        # If the first protein from the found proteins has not the same accession as the new one from the queue
+                                        # each of the found proteins are merged with the new protein. So delete them.
+                                        for existing_protein in existing_proteins:
+                                            Protein.delete(database_cursor, existing_protein)
+                                if not skip_protein_creation:
+                                    number_of_new_peptides = Protein.create(database_cursor, new_protein, self.__enzyme)
                                     count_protein = True
 
                         # Commit was successfully stop while-loop and add statistics
@@ -115,8 +130,8 @@ class ProteinDigestionProcess(GenericProcess):
                     finally:
                         # Log the last error if the unsolvable_error_factor exceeds the limit
                         if unsolvable_error_factor >= self.__class__.UNSOLVEABLE_ERROR_FACTOR_LIMIT:
-                            self.__general_log.send("Exception on protein {}, see:\n{}".format(protein.accession, error))
-                            self.__unprocessible_protein_log.send(protein.to_embl_entry())
+                            self.__general_log.send("Exception on protein {}, see:\n{}".format(new_protein.accession, error))
+                            self.__unprocessible_protein_log.send(new_protein.to_embl_entry())
                             self.__statistics.acquire()
                             self.__statistics[2] += 1
                             self.__statistics.release()
