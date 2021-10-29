@@ -11,6 +11,11 @@ from macpepdb.database.query_helpers.column_condition import ColumnCondition
 class DatabaseIndexWhereClauseBuilder:
     """
     Creates the where clause which utilize the given database index.
+
+    Parameter
+    ---------
+    database_index : AbstractIndex
+        Database index to use for the where clause
     """
 
     __slots__ = ["__database_index", "__column_conditions", "__highest_used_column_condition_idx"]
@@ -28,13 +33,13 @@ class DatabaseIndexWhereClauseBuilder:
         """
         Sets a new column condition.
 
-        Arguments
-        =========
+        Parameters
+        ----------
         column_condition : ColumnCondition
             Column condition
 
-        Return
-        ======
+        Returns
+        -------
         True/False indicating if the condition is set.
         """
         try:
@@ -46,6 +51,14 @@ class DatabaseIndexWhereClauseBuilder:
             return False
 
     def to_sql(self) -> Tuple[str, List[Any]]:
+        """
+        Returns a tupe where first element is the WHERE-part (without 'WHERE') of a SQL query which utilizes the PTM index and the second element 
+        are the related values for the WHERE-part.
+
+        Returns
+        -------
+        E.g. ("partition = %s AND mass = %s ...", [value_partition, value_mass, ...])
+        """
         if self.__highest_used_column_condition_idx < 0:
             self.__highest_used_column_condition_idx = len(self.__column_conditions) - 1
         return (

@@ -7,6 +7,25 @@ from macpepdb.models import protein
 from macpepdb.proteomics.amino_acid import X as UnknwonAminoAcid, REPLACEABLE_AMBIGIOUS_AMINO_ACID_LOOKUP
 
 class DigestEnzyme:
+    """
+    Defines a enzyme for protein digestion
+
+    Parameters
+    ----------
+    name: str
+        Name
+    shortcut: str
+        Shortcut
+    regex: re
+        Regex to find cleavage sites
+    max_number_of_missed_cleavages : int
+        Maximum number of missed cleavages
+    minimum_peptide_length : int
+        Minimum peptide length
+    maximum_peptide_length : int
+        Maxiumum peptide length
+    """
+    
     def __init__(self, name: str = "Abstract Digest Enzym", shortcut: str = "", regex: re = r".", max_number_of_missed_cleavages: int = 0, minimum_peptide_length: int = 0, maximum_peptide_length: int = 1):
         self.__name = name
         self.__shortcut = shortcut
@@ -18,18 +37,45 @@ class DigestEnzyme:
 
     @property
     def max_number_of_missed_cleavages(self):
+        """
+        Returns
+        -------
+        Maximal number of missed cleavages.
+        """
         return self.__max_number_of_missed_cleavages
 
     @property
     def minimum_peptide_length(self):
+        """
+        Returns
+        -------
+        Minimum peptide length.
+        """
         return self.__minimum_peptide_length
 
     @property
     def maximum_peptide_length(self):
+        """
+        Returns
+        -------
+        Maximal peptide length.
+        """
         return self.__maximum_peptide_length
 
 
     def digest(self, protein: 'protein.Protein') -> list:
+        """
+        Digests a protein.
+
+        Parameters
+        ----------
+        protein : Protein
+            Protein to digest
+
+        Returns
+        -------
+        List of peptides.
+        """
         peptides = set()
         # Split protein sequence on every cleavage position
         protein_parts = re.split(self.__regex, protein.sequence)
@@ -57,6 +103,16 @@ class DigestEnzyme:
 
     @classmethod
     def get_enzyme_by_name(cls, name: str):
+        """
+        Returns a enzyme by name.
+
+        Argument
+        ========
+
+        Returns
+        -------
+        DigestEnzym
+        """
         # to prevent cyclic imports, import enzyms here not at the top
         from .trypsin import Trypsin
         if name.lower() == Trypsin.NAME.lower():
@@ -66,6 +122,13 @@ class DigestEnzyme:
 
     @classmethod
     def get_known_enzymes(cls):
+        """
+        Returns a list of DigestEnzym names.
+
+        Returns
+        -------
+        List of names.
+        """
         from .trypsin import Trypsin
         return [
             Trypsin.NAME.lower()
@@ -73,6 +136,19 @@ class DigestEnzyme:
 
     @classmethod
     def is_sequence_containing_replaceable_ambigous_amino_acids(cls, sequence: str) -> bool:
+        """
+        Determines if a sequence contains ambigous amino acids.
+
+        Parameters
+        ----------
+        sequence : str
+            Amino acid sequence.
+        
+        Returns
+        
+        -------
+        True if the sequence contains ambigous amino acids, otherwise False
+        """
         for one_letter_code in REPLACEABLE_AMBIGIOUS_AMINO_ACID_LOOKUP.keys():
             if one_letter_code in sequence:
                 return True
@@ -84,7 +160,13 @@ class DigestEnzyme:
         """
         Calculates all possible combinations of an ambigous sequence.
 
-        @param ambigous_sequence
+        Parameters
+        ----------
+        ambigous_sequence : str
+            Amino acid sequence with ambigous amino acids.
+
+        Returns
+        Set of sequences
         """
         differentiated_sequences = set()
         cls.__differentiate_ambigous_sequences(ambigous_sequence, differentiated_sequences)
@@ -95,11 +177,15 @@ class DigestEnzyme:
         """
         Recursivly calculates all possible differentiate combinations of ambigous sequence.
 
-        @param sequence Current sequence
-        @param differentiated_sequences A set() where the differentiated sequences where stored.
-        @param position current position in the sequence
+        Parameters
+        ----------
+        sequence : str
+            Current sequence
+        differentiated_sequences : Set[str]
+            A set() where the differentiated sequences where stored.
+        position : int
+            current position in the sequence
         """
-
         # If recursion reached the end of the sequence add it to the set of sequences
         if position == len(sequence):
             differentiated_sequences.add(sequence)

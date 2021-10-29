@@ -23,8 +23,34 @@ from macpepdb.tasks.database_maintenance.multiprocessing.statistics_logger_proce
 from macpepdb.tasks.database_maintenance.multiprocessing.unprocessable_protein_logger_process import UnprocessableProteinLoggerProcess
 
 class ProteinDigestion:
+    """
+    Controls the protein digestion.
+
+    Parameters
+    ----------
+    termination_event: Event
+        Termination event
+    protein_data_dir: pathlib.Path
+        Path to the protein data directory of the workdir
+    log_dir_path: pathlib.Path
+        Path to the logs directory of the workdir
+    statistics_write_period: int
+        Second between statistic logs
+    enzyme_name: str
+        Name of the digestion enzym
+    maximum_number_of_missed_cleavages: int
+        Maximum number of missed cleavages
+    minimum_peptide_length: int
+        Minimum peptide length
+    maximum_peptide_length: int
+        Maximum peptide length
+    run_count: int
+        Indicates the current digestion run. Multiple runs may be necessary to digest all data.
+    """
+
     STATISTIC_FILE_HEADER = ["seconds", "inserted_proteins", "inserted_peptides", "unsolvable_errors", "protein_insert_rate", "peptide_insert_rate", "error_rate"]
-    
+    """CSV header for the log file
+    """
 
     def __init__(self, termination_event: Event, protein_data_dir: pathlib.Path, log_dir_path: pathlib.Path, statistics_write_period: int, number_of_threads: int, enzyme_name: str, maximum_number_of_missed_cleavages: int, minimum_peptide_length: int, maximum_peptide_length: int, run_count: int):
         self.__log_file_path = log_dir_path.joinpath(f"digest_{run_count}.log")
@@ -39,11 +65,18 @@ class ProteinDigestion:
         self.__statistics_csv_file_path = log_dir_path.joinpath(f"statistics_{run_count}.csv")
         self.__termination_event = termination_event
 
-    def run(self, database_url: str) -> Tuple[int, bool]:
+    def run(self, database_url: str) -> int:
         """
         Reads the protein files in `work_dir/protein_data` and updates the database.
-        @param database_url Datebase
-        @return tupel First element isthe number of errors and the second element is the status of the stop flag
+
+        Parameters
+        ----------
+        database_url: str
+            Database URL, e.g. postgres://username:password@host:port/database
+
+        Returns
+        -------
+        Number of digestion errors.
         """
         # Initialize signal handler for TERM and INT
         signal.signal(signal.SIGTERM, self.__termination_event_handler)
@@ -56,7 +89,7 @@ class ProteinDigestion:
         stop_logging_event = process_context.Event()
         # Providing a maximum size prevents overflowing RAM and makes sure every process has enough work to do.
         protein_queue = process_context.Queue(self.__max_protein_queue_size)
-        # Array for statistics [created_proteins, failed_proteins, created_peptides, processed_peptides]
+        # Array for statistics [created_proteins, created_peptides, number_of_errors]
         statistics = process_context.Array(c_ulonglong, 3)
 
         unprocessable_log_connection = []
@@ -143,7 +176,11 @@ class ProteinDigestion:
         """
         Loads the digestion information from previous digestions from the databsae and overrides the given ones.
         If no digestion information were found, it will save the current one.
-        @param database_url Database URL
+
+        Parameters
+        ----------
+        database_url: str
+            Database URL, e.g. postgres://username:password@host:port/database
         """
         database_connection = psycopg2.connect(database_url)
         with database_connection.cursor() as database_cursor:
@@ -169,9 +206,33 @@ class ProteinDigestion:
         database_connection.close()
 
     def __termination_event_handler(self, signal_number, frame):
+        """
+        Sets the termination event to true. Callback for signal handling.
+
+        Paremters
+        ---------
+        signal_number
+            Signal ID
+        frame
+            Signal frame
+        """
         self.__termination_event.set()
 
     def print_status(self, statistics: Array, protein_queue: Queue, status: str = "", is_updatable: bool = True):
+        """
+        Prints a status line.
+
+        Parameters
+        ----------
+        statistics: Array
+            Multiprocessing array which contains the inserted protein, inserted peptides and errors.
+        protein_queue: Queue
+            Multiprocessing queue which contains the current queued proteins for digestion.
+        status: str
+            Additional status message (optional)
+        is_updatable: bool = True
+            Indicates if this line is replaceable.
+        """
         console_width, _ = shutil.get_terminal_size()
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         message = f"\r{timestamp}> {statistics[0]:,} proteins; {statistics[1]:,} peptides; {statistics[2]:,} errors; {protein_queue.qsize()} / {self.__max_protein_queue_size} queue"

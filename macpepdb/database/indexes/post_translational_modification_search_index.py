@@ -3,10 +3,26 @@ from macpepdb.database.indexes.abstract_index import AbstractIndex
 from macpepdb.database.indexes.column_definition import ColumnDefinition
 
 class PostTranslationalModificationSearchIndex(AbstractIndex):
+    """
+    Defines the index for the PTM search.
+    """
+
     AMINO_ACID_COUNT_OPERATOR = ">= %s"
+    """Operator for amino acid count comparison
+    """
+
     AMINO_ACID_COUNT_VALUE = (0,)
+    """Value for amino acid comparison
+    """
+
     TERMINI_OPERATOR = ">= %s"
+    """Operator for termini count comparison
+    """
+
     TERMINI_VALUE = (0,)
+    """Value for termini comparison
+    """
+    
     COLUMN_CONDITIONS_TEMPLATE = [
         ColumnDefinition("partition",   ">= %s",                    (0,)),
         ColumnDefinition("mass",        ">= %s",                    (0,)),

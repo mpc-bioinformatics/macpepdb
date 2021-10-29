@@ -7,7 +7,10 @@ from psycopg2.extras import execute_values
 
 @unique
 class TaxonomyRank(IntEnum):
-    # Enum names created by rank.upper().replace(" ", "_")
+    """
+    Defines all types of taxonomy ranks.
+    Enum names created by rank.upper().replace(" ", "_")
+    """
     BIOTYPE             = 0
     CLADE               = 1
     CLASS               = 2
@@ -59,12 +62,41 @@ class TaxonomyRank(IntEnum):
 
     @classmethod
     def from_string(cls, rank: str):
+        """
+        Returns TaxonomyRank by string
+
+        Parameters
+        ----------
+        rank : str
+            Name of the rank
+
+        Returns
+        -------
+        TaxonomyRank
+        """
         rank = rank.upper().replace(" ", "_")
         if rank in cls.__members__:
             return cls.__members__[rank]
 
 class Taxonomy:
+    """
+    Defines a taxonomy with id, parant id (to build tree), name and rank.
+    
+    Parameters
+    ----------
+    id : id
+        ID
+    parent_id : id
+        Parent ID
+    name : str
+        Name
+    rank : TaxonomyRank
+        Rank
+    """
+
     TABLE_NAME = "taxonomies"
+    """Database table name
+    """
 
     def __init__(self, id: int, parent_id: int, name: str, rank: TaxonomyRank):
         self.id = id
@@ -73,6 +105,18 @@ class Taxonomy:
         self.rank = rank
 
     def parent(self, database_cursor):
+        """
+        Selects the parent.
+
+        Parameters
+        ----------
+        database_cursor
+            Active database cursor
+
+        Returns
+        -------
+        Taxonomy
+        """
         PARENT_QUERY = "SELECT id, parent_id, name, rank WHERE id = %s;"
         database_cursor.execute(
             PARENT_QUERY,
@@ -86,20 +130,31 @@ class Taxonomy:
             TaxonomyRank(row[3])
         )
 
-    # This method is implemented to use bot accessions as hash when a protein merge is stored in a hashable collection (Set, Dictionary, ...)
     def __hash__(self):
+        """
+        Implements the ability to use as key in dictionaries and sets.
+        """
         return hash(self.id)
     
-    # According to the Python documentation this should be implemented if __hash__() is implemented.
     def __eq__(self, other):
+        """
+        Implements the equals operator.
+        According to the Python documentation this should be implemented if __hash__() is implemented.
+        """
         return self.id == other.id
 
 
     @staticmethod
     def insert(database_cursor, taxonomy: Taxonomy):
         """
-        @param database_cursor Database cursor
-        @param taxonomy Taxonomy to insert
+        Inserts a taxonomy into the database.
+
+        Parameters
+        ----------
+        database_cursor
+            Database cursor
+        taxonomy : Taxonomy
+            Taxonomy to insert
         """
         INSERT_QUERY = f"INSERT INTO {Taxonomy.TABLE_NAME} (id, parent_id, name, rank) VALUES (%s, %s, %s, %s);"
         database_cursor.execute(
@@ -115,8 +170,12 @@ class Taxonomy:
     @classmethod
     def bulk_insert(cls, database_cursor, taxonomies: list) -> int:
         """
-        @param database_cursor Database cursor with open transaction.
-        @param taxonomies Taxonomies for bulk insert.
+        Efficiently inserts multiple taxonomies.
+
+        database_cursor
+            Database cursor with open transaction.
+        taxonomies : List[Taxonomy]
+            Taxonomies for bulk insert.
         """
         BULK_INSERT_QUERY = (
             f"INSERT INTO {cls.TABLE_NAME} (id, parent_id, name, rank) "
@@ -142,10 +201,20 @@ class Taxonomy:
     @classmethod
     def select(cls, database_cursor, select_conditions: tuple = ("", []), fetchall: bool = False):
         """
-        @param database_cursor
-        @param select_conditions A tupel with the where statement (without WHERE) and a list of parameters, e.g. ("id = %s", [1])
-        @param fetchall Indicates if multiple rows should be fetched
-        @return Taxonomy or list of taxonomies
+        Selects one or many taxonomies.
+
+        Parameters
+        ----------
+        database_cursor : 
+            Active database cursor
+        select_conditions : Tuple[str, List[Any]]
+             A tupel with the where statement (without WHERE) and a list of parameters, e.g. ("id = %s", [1])
+        fetchall : bool
+             Indicates if multiple rows should be fetched
+
+        Returns
+        -------
+        Taxonomy or list of taxonomies
         """
         select_query = f"SELECT id, parent_id, name, rank FROM {cls.TABLE_NAME}"
         if len(select_conditions) == 2 and len(select_conditions[0]):

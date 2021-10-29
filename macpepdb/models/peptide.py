@@ -36,7 +36,22 @@ class Metadata:
     
 
 class Peptide(PeptideBase):
+    """
+    Extend the peptide base by protein associations.
+
+    Parameters
+    ----------
+    sequence : str
+        Amino acid sequence
+    number_of_missed_cleavages : int
+        Number of missed cleavages
+    metadata : metadata_module.PeptideMetadata
+        Peptide metadata (optional)
+    """
+
     TABLE_NAME = 'peptides'
+    """Database table name
+    """
     
     def __init__(self, sequence: str, number_of_missed_cleavages: int, metadata: Metadata = None):
         PeptideBase.__init__(self, sequence, number_of_missed_cleavages)
@@ -44,16 +59,31 @@ class Peptide(PeptideBase):
 
     @property
     def metadata(self):
+        """
+        Returns
+        -------
+        Peptide metadata if present, otherwise None.
+        """
         return self.__metadata
 
     @classmethod
     def select(cls, database_cursor, select_conditions: tuple = ("", []), fetchall: bool = False, include_metadata: bool = False):
         """
-        @param database_cursor
-        @param select_conditions A tupel with the where statement (without WHERE) and a list of parameters, e.g. ("accession = %s AND taxonomy_id = %s",["Q257X2", 6909])
-        @param fetchall Indicates if multiple rows should be fetched
-        @param include_metadata Indicates if peptides is returned with metadata (is_swiss_prot, is_trembl, taxonomy_ids, unique_taxonomy_ids, proteome_ids)
-        @return Petide or list of peptides
+        Selects peptides.
+        
+        database_cursor
+            Active database cursor
+        select_conditions : tuple
+            A tupel with the where statement (without WHERE) and a list of parameters, e.g. ("accession = %s AND taxonomy_id = %s",["Q257X2", 6909])
+        fetchall : bool
+            Indicates if multiple rows should be fetched
+        include_metadata : bool
+            Indicates if peptides is returned with metadata (is_swiss_prot, is_trembl, taxonomy_ids, unique_taxonomy_ids, proteome_ids)
+        
+        Returns
+        None, Peptide or list of Peptides
+        -------
+        Petide or list of peptides
         """
         if not include_metadata:
             return super().select(database_cursor, select_conditions, fetchall)
@@ -74,6 +104,13 @@ class Peptide(PeptideBase):
 
 
     def proteins(self, database_cursor):
+        """
+        Selects the proteins which contain this peptide.
+
+        Returns
+        -------
+        List of proteins.
+        """
         PROTEIN_QUERY = (
             f"SELECT accession, secondary_accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed FROM {protein.Protein.TABLE_NAME} "
             f"WHERE accession = ANY(SELECT protein_accession FROM {ProteinPeptideAssociation.TABLE_NAME} WHERE partition = %s peptide_mass = %s AND peptide_sequence = %s);"
@@ -86,6 +123,16 @@ class Peptide(PeptideBase):
 
     @staticmethod
     def flag_for_metadata_update(database_cursor, peptides: list):
+        """
+        Marks peptides for a metadata update.
+
+        Parameters
+        ----------
+        databas_cursor
+            Active database cursor
+        peptides : List[Peptide]
+            List of peptides to update
+        """
         database_cursor.execute(f"UPDATE {Peptide.TABLE_NAME} SET is_metadata_up_to_date = %s WHERE sequence = ANY(%s);", (False, [peptide.sequence for peptide in peptides]))
 
     @staticmethod
@@ -106,13 +153,20 @@ class Peptide(PeptideBase):
         )
 
     @staticmethod
-    def generate_metadata_update_values(database_cursor, peptide: Peptide) -> tuple():
+    def generate_metadata_update_values(database_cursor, peptide: Peptide) -> tuple:
         """
         Generates a tuple with the updated metadata for peptides.
 
-        @param database_cursor
-        @param peptide
-        @return tuple Form (is_swiss_prot, is_trembl, taxonomy_ids, unique_taxonomy_ids, proteome_ids, mass, sequence)
+        Parameters
+        ----------
+        database_cursor
+            Active database cursor
+        peptide : Peptide
+            Peptide for which the metadata is to be updated
+
+        Returns
+        -------
+        Tuple (is_swiss_prot, is_trembl, taxonomy_ids, unique_taxonomy_ids, proteome_ids, mass, sequence)
         """
         review_statuses = []
         proteome_ids = set()

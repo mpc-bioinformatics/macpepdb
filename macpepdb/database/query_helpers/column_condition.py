@@ -10,8 +10,18 @@ from macpepdb.database.indexes.column_definition import ColumnDefinition
 @dataclass
 class ColumnCondition(ColumnDefinition):
     """
-    Subclass of macpepdb.database.indexes.column_definition.ColumnDefinition but with settable operator and values attributes.
+    Subclass of `macpepdb.database.indexes.column_definition.ColumnDefinition` but with settable operator and values attributes.
+
+    Parameters
+    ----------
+    column_name : str
+        Name of the targeted column
+    operator : str
+        Comparison operator with placeholder for values, e.g. `= %s` or `BETWEEN %s AND %s`
+    values : Tuple[Any]
+        Values for the operator
     """
+    
     def __init__(self, column_name: str, operator: str, values: Any):
         ColumnDefinition.__init__(self, column_name, operator, values)
 
@@ -28,13 +38,13 @@ class ColumnCondition(ColumnDefinition):
         """
         Uses a ColumnDefinition to create a ColumnCondition
 
-        Arguments
-        =========
+        Parameters
+        ----------
         column_definition : ColumnDefinition
             Column defintion
 
-        Return
-        ======
+        Returns
+        -------
         Returns a column condition
         """
         return ColumnCondition(

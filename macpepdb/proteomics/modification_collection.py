@@ -5,17 +5,47 @@ import pathlib
 from macpepdb.proteomics.modification import Modification
 
 class ModificationLimitError(BaseException):
+    """
+    Defines an error for a exceeded modification limit.
+    """
     pass
 
 class InvalidModificationCombinationError(BaseException):
+    """
+    Defines an error for a invalid modification combination.
+    """
     pass
 
 
 class ModificationCollection:
-    # Due to Comet this limitations applied
+    """
+    Defines a list of post translational amino acid modifications (PTM)
+
+    Parameters
+    ----------
+    modifications : List[Modification]
+        List of modifications
+
+    Raises
+    ------
+    ModificationLimitError
+        If there are too many variable od terminus modifications.
+    InvalidModificationCombinationError
+        If there are invalid amino acid modification combination, e.g. static and variable modification for the same amino acid.
+    """
+
+    
     MAX_VARIABLE_MODIFICATIONS = 9
+    """Maximum number of variable modifications
+    """
+
     MAX_STATIC_N_TERMINUS_MODIFICATIONS = 1
+    """ Maximum of static N-terminus modifications
+    """
+
     MAX_STATIC_C_TERMINUS_MODIFICATIONS = 1
+    """ Maximum of static C-terminus modifications
+    """
 
     def __init__(self, modifications: list):
         variable_modification_counter = 0
@@ -68,26 +98,63 @@ class ModificationCollection:
 
     @property
     def all(self):
+        """
+        Returns
+        -------
+        List of all added modifications.
+        """
         return self.__modifications
 
     @property
     def variable(self):
+        """
+        Returns
+        -------
+        List of added variable modifications.
+        """
         return self.__variable_modifications
 
     @property
     def static(self):
+        """
+        Returns
+        -------
+        List of added static modifications.
+        """
         return self.__static_modifications
 
     @property
     def static_n_terminus_modifications(self):
+        """
+        Returns
+        -------
+        Static n terminus modification.
+        """
         return self.__static_n_terminus_modifications
 
     @property
     def static_c_terminus_modifications(self):
+        """
+        Returns
+        -------
+        Static c terminus modification
+        """
         return self.__static_c_terminus_modifications
 
     @classmethod
     def read_from_csv_file(cls, csv_file_path: pathlib.Path):
+        """
+        Returns a modification collection from a csv file.
+
+        Parameters
+        ----------
+        csv_file_path : patlib.Path
+            Path of the CSV file.
+
+        Returns
+        -------
+        ModificationCollection
+        """
         return cls(Modification.read_from_csv_file(csv_file_path))
 
         

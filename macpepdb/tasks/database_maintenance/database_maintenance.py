@@ -24,7 +24,40 @@ class DatabaseStatus(Enum):
     READY = "ready for normal use"
 
 class DatabaseMaintenance():
+    """
+    Controls database maintenancen:
+    1. Taxonomy inserts and updtaes
+    2. Protein digest
+    3. Peptide metadata update
+    4. Update maintenance information
+    
+    Parameters
+    ----------
+    database_url : str
+        Database URL, e.g. postgres://username:password@host:port/database
+    work_dir: pathlib.Path
+        Work directory where the protein and taxonomy data are located:
+        workdir/
+        |- protein_data/
+        |- taxonomy_data/
+        |- logs/
+    number_of_threads : int
+        Number of threads/processes to use
+    statistics_write_period : int
+        Second between statistic logs
+    enzyme_name : str
+        Name of the digestion enzym
+    maximum_number_of_missed_cleavages : int
+        Maximum number of missed cleavages
+    minimum_peptide_length : int
+        Minimum peptide length
+    maximum_peptide_length : int
+        Maximum peptide length
+    """
+
     TAXONOMY_FILES = ['nodes.dmp', 'names.dmp', 'merged.dmp', 'delete.dmp']
+    """Necessary taxonomy files
+    """
 
     def __init__(self, database_url: str, work_dir: pathlib.Path, number_of_threads: int, statistics_write_period: int, enzyme_name: str, maximum_number_of_missed_cleavages: int, minimum_peptide_length: int, maximum_peptide_length: int):
         self.__database_url = database_url
@@ -45,9 +78,12 @@ class DatabaseMaintenance():
 
     def start(self):
         """
-        Maintain (create/update) the database.
-        Note: Depending on the size of the input files, the maintenance can be a long running process. You can stop it at any time by sending the TERM- or INT-signal to the main process. The maintenance will then gracefully stop.
-              If you use the maintenance from another library or script it may be good to wrap the maintenance into a separat process with the multiprocessing module, so you can stop it gracfully if you have to.
+        Maintains the database
+
+        Note
+        ----
+        Depending on the size of the input files, the maintenance can be a long running process. You can stop it at any time by sending the TERM- or INT-signal to the main process. The maintenance will then gracefully stop.
+        If you use the maintenance from another library or script it may be good to wrap the maintenance into a separat process with the multiprocessing module, so you can stop it gracfully if you have to.
         """
         signal.signal(signal.SIGTERM, self.__termination_event_handler)
         signal.signal(signal.SIGINT, self.__termination_event_handler)
@@ -61,6 +97,11 @@ class DatabaseMaintenance():
     def __validate_folders(self):
         """
         Checks if the necessary folders are present to maintain the database.
+
+        Raises
+        ------
+        AssertionError
+            If a necessary directory is missing.
         """
         if not self.__protein_data_path.exists():
             raise AssertionError(f"'{self.__protein_data_path}' does not exists.")
@@ -194,8 +235,15 @@ class DatabaseMaintenance():
     def __set_database_status(self, database_url: str, status: DatabaseStatus, maintenance_mode: bool, last_update_timestamp: int = None):
         """
         Sets the database status
-        @param status Indicate if set to maintenance mode
-        @param last_update_timestamp UTC timestamp in seconds
+
+        Parameters
+        ----------
+        status : DatabaseStatus
+            Status of the database
+        maintenance_mode : bool
+            Indicate if set to maintenance mode
+        last_update_timestamp : int 
+            UTC timestamp in seconds
         """
         database_connection = psycopg2.connect(database_url)
         with database_connection.cursor() as database_cursor:
@@ -224,6 +272,14 @@ class DatabaseMaintenance():
 
     @classmethod
     def maintain_from_command_line(cls, args):
+        """
+        Starts a database maintance with the arguments from the CLI.
+
+        Parameters
+        ----------
+        args
+            Arguments from the CLI parser
+        """
         maintenance = cls(
             args.database_url,
             pathlib.Path(args.work_dir),
@@ -238,6 +294,14 @@ class DatabaseMaintenance():
 
     @classmethod
     def comand_line_arguments(cls, subparsers):
+        """
+        Defines the CLI parameters for the database maintenance in the given subparser.
+
+        Parameters
+        ----------
+        subparser : argparse._SubParsersAction
+            Subparser of main CLI parser
+        """
         parser = subparsers.add_parser('database', help="Create and update a TrypperDB.")
         parser.add_argument("--work-dir", "-w", type=str, required=True, help="Protein file (can be used multiple times)")
         parser.add_argument("--statistics-write-period", type=int, help="Seconds between writes to the statistics file (default: 900)", default=900)
@@ -250,4 +314,14 @@ class DatabaseMaintenance():
         parser.set_defaults(func=cls.maintain_from_command_line)
 
     def __termination_event_handler(self, signal_number, frame):
+        """
+        Sets the termination event to true. Callback for signal handling.
+
+        Paremters
+        ---------
+        signal_number
+            Signal ID
+        frame
+            Signal frame
+        """
         self.__termination_event.set()

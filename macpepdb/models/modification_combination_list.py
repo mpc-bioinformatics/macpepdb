@@ -24,6 +24,18 @@ class ModificationCounter:
     count: int
 
     def __init__(self, modification: Modification):
+        """
+        Parameters
+        ----------
+        modification : Modification
+            List of modification counter
+        count : int
+            Modification count
+
+        Returns
+        -------
+        ModificationCounter
+        """
         self.modification = modification
         self.count = 0
 
@@ -32,6 +44,17 @@ class ModificationCounter:
 class ModificationCombination:
     """
     This class keeps all information for querying peptides with a specific modification combination.
+
+    Parameters
+    ----------
+    modification_counters : List[ModificationCounter]
+        List of modification counter
+    precursor : int
+        Precursor
+    lower_precursor_tolerance_ppm : int
+        Lower precursor tolerance
+    upper_precursor_tolerance_ppm : int
+        Upper precursor tolerance
     """
     __slots__ = ["__column_conditions", "__precursor_range"]
 
@@ -45,13 +68,33 @@ class ModificationCombination:
 
     @property
     def where_conditions(self) -> List[ColumnCondition]:
+        """
+        Returns the list of condition columns.
+        """
         return self.__column_conditions
 
     @property
     def precursor_range(self):
+        """
+        Returns the precursor range
+        """
         return self.__precursor_range
 
     def __calculate_columns_and_precursor_range(self, modification_counters: list, precursor: int, lower_precursor_tolerance_ppm: int, upper_precursor_tolerance_ppm: int):
+        """
+        Creates column condition from the given modification counter and precursor and tolerances.
+
+        Parameters
+        ----------
+        modification_counters : list
+            List of modification counters for this PTM/mass combination.
+        precursor : int
+            Precursor
+        lower_precursor_tolerance_ppm : int
+            Precursor rolerance
+        upper_precursor_tolerance_ppm : int
+            Precursor rolerance
+        """
         # Dict with amino acid one letter code as key and [count, is_static] as value, e.g.: "c": [4, True]
         amino_acid_occurences = {}
         # Used terminus modification of the form [modification, is_applied], e.g.: [Modification, False]
@@ -143,8 +186,8 @@ class ModificationCombination:
         """
         Creats a SQL-query WHERE-clause for the PTM/MASS-combination.
 
-        Return
-        ======
+        Returns
+        -------
         Tuple with the WHERE-part of the SQL-query and a list of values for the query.
         """
         where_clause_builder = DatabaseIndexWhereClauseBuilder(PTMSearchIndex)
@@ -154,10 +197,29 @@ class ModificationCombination:
 
 class ModificationCombinationList:
     """
-    This class creates all possible combination (ModificationCombination) from a given ModificationCollection for querying peptides.
-    The class itself is iterable.
+    Creates all possible combination (ModificationCombination) from a given ModificationCollection for querying peptides.
+    A instance of this class is iterable, the iterator will return the combinations.
     """
+
     def __init__(self, modification_collection: ModificationCollection, precursor: int, lower_precursor_tolerance_ppm: int, upper_precursor_tolerance_ppm: int, variable_modification_maximum: int):
+        """
+        Parameters
+        ----------
+        modification_collection : ModificationCollection
+            Collection of modifications
+        precursor : int
+            Targeted precursor / mass
+        lower_precursor_tolerance_ppm : int
+            Lower precursor tolerance
+        upper_precursor_tolerance_ppm : int
+            Upper precursor tolerance
+        variable_modification_maximum : int
+            Maximum variable modifications
+
+        Returns
+        -------
+        ModificationCombinationList
+        """
         self.__precursor = precursor
         self.__lower_precursor_tolerance_ppm = lower_precursor_tolerance_ppm
         self.__upper_precursor_tolerance_ppm = upper_precursor_tolerance_ppm
@@ -168,6 +230,26 @@ class ModificationCombinationList:
 
 
     def __build_combinations(self, counter_idx: int, remaining_precursor_mass: int, free_variable_modifications: int, is_n_terminus_used: bool, is_n_terminal_residue_used: bool, is_c_terminus_used: bool, is_c_terminal_residue_used: bool):
+        """
+        Recursively determines each PTM/mass combination.
+
+        Parameters
+        ----------
+        counter_idx : int
+            Index of the modification counter
+        remaining_precursor_mass : int
+            Counter for "available" mass space.
+        free_variable_modifications : int
+            Counter for free variable modifications.
+        is_n_terminus_used : bool
+            Shows if the n-terminus (not the residue of the n-terminal amino acid) is already modified
+        is_n_terminal_residue_used : bool
+            Shows if the n-terminus residue is already modified
+        is_c_terminus_used : bool
+            Shows if the c-terminus (not the residue of the n-terminal amino acid) is already modified
+        is_c_terminal_residue_used : bool
+            Shows if the c-terminus residue is already modified
+        """
         # Exit method if index is greater than number of counters
         if counter_idx >= len(self.__modification_counter):
             return None
@@ -284,6 +366,15 @@ class ModificationCombinationList:
         return len(self.__modification_combinations)
 
     def to_sql(self) -> tuple:
+        """
+        Returns a tuple, containing the WHERE-part of a SQL-query and the values for the query,
+        which can be used to fetch then peptides for the mass/modification-combination.
+        This values cann than be used with psycopg execute-method.
+
+        Returns
+        -------
+        Tuple where the first element is the WHERE-part, e.g. `partition = %s AND mass = %s ...`, and the second element is a list of values which replaces the placeholders.
+        """
         if len(self):
             query_string = []
             values = []

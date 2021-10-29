@@ -3,6 +3,20 @@ from macpepdb.proteomics.modification_collection import ModificationCollection
 from macpepdb.proteomics.mass.precursor_range import PrecursorRange
 
 class PeptideMassValidator:
+    """
+    Checks if the mass of a peptide fits into the mass/modification-combination of the given ModificationCollection and PrecursorRange.
+    Mainly used or testing.
+
+    Parameters
+    ----------
+    modification_collection : ModificationCollection
+        Collection of modifications
+    maximum_number_of_variable_modifications : int
+        Maximum number of variable modifications per peptide
+    precursor_range : PrecursorRange
+        Precursor / mass range
+    """
+
     def __init__(self, modification_collection: ModificationCollection, maximum_number_of_variable_modifications: int, precursor_range: PrecursorRange):
         self.__modification_collection = modification_collection
         self.__maximum_number_of_variable_modifications = maximum_number_of_variable_modifications
@@ -33,21 +47,32 @@ class PeptideMassValidator:
     def set_precursor_range(self, precursor_range: PrecursorRange):
         """
         Set new precursor range
-        @param precursor_range Instance of PrecursorRange
+        
+        Parameters
+        ----------
+        precursor_range : PrecursorRange
+            Precursor / mass range
         """
         self.__precursor_range = precursor_range
 
     def set_maximum_number_of_variable_modifications(self, maximum_number_of_variable_modifications: int):
         """
         Sets a new limit for variable modifications
-        @param maximum_number_of_variable_modifications New limit
+        
+        Parameters
+        ----------
+        maximum_number_of_variable_modifications : int
+            New limit
         """
         self.__maximum_number_of_variable_modifications = maximum_number_of_variable_modifications
 
     def __current_peptide_mass(self) -> int:
         """
         Returns the current peptide mass inclusively the applied modifications
-        @return int Returns the mass of the modified peptide
+
+        Returns
+        -------
+        Mass of the modified peptide
         """
         modifications_delta_sum = sum(modification.delta for modification in self.__applied_modifications if modification)
         return self.__peptide.mass + modifications_delta_sum 
@@ -55,9 +80,17 @@ class PeptideMassValidator:
     def __validate(self, current_mod_idx: int, number_of_variable_modifications: int) -> bool:
         """
         Recursivly try all variable modifications until 
-        @param current_mod_idx Current modification index
-        @param number_of_variable_modifications Current number of variable modifications
-        @return bool True if the peptide + a combindation of modifications matches the precursor range 
+        
+        Parameters
+        ----------
+        current_mod_idx : int
+            Current modification index
+        number_of_variable_modifications : int
+            Current number of variable modifications
+
+        Returns
+        -------
+        True if the peptide + a combindation of modifications matches the precursor range 
         """
         # Return True if mass matches
         if self.__current_peptide_mass() in self.__precursor_range:
@@ -104,8 +137,14 @@ class PeptideMassValidator:
     def validate(self, peptide) -> bool:
         """
         Checks if the given peptide can be modified to match the precursor range.
-        @param peptide Object based on PeptideBase
-        @return boolean True if the peptide + a combination of modification matches the precursor, if not False
+        
+        Parameters
+        ----------
+        peptide Object based on PeptideBase
+        
+        Returns
+        -------
+        True if the peptide + a combination of modification matches the precursor, if not False
         """
 
         # Set peptide

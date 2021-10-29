@@ -2,14 +2,38 @@
 from macpepdb.proteomics.mass.convert import to_int as mass_to_int
 
 class NeutralLoss:
+    """
+    Defines a neutral loss
+
+    Parameters
+    ----------
+    name : str
+        Name of the neutral loss
+    mono_mass : int
+        Mono mass as human readable float
+    average_mass : int
+        Average as human readable float
+    """
+
     def __init__(self, name: str, mono_mass: float, average_mass: float):
         self.name = name
         self.mono_mass = mass_to_int(mono_mass)
         self.average_mass = mass_to_int(average_mass)
 
-    # Returns Neutral loss by name
     @classmethod
     def get_by_name(cls, name: str):
+        """
+        Returns a neutral loss.
+
+        Parameters
+        ----------
+        name : str
+            Name of the NeutralLoss
+
+        Returns
+        -------
+        NeutralLoss
+        """
         try:
             return eval(name.upper())
         except NameError:

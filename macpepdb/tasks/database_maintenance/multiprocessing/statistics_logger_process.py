@@ -4,12 +4,35 @@ import pathlib
 import time
 from multiprocessing import Array, Event
 from multiprocessing.connection import Connection as ProcessConnection
+from typing import List
 
 # internal imports
 from macpepdb.utilities.generic_process import GenericProcess
 
 class StatisticsLoggerProcess(GenericProcess):
-    def __init__(self, termination_event: Event, statistics: Array, statistics_file_path: pathlib.Path, write_period: int, file_header: str, log_connection: ProcessConnection, stop_logging_event: Event):
+    """
+    Logs statistics.
+    """
+
+    def __init__(self, termination_event: Event, statistics: Array, statistics_file_path: pathlib.Path, write_period: int, file_header: List[str], log_connection: ProcessConnection, stop_logging_event: Event):
+        """
+        Parameters
+        ----------
+        termination_event : Event
+            Event for terminating the process
+        statistics : Array
+            Shared array for statistics
+        statistics_file_path : pathlib.Path
+            Path the log file
+        write_period : int
+            Seconds between logs
+        file_header : List[str]
+            CSV header should have the same length as the statistics array
+        log_connection : multiprocessing.connection.Connection
+            Connection to the logging process.
+        stop_logging_event : Event
+            Indicates the process to stop.
+        """
         super().__init__(termination_event)
         self.__statistics = statistics
         self.__statistics_file_path = statistics_file_path
@@ -19,6 +42,9 @@ class StatisticsLoggerProcess(GenericProcess):
         self.__stop_logging_event = stop_logging_event
 
     def run(self):
+        """
+        Starts the process to log.
+        """
         self.activate_signal_handling()
         self.__log_connection.send("statistics logger is online")
         # Snapshot of last written statistic to calculate difference

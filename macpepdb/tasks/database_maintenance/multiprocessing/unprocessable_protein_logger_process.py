@@ -7,12 +7,25 @@ from multiprocessing.connection import wait, Connection as ProcessConnection
 from macpepdb.utilities.generic_process import GenericProcess
 
 class UnprocessableProteinLoggerProcess(GenericProcess):
+    """
+    Writes embl entries from process_connections to log file. Process is running until all process connections closed by the other end (`EOFError`).
+    """
     def __init__(self, termination_event: Event, unprocessible_proteins_fasta_path: pathlib.Path, process_connections: list, log_connection: ProcessConnection):
         """
-        Writes embl entries from process_connections to log file. Process is running until all process connections closed by the other end (`EOFError`).
-        @param unprocessible_proteins_fasta_path Path to logfile
-        @param process_connections List of `multiprocessing.connection.Connection`
-        @param log_connection Connection to LoggerProcess
+        Parameters
+        ----------
+        termination_event : Event
+            Event for terminating the process
+        unprocessible_proteins_fasta_path : pathlib.Path
+            Path to logfile
+        process_connections : List[]
+            List of read only from other processes
+        log_connection : multiprocessing.connection.Connection
+            Connection to log process
+
+        Returns
+        -------
+        UnprocessableProteinLoggerProcess
         """
         super().__init__(termination_event)
         self.__unprocessible_proteins_fasta_path = unprocessible_proteins_fasta_path
@@ -20,6 +33,9 @@ class UnprocessableProteinLoggerProcess(GenericProcess):
         self.__log_connection = log_connection
 
     def run(self):
+        """
+        Starts process and logging.
+        """
         self.activate_signal_handling()
         self.__log_connection.send("unprocessible proteins logger is online")
         with self.__unprocessible_proteins_fasta_path.open("w") as unprocessible_proteins_file:

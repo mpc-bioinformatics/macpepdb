@@ -6,11 +6,29 @@ from datetime import datetime, timedelta
 from macpepdb.models.protein import Protein
 
 class UniprotTextReader():
+    """
+    Reads EMBL files from UniProt.
+    Class instances are iterable. The iterator will return instances of Protein.
+
+    Parameters
+    ----------
+    file : TextIO
+        EMBL file as file-like text object
+    """
+
     TAXONOMY_ID_REGEX = re.compile(r".*=(?P<taxonomy_id>\d+)")
+    """Matches the taxonomy ID after '='
+    """
+
     NAME_REGEX = re.compile(r"Full=(?P<name>.*?)(\{|;)")
+    """Regex for fullname
+    """
+
     WHITESPACE_REGEX = re.compile(r"\s")
     SERIAL_WHITESPACES_REGEX = re.compile(r"\s{2,}")
-    # Lookup for month number by name. So no locale change is necessary
+    """Just a precompiled regex for matching whitespaces
+    """
+    
     DT_MONTH_LOOKUP_TABLE = {
         "JAN": 1,
         "FEB": 2,
@@ -25,7 +43,13 @@ class UniprotTextReader():
         "NOV": 11,
         "DEC": 12
     }
+    """Lookup for month number by name. So no locale change is necessary
+    """
+    
 
+    SERIAL_WHITESPACES_REGEX = re.compile(r"\s{2,}")
+    """Just a precompiled regex for matching 2 or more sequential whitespaces
+    """
 
     def __init__(self, file):
         self.__file = file
@@ -72,37 +96,102 @@ class UniprotTextReader():
                     primary_accession = accessions.pop(0)
                     return Protein(primary_accession, accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed, self.__dt_date_to_utc_timestamp(last_update))
 
-
-    # Returns the the uniprot entry name and the review status (ture|false)
     def __process_id(self, line):
+        """
+        Returns the the uniprot entry name and the review status (ture|false)
+
+        Parameters
+        ----------
+        line : str
+            Line from EMBL file
+
+        Returns
+        -------
+        Tuple with entry name and review status.
+        """
         # split line by multiple sequential whitespaces
         splitted_id_line = self.SERIAL_WHITESPACES_REGEX.split(line)
         return splitted_id_line[0], splitted_id_line[1] == "Reviewed;"
 
-    # Returns accessions
     def __process_ac(self, line):
+        """
+        Returns accessions
+        
+        Parameters
+        ----------
+        line : str
+            Line from EMBL file
+
+        Returns
+        -------
+        List of accession
+        """
         # Split by whitespaces and return the first element without last char (';')
         return [accession[:-1] for accession in line.split()]
 
-    # Returns the taxonomy id
     def __process_ox(self, line):
+        """
+        Returns the taxonomy id
+
+        Parameters
+        ----------
+        line : str
+            Line from EMBL file
+
+        Returns
+        -------
+        Taxonomy ID or None
+        """
         matches = self.TAXONOMY_ID_REGEX.search(line)
         if matches and "taxonomy_id" in matches.groupdict():
             return int(matches.group("taxonomy_id"))
         else:
             return None
 
-    # Returns the proteom id
     def __process_dr_proteoms(self, line):
+        """
+        Returns the proteom id
+
+        Parameters
+        ----------
+        line : str
+            Line from EMBL file
+
+        Returns
+        -------
+        Proteome ID 
+        """
         # Split line by spaces and return the second element without last character (';')
         return line.split()[1][:-1]
 
-    # Returns the sequence without any whitespaces
     def __process_sq_no_header(self, line):
+        """
+        Returns the sequence without any whitespaces
+
+        Parameters
+        ----------
+        line : str
+            Line from EMBL file
+
+        Returns
+        -------
+        Amino Acid Sequence
+        """
         return self.WHITESPACE_REGEX.sub("", line)
 
-    # returns the value of the FullName attribute
     def __process_de_name(self, line):
+        """
+        Returns the value of the FullName attribute
+
+        Parameters
+        ----------
+        line : str
+            Line from EMBL file
+
+        Returns
+        -------
+        Fullname
+        """
         matches = self.NAME_REGEX.search(line)
         if matches:
             return matches["name"].strip()

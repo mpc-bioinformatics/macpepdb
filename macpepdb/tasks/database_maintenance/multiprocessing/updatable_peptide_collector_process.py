@@ -14,15 +14,40 @@ class UpdatablePeptideCollectorProcess(GenericProcess):
     """
     Reads updatable peptides from the database and put them into a queue for further processing in batches of 100 peptides
     """
+
     PEPTIDE_BATCH = 100
 
     def __init__(self, termination_event: Event, database_url: str, peptide_queue: Queue, general_log: ProcessConnection):
+        """
+        Parameters
+        ----------
+        termination_event : Event
+            Event for terminating the process
+        database_url : str
+            Database URL, e.g. postgres://username:password@host:port/database
+        peptide_queue : Queue
+            Peptide queue
+        general_log : multiprocessing.connection.Connection
+            Connection to log process
+
+        Returns
+        -------
+        UpdatablePeptideCollectorProcess
+        """
         super().__init__(termination_event)
         self.__database_url = database_url
         self.__peptide_queue = peptide_queue
         self.__general_log = general_log
 
     def __enque_peptides(self, peptides: List[Peptide]):
+        """
+        Puts peptide into the queue.
+
+        Parameters
+        ----------
+        peptides : List[Peptide]
+            List of peptides
+        """
         while not self.termination_event.is_set():
             try:
                 # Try to enqueue the ID slice, wait 5 seconds for a free slot
@@ -35,6 +60,9 @@ class UpdatablePeptideCollectorProcess(GenericProcess):
 
 
     def run(self):
+        """
+        Starts the process and enqueing of updateable peptides.
+        """
         self.activate_signal_handling()
 
         self.__general_log.send("Start enqueuing updatable peptides.")

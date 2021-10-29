@@ -16,7 +16,24 @@ from macpepdb.tasks.database_maintenance.multiprocessing.updatable_peptide_colle
 
 
 class PeptideMetadataCollector:
+    """
+    Controls the metadata collection.
+
+    Parameter
+    ---------
+    termination_event: Event
+        Event which controlls the termination of subprocesses.
+    log_dir_path: pathlib.Path
+        Path to the logs directory
+    statistics_write_period: int
+        Seconds between statistics logs
+    number_of_threads: int
+        Number of threads/processes
+    """
+
     STATISTIC_FILE_HEADER = ["seconds", "updated_peptides", "peptide_update_rate"]
+    """CSV header for log file
+    """
 
     def __init__(self, termination_event: Event, log_dir_path: pathlib.Path, statistics_write_period: int, number_of_threads: int):
         self.__log_file_path = log_dir_path.joinpath(f"metadata_collector.log")
@@ -26,11 +43,14 @@ class PeptideMetadataCollector:
         self.__statistics_csv_file_path = log_dir_path.joinpath(f"metadata_collector_statistics.csv")
         self.__termination_event = termination_event
 
-    def run(self, database_url: str) -> bool:
+    def run(self, database_url: str):
         """
         Iterates through all peptides which are flagged for updates, collectes the meta information from the referenced proteins (review status, taxonomy IDs and proteome IDs) and stores them in the peptide.
-        @param database_url
-        @return bool Returns the status of the stop flag
+
+        Parameters
+        ----------
+        database_url : str
+            E.g. postgres://username:password@host:port/database
         """
         # Initialize signal handler for TERM and INT
         signal.signal(signal.SIGTERM, self.__termination_event_handler)
@@ -111,9 +131,33 @@ class PeptideMetadataCollector:
         self.print_status(update_counter, peptide_queue, is_updatable=False)
 
     def __termination_event_handler(self, signal_number, frame):
+        """
+        Sets the termination event to true. Callback for signal handling.
+
+        Paremters
+        ---------
+        signal_number
+            Signal ID
+        frame
+            Signal frame
+        """
         self.__termination_event.set()
 
     def print_status(self, update_counter: Value, peptide_queue: Queue, status: str = "", is_updatable: bool = True):
+        """
+        Prints a status line.
+
+        Parameters
+        ----------
+        update_counter: Value
+            Multiprocessing value which contains the update counter
+        peptide_queue: Queue
+            Multiprocessing queue which contains the current queued peptide which get an update.
+        status: str
+            Additional status message (optional)
+        is_updatable: bool = True
+            Indicates if this line is replaceable.
+        """
         console_width, _ = shutil.get_terminal_size()
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         message = f"\r{timestamp}> {update_counter[0]:,} updated peptides; {peptide_queue.qsize()} / {self.__max_peptide_queue_size} queue"

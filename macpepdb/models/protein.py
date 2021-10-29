@@ -12,6 +12,28 @@ from macpepdb.models.protein_peptide_association import ProteinPeptideAssociatio
 from macpepdb.models import peptide as peptide_module
 
 class Protein:
+    """
+    Defines a protein.
+
+    Parameters
+    ----------
+    accession : str
+        Primary accession
+    secondary_accessions : List[str]
+        Secondary accessions
+    entry_name : str
+        Entry name
+    name : str
+        Name
+    sequence : str
+        Amino acid sequence
+    taxonomy_id : ID
+        Taxonomy ID
+    proteome_id : str
+        Proteome ID
+    is_reviewed : bool
+        Review status
+    """
     EMBL_AMINO_ACID_GROUPS_PER_LINE = 6
     EMBL_AMINO_ACID_GROUP_LEN = 10
     EMBL_ACCESSIONS_PER_LINE = 8
@@ -45,6 +67,13 @@ class Protein:
         self.updated_at = updated_at
 
     def to_embl_entry(self) -> str:
+        """
+        Creates an EMBL entry of the protein.
+
+        Returns
+        -------
+        EMBL entry
+        """
         embl_entry = f"ID   {self.entry_name}    {'Reviewed' if self.is_reviewed else 'Unreviewed'};    {len(self.sequence)}\n"
 
         embl_accessions = [self.accession] + self.secondary_accessions
@@ -85,17 +114,42 @@ class Protein:
             
         return embl_entry
 
-    # This method is implemented to make sure only the accession is used as hash when a protein is stored in a hashable collection (Set, Dictionary, ...)
     def __hash__(self):
+        """
+        Implements the ability to use proteins as key in sets and dictionaries.
+        """
         return hash(self.accession)
     
-    # According to the Python documentation this should be implemented if __hash__() is implemented.
     def __eq__(self, other):
+        """
+        Implements the equals operatis.
+        According to the Python documentation this should be implemented if __hash__() is implemented.
+        """
         if not isinstance(other, Protein):
             return False
         return self.accession == other.accession
 
     def peptides(self, database_cursor, order_by = None, order_descending: bool = False, offset: int = None, limit: int = None):
+        """
+        Selects the associated peptides of this protein.
+
+        Parameters
+        ----------
+        database_cursor
+            Active database cursor
+        order_by : str
+            adds an order column to the query
+        order_descending : bool
+            Descending if True, otherwise False. Applies only if order_by is not None
+        offset : int
+            Adds an offset to the query.
+        limit : int
+            Adds a limit to the query.
+
+        Returns
+        -------
+        List of peptides
+        """
         referenced_peptides_query = (
             f"SELECT sequence, number_of_missed_cleavages "
             f"FROM {peptide_module.Peptide.TABLE_NAME} "
@@ -123,10 +177,20 @@ class Protein:
     @staticmethod
     def select(database_cursor, select_conditions: tuple = ("", []), fetchall: bool = False):
         """
-        @param database_cursor
-        @param select_conditions A tupel with the where statement (without WHERE) and a list of parameters, e.g. ("accession = %s AND taxonomy_id = %s",["Q257X2", 6909])
-        @param fetchall Indicates if multiple rows should be fetched
-        @return Protein or list of proteins
+        Selects one or many proteins.
+
+        Parameters
+        ----------
+        database_cursor
+            Active database cursor
+        select_conditions : Tuple[str, List[Any]]
+            A tupel with the where statement (without WHERE) and a list of parameters, e.g. ("accession = %s AND taxonomy_id = %s",["Q257X2", 6909])
+        fetchall : bool
+            Indicates if multiple rows should be fetched
+
+        Returns
+        -------
+        Protein or list of proteins
         """
         select_query = f"SELECT accession, secondary_accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed, updated_at FROM {Protein.TABLE_NAME}"
         if len(select_conditions) == 2 and len(select_conditions[0]):
@@ -150,8 +214,8 @@ class Protein:
         sql_row : tuple
             Contains the protein columns in the following order: accession, secondary_accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed, updated_at
 
-        Return
-        ------
+        Returns
+        -------
         Protein
         """
         return Protein(
@@ -167,7 +231,17 @@ class Protein:
         )
 
     @staticmethod
-    def insert(database_cursor, protein) -> int:
+    def insert(database_cursor, protein):
+        """
+        Inserts a protein.
+
+        Parameters
+        ----------
+        database_cursor
+            Active database cursor
+        protein : Protein
+            Protein to insert
+        """
         INSERT_QUERY = f"INSERT INTO {Protein.TABLE_NAME} (accession, secondary_accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed, updated_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);"
         database_cursor.execute(
             INSERT_QUERY,
@@ -187,6 +261,16 @@ class Protein:
 
     @staticmethod
     def delete(database_cursor, protein):
+        """
+        Deletes a peptides
+
+        Parameters
+        ----------
+        database_cursor
+            Active database cursor
+        protein : Protein
+            Protein to delete
+        """
         DELETE_QUERY = f"DELETE FROM {Protein.TABLE_NAME} WHERE accession = %s;"
         ProteinPeptideAssociation.delete(
             database_cursor,
@@ -200,10 +284,19 @@ class Protein:
     def create(database_cursor, protein, enzyme) -> int:
         """
         Creates a new protein, by storing insert it and its peptides to the database. Make sure the protein does not already exists
-        @param database_cursor Database cursor with open transaction.
-        @param protein Protein to digest
-        @param enzyme Digest enzym
-        @return int Number of newly inserted peptides
+
+        Parameters
+        ----------
+        database_cursor
+            Database cursor with open transaction.
+        protein : Protein
+            Protein to digest
+        enzyme : DigestEnzym
+            Digest enzym
+
+        Returns
+        -------
+        Number of newly inserted peptides
         """
         # Create protein and get protein ID
         Protein.insert(database_cursor, protein)
@@ -364,9 +457,17 @@ class Protein:
     def __select_existing_peptides_with_metadata_status(database_cursor, peptides: list) -> list:
         """
         Updates the stored_protein with the updated_protein by comparing its attributes.
-        @param database_cursor Database cursor.
-        @param peptides List of peptides
-        @return list Each element is a tuple which contains a peptide and the peptides metadata status
+
+        Parameters
+        ----------
+        database_cursor
+            Database cursor.
+        peptides : List[Peptide]
+            List of peptides
+
+        Returns
+        -------
+        List of tuple, each tuple contains a peptide and the peptides metadata status
         """
 
         # %s after VLAUES is substitutet by "(mass, sequence), (mass, sequence)"

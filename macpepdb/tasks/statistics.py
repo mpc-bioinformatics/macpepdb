@@ -8,16 +8,28 @@ import psycopg2
 from macpepdb.models.peptide import Peptide
 
 class Statistics:
-    # Can be overriden in subclasses to change the peptide tables
+    """
+    Collects and prints statistics from the database.
+    """
+
     peptide_class=Peptide
+    """Can be overriden in subclasses to change the peptide table
+    """
 
     @classmethod
     def estimate_peptide_partition_utilizations(cls, database_cursor) -> list:
         """
         Estimates the parititon utilization. Counting peptides need to much time, so we can estimate it with help of the pg_class view.
         The estimation changes a bit after each VACUUM or ANALYZE but is very fast.
-        @param database_cursor
-        @return List of tupels [(parition_count, partition_name), ...]
+
+        Parameters
+        ----------
+        database_cursor
+            Database cursor
+
+        Returns
+        -------
+        List of tupels [(parition_count, partition_name), ...]
         """
         database_cursor.execute(f"SELECT relname, reltuples::BIGINT FROM pg_class WHERE relname SIMILAR TO '{cls.peptide_class.TABLE_NAME}_[0-9]{{3}}';")
         return database_cursor.fetchall()
@@ -27,8 +39,15 @@ class Statistics:
         """
         Estimates the peptide count, by using the partition utilizaton.
         The estimation changes a bit after each VACUUM or ANALYZE but is very fast.
-        @param database_cursor
-        @return Estimated peptide count
+
+        Parameters
+        ----------
+        database_cursor
+            Database cursor
+
+        Returns
+        -------
+        Estimated peptide count
         """
         sum = 0
         for partition_estimation in cls.estimate_peptide_partition_utilizations(database_cursor):
@@ -39,8 +58,15 @@ class Statistics:
     def get_partition_boundaries(cls, database_cursor):
         """
         This return the peptide partition boundaries.
-        @param database_cursor
-        @return List of tupel [(partition_name, from, to), ...]
+
+        Parameters
+        ----------
+        database_cursor
+            Database cursor
+
+        Returns
+        -------
+        List of tupel [(partition_name, from, to), ...]
         """
         database_cursor.execute(f"select pg_class.relname, pg_get_expr(pg_class.relpartbound, pg_class.oid, true) from pg_class where relname SIMILAR TO '{cls.peptide_class.TABLE_NAME}_[0-9]{{3}}';")
         rows = database_cursor.fetchall()
@@ -54,6 +80,14 @@ class Statistics:
 
     @classmethod
     def get_partition_boundaries_from_command_line(cls, args):
+        """
+        Prints the partition boundaries.
+
+        Paramters
+        ---------
+        args
+            Arguments from the CLI parser
+        """
         database_connection = psycopg2.connect(args.database_url)
         with database_connection:
             with database_connection.cursor() as database_cursor:
@@ -71,12 +105,28 @@ class Statistics:
 
     @classmethod
     def __comand_line_arguments_for_partition_boundaries(cls, subparsers):
+        """
+        Defines the CLI parameters for printing the partition boundaries in the given subparser.
+
+        Parameters
+        ----------
+        subparser : argparse._SubParsersAction
+            Subparser of main CLI parser
+        """
         parser = subparsers.add_parser('peptide-partition-boundaries', help="Prints the used peptide partition boundaries.")
         parser.add_argument("--csv", action="store_const", const="True", help="Output is in csv format.", default=False)
         parser.set_defaults(func=cls.get_partition_boundaries_from_command_line)
 
     @classmethod
     def estimate_partition_usage_from_comand_line(cls, args):
+        """
+        Prints the partition usage.
+
+        Paramters
+        ---------
+        args
+            Arguments from the CLI parser
+        """
         database_connection = psycopg2.connect(args.database_url)
         with database_connection:
             with database_connection.cursor() as database_cursor:
@@ -92,12 +142,28 @@ class Statistics:
 
     @classmethod
     def __comand_line_arguments_for_patition_usage(cls, subparsers):
+        """
+        Defines the CLI parameters for printing the partition usage calculation in the given subparser.
+
+        Parameters
+        ----------
+        subparser : argparse._SubParsersAction
+            Subparser of main CLI parser
+        """
         parser = subparsers.add_parser('estimate-peptide-partition-utilizations', help="Prints estimation for peptide parition utilization.")
         parser.add_argument("--csv", action="store_const", const="True", help="Output is in csv format.", default=False)
         parser.set_defaults(func=cls.estimate_partition_usage_from_comand_line)
 
     @classmethod
     def count_peptides_from_command_line(cls, args):
+        """
+        Prints the partition count.
+
+        Paramters
+        ---------
+        args
+            Arguments from the CLI parser
+        """
         database_connection = psycopg2.connect(args.database_url)
         with database_connection:
             with database_connection.cursor() as database_cursor:
@@ -106,11 +172,27 @@ class Statistics:
 
     @classmethod
     def __comand_line_arguments_peptide_counts(cls, subparsers):
+        """
+        Defines the CLI parameters for printing the peptide count calculation in the given subparser.
+
+        Parameters
+        ----------
+        subparser : argparse._SubParsersAction
+            Subparser of main CLI parser
+        """
         parser = subparsers.add_parser('estimate-peptide-count', help="Estimates the peptide count")
         parser.set_defaults(func=cls.count_peptides_from_command_line)
 
     @classmethod
     def command_line_arguments(cls, subparsers):
+        """
+        Defines the CLI parameters for the statistic tasks.
+
+        Parameters
+        ----------
+        subparser : argparse._SubParsersAction
+            Subparser of main CLI parser
+        """
         parser = subparsers.add_parser('statistics', help="Gather some database statistics")
         parser.add_argument("--database-url", "-d", type=str, required=True, help="Database URL for postgres, e.g. postgres://user:password@server/database")
         subsubparsers = parser.add_subparsers()

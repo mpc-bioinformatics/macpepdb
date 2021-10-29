@@ -19,18 +19,42 @@ class ProteinDigestionProcess(GenericProcess):
     """
     Sequentially digests proteins from the given queue and inserts them and their proteins into the given database.
     """
-    def __init__(self, termination_event: Event, id: int, database_url: str, protein_queue: Queue, enzyme: DigestEnzyme, general_log: ProcessConnection, unprocessable_protein_log: ProcessConnection, statistics: Array, finish_event: Event):
+
+    def __init__(self, termination_event: Event, id: int, database_url: str, protein_queue: Queue, enzyme: DigestEnzyme, general_log: ProcessConnection, unprocessible_protein_log: ProcessConnection, statistics: Array, finish_event: Event):
+        """
+        termination_event : Event
+            Event for terminating the process
+        id : int
+            ID for identification in logs
+        database_url : str
+            Database URL, e.g. postgres://username:password@host:port/database
+        protein_queue : Queue
+            Protein queue
+        enzyme : DigestEnzyme
+            Digest enzyme
+        general_log : multiprocessing.connection.Connection
+            Connection to the log process
+        unprocessible_protein_log : multiprocessing.connection.Connection
+            connection to log process which logs unprocessible proteins
+        statistics : Array
+            Shared array to collect statistics [inserted proteins, inserted peptides, errors]
+        finish_event : Event
+            Event which indicates that the process can stop as soon as the queue is empty.
+        """
         super().__init__(termination_event)
         self.__id = id
         self.__database_url = database_url
         self.__protein_queue = protein_queue
         self.__general_log = general_log
-        self.__unprocessable_protein_log = unprocessable_protein_log
+        self.__unprocessible_protein_log = unprocessible_protein_log
         self.__statistics = statistics
         self.__enzyme = enzyme
         self.__finish_event = finish_event
 
     def run(self):
+        """
+        Starts the process which digests proteins and inserts the peptides into the database.
+        """
         self.activate_signal_handling()
         self.__general_log.send("digest worker {} is online".format(self.__id))
         database_connection = None
@@ -92,7 +116,7 @@ class ProteinDigestionProcess(GenericProcess):
                         # Log the last error if the unsolvable_error_factor exceeds the limit
                         if unsolvable_error_factor >= self.__class__.UNSOLVEABLE_ERROR_FACTOR_LIMIT:
                             self.__general_log.send("Exception on protein {}, see:\n{}".format(protein.accession, error))
-                            self.__unprocessable_protein_log.send(protein.to_embl_entry())
+                            self.__unprocessible_protein_log.send(protein.to_embl_entry())
                             self.__statistics.acquire()
                             self.__statistics[2] += 1
                             self.__statistics.release()
@@ -108,4 +132,4 @@ class ProteinDigestionProcess(GenericProcess):
             database_connection.close()
         self.__general_log.send("digest worker {} is stopping".format(self.__id))
         self.__general_log.close()
-        self.__unprocessable_protein_log.close()
+        self.__unprocessible_protein_log.close()

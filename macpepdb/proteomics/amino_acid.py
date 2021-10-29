@@ -4,6 +4,25 @@ from macpepdb.proteomics.mass.convert import to_int as mass_to_int
 AMINO_ACIDS_FOR_COUNTING = ["A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "Y"]
 
 class AminoAcid:
+    """
+    Defines an amino acid.
+
+    Parameters
+    ----------
+    name : str
+        Full name
+    one_letter_code : str
+        One letter code
+    three_letter_code : str
+        Three letter code
+    chemical_formula : str
+        Chemical formular
+    mono_mass : float
+        Mono mass in human readable float (Dalton)
+    average_mass : float
+        Average mass in human readable float (Dalton)
+    """
+
     def __init__(self, name: str, one_letter_code: str, three_letter_code: str, chemical_formula: str, mono_mass: float, average_mass: float):
         self.name = name
         self.one_letter_code = one_letter_code
@@ -14,16 +33,32 @@ class AminoAcid:
 
     def get_one_letter_code_ascii_dec(self) -> int:
         """
-        Return
-        ======
+        Returns
+        -------
         Decimal ASCII represenation of the amino acids one letter code
         """
         return ord(self.one_letter_code)
 
-    # Returns an amino acid by one letter code.
-    # If the given one letter code is unknown Unknown Amino Acid (X) is returned.
+    
     @classmethod
     def get_by_one_letter_code(cls, one_letter_code: str):
+        """
+        Returns an amino acid by one letter code.
+
+        Parameters
+        ----------
+        one_letter_code : str
+            One letter code of an amino acid.
+
+        Returns
+        -------
+        Amino acid
+
+        Raises
+        ------
+        NameError
+            If the given one letter code is unknown.
+        """
         olc = one_letter_code.upper()
         if olc == 'A':
             return A
@@ -80,24 +115,39 @@ class AminoAcid:
         else:
             raise NameError(f"No amino acid with one letter code '{olc}' found.")
 
-    # Returns Tryptophan (W)
     @classmethod
     def get_haviest(cls):
+        """
+        Returns
+        -------
+        Heaviest amino acis (Tryptophan)
+        """
         return W
 
-    # Returns Glycine (G)
     @classmethod
     def get_lightest(cls):
+        """
+        Returns
+        -------
+        Lightest amino acis (Glycine)
+        """
         return G
 
     @staticmethod
     def get_unknown():
+        """
+        Returns
+        -------
+        Unknwon
+        """
         return X
 
     @staticmethod
     def all() -> tuple:
         """
-        Returns a tuple with all known amino acids
+        Returns
+        -------
+        Tuple with all known amino acids
         """
         return KNOWN_AMINO_ACIDS
 

@@ -3,6 +3,17 @@ from __future__ import annotations
 import json
 
 class MaintenanceInformation:
+    """
+    Holds information of the database, e.g. which protein was used for digestion, min/max length of peptides, ...
+
+    Parameters
+    ----------
+    key : str
+        Key of the maintenance information
+    value : dict
+        Actual information
+    """
+
     DATABASE_STATUS_KEY = 'database_status'
     DIGESTION_PARAMTERS_KEY = 'digestion_parameters'
 
@@ -15,9 +26,18 @@ class MaintenanceInformation:
     @staticmethod
     def select(database_cursor, key: str) -> MaintenanceInformation:
         """
-        @param database_cursor Database cursor with open transaction.
-        @param key Key for identification
-        @return MaintenanceInformation If the SELECT returns something, otherwise None
+        Selectes maintenance information from the database.
+        Parameters
+        ----------
+        database_cursor
+            Database cursor with open transaction.
+        key : str
+            Key for identification
+        
+        Returns
+        
+        -------
+        Returns MaintenanceInformation if the SELECT returns something, otherwise None
         """
         SELECT_QUERY = f"SELECT values FROM {MaintenanceInformation.TABLE_NAME} WHERE key = %s;"
         database_cursor.execute(
@@ -33,8 +53,14 @@ class MaintenanceInformation:
     @staticmethod
     def insert(database_cursor, maintenance_information: MaintenanceInformation):
         """
-        @param database_cursor Database cursor with open transaction.
-        @param mainenance_infromation MaintenanceInformation to insert
+        Inserts maintenance information into the database.
+
+        Parameters
+        ----------
+        database_cursor :
+            Database cursor with open transaction.
+        mainenance_infromation : MaintenanceInformation
+            MaintenanceInformation to insert
         """
         INSERT_QUERY = f"INSERT INTO {MaintenanceInformation.TABLE_NAME} (key, values) VALUES (%s, %s);"
         database_cursor.execute(
@@ -45,8 +71,14 @@ class MaintenanceInformation:
     @staticmethod
     def update(database_cursor, maintenance_information: MaintenanceInformation):
         """
-        @param database_cursor Database cursor with open transaction.
-        @param mainenance_infromation MaintenanceInformation to insert
+        Updates maintenance information in the database.
+
+        Parameters
+        ----------
+        database_cursor : 
+            Database cursor with open transaction.
+        mainenance_infromation : MaintenanceInformation
+            MaintenanceInformation to insert
         """
         UPDATE_QUERY = f"UPDATE {MaintenanceInformation.TABLE_NAME} SET values = %s WHERE key = %s;"
         database_cursor.execute(

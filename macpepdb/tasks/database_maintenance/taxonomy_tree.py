@@ -17,6 +17,28 @@ from macpepdb.models.taxonomy import Taxonomy, TaxonomyRank
 from macpepdb.models.taxonomy_merge import TaxonomyMerge
 
 class TaxonomyTree:
+    """
+    Controls the creation and updates of the taxonomy tree.
+
+    Parameters
+    ----------
+    termination_event: Event
+        Event for process termination
+    nodes_dmp_path: pathlib.Path
+        Path the nodes.dmp within the work directory
+    names_dmp_path: pathlib.Path
+        Path the names.dmp within the work directory
+    merge_dmp_path: pathlib.Path
+        Path the merge.dmp within the work directory
+    delete_dmp_path: pathlib.Path
+        Path the delnodes.dmp within the work directory
+    database_url: str
+        Database URL, e.g. postgres://username:password@host:port/database
+    log_file: pathlib.Path
+        Path to the log directory within the work directory
+    number_of_threads: int
+        Number of threads / processes
+    """
 
     def __init__(self, termination_event: Event, nodes_dmp_path: pathlib.Path, names_dmp_path: pathlib.Path, merge_dmp_path: pathlib.Path, delete_dmp_path: pathlib.Path, database_url: str, log_file: pathlib.Path, number_of_threads: int):
         self.__termination_event = termination_event
@@ -41,12 +63,34 @@ class TaxonomyTree:
         self.__delete_taxonomies()
 
     def __termination_event_handler(self, signal_number, frame):
+        """
+        Sets the termination event to true. Callback for signal handling.
+
+        Paremters
+        ---------
+        signal_number
+            Signal ID
+        frame
+            Signal frame
+        """
         self.__termination_event.set()
 
-    # This will create working processes and one logger processes. The worker processes are connected with the logger process.
-    # Make sure the worker function has the following argument list: id (int), database_url (str), stop_flag (Event) and log_connection (Connection).
-    # Returns (array of worker processes, the logger process, the work queue, and a stop flag for the worker processes)
     def __start_work_and_logger_processes(self, work_function, logger_write_mode) -> Tuple[list, Process, Queue, Event]:
+        """
+        This will create working processes and one logger processes. The worker processes are connected with the logger process.
+        Make sure the worker function has the following argument list: id (int), database_url (str), stop_flag (Event) and log_connection (Connection).
+        
+        Parameters
+        ----------
+        work_function : Callable[int, str, Event, Connection]
+            Function which is executed by the worker processes
+        logger_write_mode : str
+            Write mode for the logger (see write mode for Pythons `open()`-function)
+
+        Returns
+        -------
+        Tuple (array of worker processes, the logger process, the work queue, and a stop flag for the worker processes)
+        """
         # Build processing context
         processing_context = get_processing_context("spawn")
 
@@ -76,6 +120,9 @@ class TaxonomyTree:
 
 
     def __build_taxonomies(self):
+        """
+        Inserts nodes into the taxonomy tree.
+        """
         if self.__nodes_dmp_path.exists() and self.__names_dmp_path.exists():
             if self.__nodes_dmp_path.is_dir():
                 raise AssertionError(f"'{self.__nodes_dmp_path}' is a directory, not a file.")
@@ -155,6 +202,9 @@ class TaxonomyTree:
                     log_file.write(f"####\n")
     
     def __merge_taxonomies(self):
+        """
+        Inserts merges into the taxonomy tree
+        """
         if self.__merge_dmp_path.exists():
             if self.__merge_dmp_path.is_dir():
                 raise AssertionError(f"'{self.__merge_dmp_path}' is a directory, not a file.")
@@ -207,6 +257,9 @@ class TaxonomyTree:
             logger.join()
 
     def __delete_taxonomies(self):
+        """
+        Deletes taxonomy from the tree
+        """
         if self.__delete_dmp_path.exists():
             if self.__delete_dmp_path.is_dir():
                 raise AssertionError(f"'{self.__delete_dmp_path}' is a directory, not a file.")
@@ -240,9 +293,24 @@ class TaxonomyTree:
             # Wait for logger to stop
             logger.join()
 
-    # Inserts new taxonomies into the database
     @staticmethod
     def process_new_taxonomies(id: int, database_url: str, stop_flag: Event, queue: Queue, log_connection: Connection):
+        """
+        Inserts new taxonomies into the tree
+
+        Parameters
+        ----------
+        id : int
+            Just a id for identifying the process in the logs
+        database_url : str
+            Database URL, e.g. postgres://username:password@host:port/database
+        stop_flag : Event
+            Multiprocessing event to stop the processes
+        queue : Queue
+            Multiprocessing queue for queuing the new nodes
+        log_connection : Connection
+            Multiprocessing connection to send logs to the logger
+        """
         log_connection.send(f"insert worker {id} is online")
         database_connection = None
 
@@ -281,6 +349,22 @@ class TaxonomyTree:
 
     @staticmethod
     def process_taxonomy_merge(id: int, database_url: str, stop_flag: Event, queue: Queue, log_connection: Connection):
+        """
+        Processes taxonomy merges from a queue.
+
+        Parameters
+        ----------
+        id : int
+            Just a id for identifying the process in the logs
+        database_url : str
+            Database URL, e.g. postgres://username:password@host:port/database
+        stop_flag : Event
+            Multiprocessing event to stop the processes
+        queue : Queue
+            Multiprocessing queue for queuing the merges
+        log_connection : Connection
+            Multiprocessing connection to send logs to the logger
+        """
         log_connection.send(f"merge worker {id} is online")
         database_connection = None
         while not stop_flag.is_set() or not queue.empty():
@@ -318,6 +402,22 @@ class TaxonomyTree:
 
     @staticmethod
     def process_taxonomy_deletion(id: int, database_url: str, stop_flag: Event, queue: Queue, log_connection: Connection):
+        """
+        Processes taxonomy merges from a queue.
+
+        Parameters
+        ----------
+        id : int
+            Just a id for identifying the process in the logs
+        database_url : str
+            Database URL, e.g. postgres://username:password@host:port/database
+        stop_flag : Event
+            Multiprocessing event to stop the processes
+        queue : Queue
+            Multiprocessing queue for queuing the merges
+        log_connection : Connection
+            Multiprocessing connection to send logs to the logger
+        """
         log_connection.send(f"deletion worker {id} is online")
         database_connection = None
         while not stop_flag.is_set() or not queue.empty():
@@ -357,9 +457,16 @@ class TaxonomyTree:
     @classmethod
     def parse_node_line(cls, line: str) -> tuple:
         """
-        Parse node lines and returns id, parent id and rank
-        @param line Line from nodes.dmp
-        @return tupel (id, parent id, rank)
+        Parses node lines and returns id, parent id and rank
+        
+        Parameters
+        ----------
+        line : str
+            Line from nodes.dmp
+
+        Returns
+        -------
+        Tuple (id, parent id, rank)
         """
         node_attributes = cls.split_dmp_file_line(line)
         return int(node_attributes[0]), int(node_attributes[1]), TaxonomyRank.from_string(node_attributes[2])
@@ -367,9 +474,16 @@ class TaxonomyTree:
     @classmethod
     def parse_name_line(cls, line: str) -> tuple:
         """
-        Parse names line and returns id, name and name class
-        @param line Line from names.dmp
-        @return tupel (id, name, name class)
+        Parses names line and returns id, name and name class
+
+        Parameters
+        ----------
+        line : str
+            Line from names.dmp
+
+        Returns
+        -------
+        Tuple (id, name, name class)
         """
         node_attributes = cls.split_dmp_file_line(line)
         return  int(node_attributes[0]), node_attributes[1], node_attributes[3]
@@ -377,9 +491,16 @@ class TaxonomyTree:
     @classmethod
     def parse_merge_line(cls, line: str) -> tuple:
         """
-        Parse merge line and returns source id and target id
-        @param line Line from merged.dmp
-        @return tupel (source_id, target_id )
+        Parses merge line and returns source id and target id
+        
+        Parameters
+        ----------
+        line : str
+            Line from merged.dmp
+
+        Returns
+        -------
+        Tuple (source_id, target_id )
         """
         node_attributes = cls.split_dmp_file_line(line)
         return int(node_attributes[0]), int(node_attributes[1])
@@ -388,9 +509,16 @@ class TaxonomyTree:
     @classmethod
     def parse_delete_line(cls, line: str) -> int:
         """
-        Parse delnodes line and returns taxonomy id
-        @param line Line from delnodes.dmp
-        @return int Taxonomy id
+        Parses delnodes line and returns taxonomy id
+
+        Parameters
+        ----------
+        line : str
+            Line from delnodes.dmp
+
+        Returns
+        -------
+        Taxonomy id
         """
         return int(cls.split_dmp_file_line(line)[0])
 
@@ -399,7 +527,14 @@ class TaxonomyTree:
         """
         Splits line from dmp line. Separator is '|'
         Each element of the line will be stripped from prepending and appending whitespaces.
-        @param line Line from dmp-file
-        @return list
+        
+        Parameters
+        ----------
+        line : str
+            Line from dmp-file
+
+        Returns
+        -------
+        List
         """
         return [elem.strip() for elem in line.split("|")[:-1]]
