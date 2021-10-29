@@ -25,12 +25,26 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase, DatabaseMaintenanceW
     """[summary]
     Contains test to test the full database digest.
     """
-    def test_complete_digestion(self):
+    def test_maintenance(self):
         """
-        Digests `text_files/proteins.txt`.
-        Than the database will be verified.
+        1. Digests `text_files/proteins.txt` and verify the database
+        2. Digest `test_files/B0FIH3_merge.txt` which will merge B0FIH3 
+           with a slightly updated version of the protein creating new peptides.
+           And verify again.
         """
-        work_dir = pathlib.Path(f"./tmp/{self.id()}")
+        initial_digest_file_proteins = self.initial_digestion()
+        self.merge_digestion(initial_digest_file_proteins)
+        
+
+    def initial_digestion(self) -> List[Protein]:
+        """
+        Digests `text_files/proteins.txt` and verify the database
+
+        Returns
+        -------
+        The peptides from the file.
+        """
+        work_dir = pathlib.Path(f"./tmp/{self.id()}_digest")
         test_files_path = pathlib.Path('./test_files')
         protein_data_test_file_path = test_files_path.joinpath('proteins.txt')
         self.prepare_workdir(work_dir, test_files_path, protein_data_test_file_path)
@@ -57,42 +71,22 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase, DatabaseMaintenanceW
             protein_file_reader = UniprotTextReader(protein_data_test_file)
             file_proteins = [file_protein for file_protein in protein_file_reader]
 
-
         self.verify_database_integrity(file_proteins, trypsin)
 
+        return file_proteins
 
-    def test_digestion_with_protein_merge(self):
+
+    def merge_digestion(self, initial_digest_file_proteins: List[Protein]) -> List[Protein]:
         """
-        Digests `text_files/proteins.txt` first, then  `test_files/B0FIH3_merge.txt`
+        Digests `test_files/B0FIH3_merge.txt`
         which will merge B0FIH3 with a slightly updates version of the protein
         creating new peptides.
         Than the database will be verified.
+
+        Returns
+        -------
+        List of proteins containing the proteins from the inital digest with the applied merges.
         """
-        # Digest the database
-        work_dir = pathlib.Path(f"./tmp/{self.id()}_create")
-        test_files_path = pathlib.Path('./test_files')
-        protein_data_test_file_path = test_files_path.joinpath('proteins.txt')
-        self.prepare_workdir(work_dir, test_files_path, protein_data_test_file_path)
-
-        maintenance = DatabaseMaintenance(
-            os.getenv("TEST_MACPEPDB_URL"),
-            work_dir,
-            4,
-            5,
-            'Trypsin',
-            TRYPSIN_MAX_MISSED_CLEAVAGES,
-            TRYPSIN_MIN_PEPTIDE_LENGTH,
-            TRYPSIN_MAX_PEPTIDE_LENGTH
-        )
-
-        maintenance.start()
-
-        # Read proteins from file
-        file_proteins = []
-        with protein_data_test_file_path.open("r") as protein_data_test_file:
-            protein_file_reader = UniprotTextReader(protein_data_test_file)
-            file_proteins = [file_protein for file_protein in protein_file_reader]
-
         # Run digest with updated B0FIH3.
         # The old peptide is merged with the new one
         # which has the accesseion 'NEWACC'
@@ -114,7 +108,7 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase, DatabaseMaintenanceW
 
         maintenance.start()
 
-        old_file_proteins_len = len(file_proteins)
+        old_file_proteins_len = len(initial_digest_file_proteins)
 
         merged_file_proteins = []
         with protein_data_test_file_path.open("r") as protein_data_test_file:
@@ -127,23 +121,26 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase, DatabaseMaintenanceW
         for merged_file_protein in merged_file_proteins:
             for secondary_accession in merged_file_protein.secondary_accessions:
                 file_proteins_to_remove = []
-                for file_protein in file_proteins:
+                for file_protein in initial_digest_file_proteins:
                     if secondary_accession == file_protein.accession or secondary_accession in file_protein.secondary_accessions:
                         file_proteins_to_remove.append(file_protein)
                 for file_protein in file_proteins_to_remove:
-                    file_proteins.remove(file_protein)
+                    initial_digest_file_proteins.remove(file_protein)
 
-        self.assertEqual(len(file_proteins), old_file_proteins_len - 1)
+        # One protein should be removed
+        self.assertEqual(len(initial_digest_file_proteins), old_file_proteins_len - 1)
 
         # Than add the merged proteins to the file_proteins
         # and verfy the database again
-        file_proteins = file_proteins + merged_file_proteins
-        self.assertEqual(len(file_proteins), old_file_proteins_len)
+        initial_digest_file_proteins = initial_digest_file_proteins + merged_file_proteins
+        self.assertEqual(len(initial_digest_file_proteins), old_file_proteins_len)
 
         EnzymeClass = DigestEnzyme.get_enzyme_by_name("Trypsin")
         trypsin = EnzymeClass(TRYPSIN_MAX_MISSED_CLEAVAGES, TRYPSIN_MIN_PEPTIDE_LENGTH, TRYPSIN_MAX_PEPTIDE_LENGTH)
 
-        self.verify_database_integrity(file_proteins, trypsin)
+        self.verify_database_integrity(initial_digest_file_proteins, trypsin)
+
+        return initial_digest_file_proteins
 
 
     def verify_database_integrity(self, proteins_from_file: List[Protein], enzym: DigestEnzyme):
