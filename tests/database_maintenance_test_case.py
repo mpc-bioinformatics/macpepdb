@@ -33,7 +33,8 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase, DatabaseMaintenanceW
            And verify again.
         """
         initial_digest_file_proteins = self.initial_digestion()
-        self.merge_digestion(initial_digest_file_proteins)
+        initial_and_merged_digest_file_proteins = self.merge_digestion(initial_digest_file_proteins)
+        self.update_digestion(initial_and_merged_digest_file_proteins)
         
 
     def initial_digestion(self) -> List[Protein]:
@@ -141,6 +142,76 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase, DatabaseMaintenanceW
         self.verify_database_integrity(initial_digest_file_proteins, trypsin)
 
         return initial_digest_file_proteins
+
+    def update_digestion(self, initial_and_merged_digest_file_proteins: List[Protein]) -> List[Protein]:
+        """
+        Digests `test_files/NEWACC_updated.txt`
+        which will add  B0FIJ1 to NEWACCs secondary accession (which ultimatly deletes and merges B0FIJ1 into NEWACC) 
+        and also updating NEWACCs sequence without creating new peptides.
+        Than the database will be verified.
+
+        Returns
+        -------
+        List of proteins containing the proteins from the merge with the applied updates.
+        """
+        # Run digest with updated B0FIH3.
+        # The old peptide is merged with the new one
+        # which has the accesseion 'NEWACC'
+        work_dir = pathlib.Path(f"./tmp/{self.id()}_merge")
+        test_files_path = pathlib.Path('./test_files')
+        protein_data_test_file_path = test_files_path.joinpath('NEWACC_updated.txt')
+        self.prepare_workdir(work_dir, test_files_path, protein_data_test_file_path)
+
+        maintenance = DatabaseMaintenance(
+            os.getenv("TEST_MACPEPDB_URL"),
+            work_dir,
+            1,
+            5,
+            'Trypsin',
+            TRYPSIN_MAX_MISSED_CLEAVAGES,
+            TRYPSIN_MIN_PEPTIDE_LENGTH,
+            TRYPSIN_MAX_PEPTIDE_LENGTH
+        )
+
+        maintenance.start()
+
+        old_file_proteins_len = len(initial_and_merged_digest_file_proteins)
+
+        merged_file_proteins = []
+        with protein_data_test_file_path.open("r") as protein_data_test_file:
+            protein_file_reader = UniprotTextReader(protein_data_test_file)
+            merged_file_proteins = [merged_file_protein for merged_file_protein in protein_file_reader]
+
+        self.assertEqual(len(merged_file_proteins), 1)
+        newacc_upgraded_protein = merged_file_proteins.pop()
+
+        # NEWACC will be updated, so replace it.
+        newacc_idx = -1
+        for file_protein_index, file_protein in enumerate(initial_and_merged_digest_file_proteins):
+            if file_protein.accession == newacc_upgraded_protein.accession:
+                newacc_idx = file_protein_index
+                break
+
+        initial_and_merged_digest_file_proteins[newacc_idx] = newacc_upgraded_protein
+
+        # Remove B0FIJ1 from file proteins
+        file_proteins_to_remove = []
+        for file_protein in initial_and_merged_digest_file_proteins:
+            if file_protein.accession in newacc_upgraded_protein.secondary_accessions:
+                file_proteins_to_remove.append(file_protein)
+
+        for file_protein in file_proteins_to_remove:
+            initial_and_merged_digest_file_proteins.remove(file_protein)
+
+        # Length should be decreased by one
+        self.assertEqual(len(initial_and_merged_digest_file_proteins), old_file_proteins_len - 1)
+
+        EnzymeClass = DigestEnzyme.get_enzyme_by_name("Trypsin")
+        trypsin = EnzymeClass(TRYPSIN_MAX_MISSED_CLEAVAGES, TRYPSIN_MIN_PEPTIDE_LENGTH, TRYPSIN_MAX_PEPTIDE_LENGTH)
+
+        self.verify_database_integrity(initial_and_merged_digest_file_proteins, trypsin)
+
+        return initial_and_merged_digest_file_proteins
 
 
     def verify_database_integrity(self, proteins_from_file: List[Protein], enzym: DigestEnzyme):
