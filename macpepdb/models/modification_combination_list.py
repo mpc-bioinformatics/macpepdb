@@ -110,6 +110,7 @@ class ModificationCombination:
                     amino_acid_occurences[counter.modification.amino_acid.one_letter_code][0] += counter.count
                 else:
                     amino_acid_occurences[counter.modification.amino_acid.one_letter_code] = [counter.count, counter.modification.is_static]
+                delta_sum += counter.count * counter.modification.delta
             elif counter.modification.is_terminus_modification and counter.modification.is_variable:
                 if counter.modification.is_position_n_terminus:
                     n_terminus_modification = [counter.modification, counter.count > 0]
