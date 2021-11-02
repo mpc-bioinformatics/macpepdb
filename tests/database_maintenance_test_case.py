@@ -4,6 +4,7 @@ import os
 from typing import List
 
 # internal imports
+from macpepdb.database.query_helpers.where_condition import WhereCondition
 from macpepdb.models.maintenance_information import MaintenanceInformation
 from macpepdb.models.peptide import Peptide
 from macpepdb.models.peptide_metadata import PeptideMetadata
@@ -245,7 +246,7 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase, DatabaseMaintenanceW
             for file_protein in proteins_from_file:
                 db_protein = Protein.select(
                     database_cursor,
-                    (
+                    WhereCondition(
                         "accession = %s",
                         [file_protein.accession]
                     ),
@@ -293,7 +294,7 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase, DatabaseMaintenanceW
             for file_peptide in peptides_from_file_proteins:
                 db_peptide = Peptide.select(
                     database_cursor,
-                    (
+                    WhereCondition(
                         "partition = %s AND mass = %s AND sequence = %s",
                         [file_peptide.partition, file_peptide.mass, file_peptide.sequence]
                     )

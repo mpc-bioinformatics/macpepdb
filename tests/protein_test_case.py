@@ -1,4 +1,5 @@
 # internal imports
+from macpepdb.database.query_helpers.where_condition import WhereCondition
 from macpepdb.models.peptide import Peptide
 from macpepdb.models.protein import Protein
 from macpepdb.models.protein_peptide_association import ProteinPeptideAssociation
@@ -48,7 +49,10 @@ class ProteinTestCase(AbstractDatabaseTestCase):
                 # Get Leptin by accession
                 database_leptin = Protein.select(
                     database_cursor,
-                    ("accession = %s", [leptin.accession])
+                    WhereCondition(
+                        "accession = %s", 
+                        [leptin.accession]
+                    )
                 )
                 database_leptin_petides = database_leptin.peptides(database_cursor)
                 self.assertEqual(database_leptin.accession, leptin.accession)
@@ -60,7 +64,10 @@ class ProteinTestCase(AbstractDatabaseTestCase):
             with self.database_connection.cursor() as database_cursor:
                 database_leptin = Protein.select(
                     database_cursor,
-                    ("accession = %s", [leptin.accession])
+                    WhereCondition(
+                        "accession = %s",
+                        [leptin.accession]
+                    )
                 )
                 database_leptin.update(database_cursor, updated_leptin, trypsin)
                 self.database_connection.commit()
@@ -68,7 +75,13 @@ class ProteinTestCase(AbstractDatabaseTestCase):
                 protein_count = database_cursor.fetchone()[0]
                 # There should still be only one protein (updated letpin)
                 self.assertEqual(protein_count, 1)
-                updated_database_leptin = Protein.select(database_cursor, ("accession = %s", [updated_leptin.accession]))
+                updated_database_leptin = Protein.select(
+                    database_cursor, 
+                    WhereCondition(
+                        "accession = %s",
+                        [updated_leptin.accession]
+                    )
+                )
                 # Check the updated attributes
                 self.assertEqual(updated_database_leptin.accession, updated_leptin.accession)
                 self.assertEqual(updated_database_leptin.secondary_accessions, updated_leptin.secondary_accessions)
@@ -87,8 +100,11 @@ class ProteinTestCase(AbstractDatabaseTestCase):
         with self.database_connection:
             with self.database_connection.cursor() as database_cursor:
                 database_leptin = Protein.select(
-                    database_cursor, 
-                    ("accession = %s", [updated_leptin.accession])
+                    database_cursor,
+                    WhereCondition(
+                        "accession = %s",
+                        [updated_leptin.accession]
+                    )
                 )
                 Protein.delete(database_cursor, database_leptin)
                 self.database_connection.commit()

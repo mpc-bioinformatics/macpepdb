@@ -2,7 +2,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from math import floor
-from typing import Tuple, List, Any
+from typing import List
 
 # inner imports
 from macpepdb.proteomics.modification_collection import ModificationCollection
@@ -10,6 +10,7 @@ from macpepdb.proteomics.mass.precursor_range import PrecursorRange
 from macpepdb.models.peptide import Peptide
 from macpepdb.database.query_helpers.column_condition import ColumnCondition
 from macpepdb.database.query_helpers.database_index_where_clause_builder import DatabaseIndexWhereClauseBuilder
+from macpepdb.database.query_helpers.where_condition import WhereCondition
 from macpepdb.database.indexes.post_translational_modification_search_index import PostTranslationalModificationSearchIndex as PTMSearchIndex
 from macpepdb.proteomics.modification import Modification
 
@@ -183,7 +184,7 @@ class ModificationCombination:
             )
         )
 
-    def to_sql(self) -> Tuple[str, List[Any]]:
+    def to_where_condition(self) -> WhereCondition:
         """
         Creats a SQL-query WHERE-clause for the PTM/MASS-combination.
 
@@ -194,7 +195,7 @@ class ModificationCombination:
         where_clause_builder = DatabaseIndexWhereClauseBuilder(PTMSearchIndex)
         for column_condition in self.__column_conditions:
             where_clause_builder.set_condition(column_condition)
-        return where_clause_builder.to_sql()
+        return where_clause_builder.to_where_condition()
 
 class ModificationCombinationList:
     """
@@ -366,24 +367,28 @@ class ModificationCombinationList:
     def __len__(self):
         return len(self.__modification_combinations)
 
-    def to_sql(self) -> tuple:
+    def to_where_condition(self) -> WhereCondition:
         """
-        Returns a tuple, containing the WHERE-part of a SQL-query and the values for the query,
-        which can be used to fetch then peptides for the mass/modification-combination.
-        This values cann than be used with psycopg execute-method.
+        Returns a where condition, containing the WHERE-part of a SQL-query and the values for the query,
+        which can be used to fetch peptides for the mass/modification-combination.
 
         Returns
         -------
-        Tuple where the first element is the WHERE-part, e.g. `partition = %s AND mass = %s ...`, and the second element is a list of values which replaces the placeholders.
+        WhereCondition
         """
         if len(self):
-            query_string = []
-            values = []
+            finished_where_condition = WhereCondition("", [])
             for combination in self:
-                combination_query_string, combination_values = combination.to_sql()
-                query_string.append(combination_query_string)
-                values += combination_values
-            return (" OR ".join(query_string), values)
+                finished_where_condition.concatenate(combination.to_where_condition(), "OR")
+            return finished_where_condition
         else:
             precursor_range = PrecursorRange(self.__precursor, self.__lower_precursor_tolerance_ppm, self.__upper_precursor_tolerance_ppm)
-            return (f"partition BETWEEN %s AND %s AND mass BETWEEN %s AND %s", [Peptide.get_partition(precursor_range.lower_limit), Peptide.get_partition(precursor_range.upper_limit), precursor_range.lower_limit, precursor_range.upper_limit])
+            return WhereCondition(
+                "partition BETWEEN %s AND %s AND mass BETWEEN %s AND %s",
+                [
+                    Peptide.get_partition(precursor_range.lower_limit),
+                    Peptide.get_partition(precursor_range.upper_limit),
+                    precursor_range.lower_limit,
+                    precursor_range.upper_limit
+                ]
+            )

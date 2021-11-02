@@ -5,6 +5,7 @@ from collections import Counter
 from psycopg2.extras import execute_values
 
 # internal imports
+from macpepdb.database.query_helpers.where_condition import WhereCondition
 from macpepdb.proteomics.neutral_loss import H2O
 from macpepdb.proteomics.amino_acid import AminoAcid
 
@@ -536,7 +537,7 @@ class PeptideBase:
 
 
     @classmethod
-    def select(cls, database_cursor, select_conditions: tuple = ("", []), fetchall: bool = False):
+    def select(cls, database_cursor, where_condition: WhereCondition = None, fetchall: bool = False):
         """
         Selects peptides.
 
@@ -544,8 +545,8 @@ class PeptideBase:
         ----------
         database_cursor
             Database cursor
-        select_conditions : tuple
-            A tupel with the where statement (without WHERE) and a list of parameters, e.g. ("accession = %s AND taxonomy_id = %s",["Q257X2", 6909])
+        select_conditions : WhereCondition
+            Where condition (optional)
         fetchall : bool
             Indicates if multiple rows should be fetched
         
@@ -555,10 +556,12 @@ class PeptideBase:
         Petide or list of peptides
         """
         select_query = f"SELECT sequence, number_of_missed_cleavages FROM {cls.TABLE_NAME}"
-        if len(select_conditions) == 2 and len(select_conditions[0]):
-            select_query += f" WHERE {select_conditions[0]}"
+        select_values = ()
+        if where_condition is not None:
+            select_query += f" WHERE {where_condition.condition}"
+            select_values = where_condition.values
         select_query += ";"
-        database_cursor.execute(select_query, select_conditions[1])
+        database_cursor.execute(select_query, select_values)
         
         if fetchall:
             return [cls(row[0], row[1]) for row in database_cursor.fetchall()]

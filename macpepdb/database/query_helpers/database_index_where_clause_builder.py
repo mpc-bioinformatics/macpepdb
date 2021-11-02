@@ -1,11 +1,12 @@
 # std imports
 import itertools
 from dataclasses import dataclass
-from typing import List, Any, Tuple, Type
+from typing import List, Type
 
 # internal imports
 from macpepdb.database.indexes.abstract_index import AbstractIndex
 from macpepdb.database.query_helpers.column_condition import ColumnCondition
+from macpepdb.database.query_helpers.where_condition import WhereCondition
 
 @dataclass
 class DatabaseIndexWhereClauseBuilder:
@@ -50,20 +51,21 @@ class DatabaseIndexWhereClauseBuilder:
         except ValueError:
             return False
 
-    def to_sql(self) -> Tuple[str, List[Any]]:
+    def to_where_condition(self) -> WhereCondition:
         """
-        Returns a tupe where first element is the WHERE-part (without 'WHERE') of a SQL query which utilizes the PTM index and the second element 
-        are the related values for the WHERE-part.
+        Returns WhereCondition which can be used create a SQL-query which utilizes the PTM index.
 
         Returns
         -------
-        E.g. ("partition = %s AND mass = %s ...", [value_partition, value_mass, ...])
+        WhereCondition
         """
         if self.__highest_used_column_condition_idx < 0:
             self.__highest_used_column_condition_idx = len(self.__column_conditions) - 1
-        return (
+        return WhereCondition (
+            # Concatenate all column conditions with `AND`
             " AND ".join(
                 [column_condition.get_sql_definition() for column_condition_index, column_condition in enumerate(self.__column_conditions) if column_condition_index <= self.__highest_used_column_condition_idx]
             ),
-            itertools.chain(*[column_condition.values for column_condition_index, column_condition in enumerate(self.__column_conditions) if column_condition_index <= self.__highest_used_column_condition_idx])
+            # Concatenate column conditions
+            list(itertools.chain(*[column_condition.values for column_condition_index, column_condition in enumerate(self.__column_conditions) if column_condition_index <= self.__highest_used_column_condition_idx]))
         )

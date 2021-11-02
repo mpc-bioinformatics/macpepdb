@@ -2,7 +2,9 @@
 from __future__ import annotations
 from typing import Optional
 
+
 # internal imports
+from macpepdb.database.query_helpers.where_condition import WhereCondition
 from macpepdb.models.peptide_base import PeptideBase
 from macpepdb.models.protein_peptide_association import ProteinPeptideAssociation
 from macpepdb.models import protein
@@ -41,14 +43,14 @@ class Peptide(PeptideBase):
         return self.__metadata
 
     @classmethod
-    def select(cls, database_cursor, select_conditions: tuple = ("", []), fetchall: bool = False, include_metadata: bool = False):
+    def select(cls, database_cursor, where_condition: WhereCondition = None, fetchall: bool = False, include_metadata: bool = False):
         """
         Selects peptides.
         
         database_cursor
             Active database cursor
-        select_conditions : tuple
-            A tupel with the where statement (without WHERE) and a list of parameters, e.g. ("accession = %s AND taxonomy_id = %s",["Q257X2", 6909])
+        where_condition : WhereCondition
+            Where condition (optional)
         fetchall : bool
             Indicates if multiple rows should be fetched
         include_metadata : bool
@@ -60,16 +62,18 @@ class Peptide(PeptideBase):
         Petide or list of peptides
         """
         if not include_metadata:
-            return super().select(database_cursor, select_conditions, fetchall)
+            return super().select(database_cursor, where_condition, fetchall)
         else:
             select_query = (
                 "SELECT peps.partition, peps.mass, peps.sequence, peps.number_of_missed_cleavages, meta.is_swiss_prot, meta.is_trembl, meta.taxonomy_ids, meta.unique_taxonomy_ids, meta.proteome_ids FROM {cls.TABLE_NAME} "
                 f"INNER JOIN {metadata_module.PeptideMetadata.TABLE_NAME} as meta ON meta.partition = peps.partition AND meta.mass = peps.mass AND meta.sequence = peps.sequence"
             )
-            if len(select_conditions) == 2 and len(select_conditions[0]):
-                select_query += f" WHERE {select_conditions[0]}"
+            select_values = ()
+            if where_condition is not None:
+                select_query += f" WHERE {where_condition.condition}"
+                select_values = where_condition.values
             select_query += ";"
-            database_cursor.execute(select_query, select_conditions[1])
+            database_cursor.execute(select_query, select_values)
             if fetchall:
                 return [cls(row[2], row[3], metadata_module.PeptideMetadata(row[4], row[5], row[6], row[7], row[8])) for row in database_cursor.fetchall()]
             else:

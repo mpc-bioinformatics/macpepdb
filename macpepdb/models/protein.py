@@ -5,6 +5,7 @@ from typing import List, Tuple
 
 # external imports
 from psycopg2.extras import execute_values
+from macpepdb.database.query_helpers.where_condition import WhereCondition
 
 
 # internal imports
@@ -175,7 +176,7 @@ class Protein:
         ]
 
     @staticmethod
-    def select(database_cursor, select_conditions: tuple = ("", []), fetchall: bool = False):
+    def select(database_cursor, where_condition: WhereCondition = None, fetchall: bool = False):
         """
         Selects one or many proteins.
 
@@ -183,8 +184,8 @@ class Protein:
         ----------
         database_cursor
             Active database cursor
-        select_conditions : Tuple[str, List[Any]]
-            A tupel with the where statement (without WHERE) and a list of parameters, e.g. ("accession = %s AND taxonomy_id = %s",["Q257X2", 6909])
+        where_condition : WhereCondition
+            Where condition
         fetchall : bool
             Indicates if multiple rows should be fetched
 
@@ -193,10 +194,12 @@ class Protein:
         Protein or list of proteins
         """
         select_query = f"SELECT accession, secondary_accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed, updated_at FROM {Protein.TABLE_NAME}"
-        if len(select_conditions) == 2 and len(select_conditions[0]):
-            select_query += f" WHERE {select_conditions[0]}"
+        select_values = ()
+        if where_condition is not None:
+            select_query += f" WHERE {where_condition.condition}"
+            select_values = where_condition.values
         select_query += ";"
-        database_cursor.execute(select_query, select_conditions[1])
+        database_cursor.execute(select_query, select_values)
         if fetchall:
             return [Protein.from_sql_row(row) for row in database_cursor.fetchall()]
         else:

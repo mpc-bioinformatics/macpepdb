@@ -9,6 +9,7 @@ from queue import Empty as EmptyQueueError
 import psycopg2
 
 # internal imports
+from macpepdb.database.query_helpers.where_condition import WhereCondition
 from macpepdb.models.protein import Protein
 from macpepdb.proteomics.enzymes.digest_enzyme import DigestEnzyme
 from macpepdb.utilities.generic_process import GenericProcess
@@ -83,7 +84,14 @@ class ProteinDigestionProcess(GenericProcess):
                                 skip_protein_creation = False
                                 # Check if the Protein exists by its accession or secondary accessions
                                 accessions = [new_protein.accession] + new_protein.secondary_accessions
-                                existing_proteins = Protein.select(database_cursor, ("accession = ANY(%s)", [accessions]), fetchall=True)
+                                existing_proteins = Protein.select(
+                                    database_cursor,
+                                    WhereCondition(
+                                        "accession = ANY(%s)",
+                                        [accessions]
+                                    ),
+                                    fetchall=True
+                                )
                                 if len(existing_proteins) > 0:
                                     # If more than one protein were found and the first protein is the same protein as the current one from the queue ...
                                     if existing_proteins[0].accession == new_protein.accession:
