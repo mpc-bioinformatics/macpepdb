@@ -82,7 +82,7 @@ PEPTIDES_FOR_MODIFIED_SEARCH = {
 }
 
 class ModifiedPeptideWhereClauseBuilderTestCase(AbstractDatabaseTestCase, DatabaseMaintenanceWorkdir):
-    MASS_TOLERANCE_REGEX = re.compile(r"BETWEEN\W(?P<lower>\d+)\WAND\W(?P<upper>\d+)(\W|$)")
+    MASS_TOLERANCE_REGEX = re.compile(r"mass\WBETWEEN\W(?P<lower>\d+)\WAND\W(?P<upper>\d+)(\W|$)")
 
     def test_without_modifications(self):
         # Add peptides to database
