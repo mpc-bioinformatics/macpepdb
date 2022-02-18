@@ -50,7 +50,7 @@ class ProteinTestCase(AbstractDatabaseTestCase):
                 database_leptin = Protein.select(
                     database_cursor,
                     WhereCondition(
-                        "accession = %s", 
+                        ["accession = %s"], 
                         [leptin.accession]
                     )
                 )
@@ -65,7 +65,7 @@ class ProteinTestCase(AbstractDatabaseTestCase):
                 database_leptin = Protein.select(
                     database_cursor,
                     WhereCondition(
-                        "accession = %s",
+                        ["accession = %s"],
                         [leptin.accession]
                     )
                 )
@@ -78,7 +78,7 @@ class ProteinTestCase(AbstractDatabaseTestCase):
                 updated_database_leptin = Protein.select(
                     database_cursor, 
                     WhereCondition(
-                        "accession = %s",
+                        ["accession = %s"],
                         [updated_leptin.accession]
                     )
                 )
@@ -102,7 +102,7 @@ class ProteinTestCase(AbstractDatabaseTestCase):
                 database_leptin = Protein.select(
                     database_cursor,
                     WhereCondition(
-                        "accession = %s",
+                        ["accession = %s"],
                         [updated_leptin.accession]
                     )
                 )

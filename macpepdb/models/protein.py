@@ -196,7 +196,7 @@ class Protein:
         select_query = f"SELECT accession, secondary_accessions, entry_name, name, sequence, taxonomy_id, proteome_id, is_reviewed, updated_at FROM {Protein.TABLE_NAME}"
         select_values = ()
         if where_condition is not None:
-            select_query += f" WHERE {where_condition.condition}"
+            select_query += f" WHERE {where_condition.get_condition_str()}"
             select_values = where_condition.values
         select_query += ";"
         database_cursor.execute(select_query, select_values)

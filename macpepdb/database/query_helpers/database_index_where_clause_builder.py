@@ -61,11 +61,11 @@ class DatabaseIndexWhereClauseBuilder:
         """
         if self.__highest_used_column_condition_idx < 0:
             self.__highest_used_column_condition_idx = len(self.__column_conditions) - 1
+        conditions = [column_condition.get_sql_definition() for column_condition_index, column_condition in enumerate(self.__column_conditions) if column_condition_index <= self.__highest_used_column_condition_idx]        
+        ands = ["AND"] * (len(conditions) - 1) # Create conditions -1 ANDs
         return WhereCondition (
             # Concatenate all column conditions with `AND`
-            " AND ".join(
-                [column_condition.get_sql_definition() for column_condition_index, column_condition in enumerate(self.__column_conditions) if column_condition_index <= self.__highest_used_column_condition_idx]
-            ),
+            list(filter(None, itertools.chain(*itertools.zip_longest(conditions,ands)))),
             # Concatenate column conditions
             list(itertools.chain(*[column_condition.values for column_condition_index, column_condition in enumerate(self.__column_conditions) if column_condition_index <= self.__highest_used_column_condition_idx]))
         )

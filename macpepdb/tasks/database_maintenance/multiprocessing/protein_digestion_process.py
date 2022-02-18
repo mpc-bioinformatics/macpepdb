@@ -87,7 +87,7 @@ class ProteinDigestionProcess(GenericProcess):
                                 existing_proteins = Protein.select(
                                     database_cursor,
                                     WhereCondition(
-                                        "accession = ANY(%s)",
+                                        ["accession = ANY(%s)"],
                                         [accessions]
                                     ),
                                     fetchall=True

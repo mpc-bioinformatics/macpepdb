@@ -100,7 +100,7 @@ class ModifiedPeptideWhereClauseBuilderTestCase(AbstractDatabaseTestCase, Databa
                 modification_combination_list =  ModificationCombinationList(modification_collection, precursor, PRECURSOR_TOLERANCE, PRECURSOR_TOLERANCE, VARIABLE_MODIFICATION_MAXIMUM)
 
                 where_condition = modification_combination_list.to_where_condition()
-                select_conditions_string = database_cursor.mogrify(where_condition.condition, where_condition.values).decode('utf-8')
+                select_conditions_string = database_cursor.mogrify(where_condition.get_condition_str(), where_condition.values).decode('utf-8')
                 matches = re.findall(self.__class__.MASS_TOLERANCE_REGEX, select_conditions_string)
                 # Without modifications there is only one between-condition.
                 self.assertEqual(len(matches), 1)

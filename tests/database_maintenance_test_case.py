@@ -247,7 +247,7 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase, DatabaseMaintenanceW
                 db_protein = Protein.select(
                     database_cursor,
                     WhereCondition(
-                        "accession = %s",
+                        ["accession = %s"],
                         [file_protein.accession]
                     ),
                 )
@@ -295,7 +295,7 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase, DatabaseMaintenanceW
                 db_peptide = Peptide.select(
                     database_cursor,
                     WhereCondition(
-                        "partition = %s AND mass = %s AND sequence = %s",
+                        ["partition = %s", "AND", "mass = %s", "AND", "sequence = %s"],
                         [file_peptide.partition, file_peptide.mass, file_peptide.sequence]
                     )
                 )

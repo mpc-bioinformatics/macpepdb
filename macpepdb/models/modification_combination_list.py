@@ -377,14 +377,14 @@ class ModificationCombinationList:
         WhereCondition
         """
         if len(self):
-            finished_where_condition = WhereCondition("", [])
+            finished_where_condition = WhereCondition([], [])
             for combination in self:
                 finished_where_condition.concatenate(combination.to_where_condition(), "OR")
             return finished_where_condition
         else:
             precursor_range = PrecursorRange(self.__precursor, self.__lower_precursor_tolerance_ppm, self.__upper_precursor_tolerance_ppm)
             return WhereCondition(
-                "partition BETWEEN %s AND %s AND mass BETWEEN %s AND %s",
+                ["partition BETWEEN %s AND %s", "AND", "mass BETWEEN %s AND %s"],
                 [
                     Peptide.get_partition(precursor_range.lower_limit),
                     Peptide.get_partition(precursor_range.upper_limit),

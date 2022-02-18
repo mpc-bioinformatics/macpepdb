@@ -1,7 +1,7 @@
 # std imports
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import List, Any
+from typing import List, Any, Optional
 
 @dataclass
 class WhereCondition:
@@ -11,8 +11,10 @@ class WhereCondition:
 
     Paramters
     ---------
-    condition : str
-        SQL-definition (without `WHERE`-keyword) with placeholders for the values, e.g. mass BETWEEN %s AND %s AND m_count >= %s
+    condition : List[str]
+        SQL-condition (without `WHERE`-keyword) with placeholders for the values.
+        Each element should be a column condition or a logical operator between two columns conditions,
+        e.g. ["mass BETWEEN %s AND %s", "AND", "m_count >= %s"]
     values : List[ANY]
         List of values, used in the condition
 
@@ -21,19 +23,24 @@ class WhereCondition:
     ValueError
         If number of placeholder and values are different.
     """
-    __slots__ = ["__condition", "__values"]
 
-    __condition: str
+    __slots__ = [
+        "__condition",
+        "__values"
+    ]
+
+    __condition: List[str]
     __values: List[Any]
 
-    def __init__(self, condition: str, condtition_values: List[Any]):
-        if condition.count("%s") != len(condtition_values):
-            raise ValueError(f"condition has {condition.count('%s')} placeholders but {len(condtition_values)} values were given")
+    def __init__(self, condition: List[str], condtition_values: List[Any]):
+        placeholder_count = sum([part.count("%s") for part in condition])
+        if placeholder_count != len(condtition_values):
+            raise ValueError(f"condition has {placeholder_count} placeholders but {len(condtition_values)} values were given")
         self.__condition = condition
         self.__values = condtition_values
 
     @property
-    def condition(self) -> str:
+    def condition(self) -> List[str]:
         """
         Returns
         -------
@@ -51,6 +58,30 @@ class WhereCondition:
         """
         return self.__values
 
+    def add(self, condition: str, value: Any):
+        self.__condition.append(condition)
+        self.__values.append(value)
+
+    def get_condition_str(self, table: Optional[str] = None) -> str:
+        """
+        Returns the condition as string.
+
+        Parameters
+        ----------
+        table : Optional[str], optional
+            Table name which is added to the column names, by default None.
+            E.g. if conditions is `["mass BETWEEN %s AND %s", "AND", "m_count >= %s"]` and table is `foo`
+            output become: `foo.mass BETWEEN %s AND %s AND foo.m_count >= %s`
+
+        Returns
+        -------
+        Condition string for SQL-query
+        """
+        if table is None:
+            return " ".join(self.__condition)
+        else:
+            return " ".join([f"{table}.{part}" if part_idx % 2 == 0 and part[0].isalnum() else part for part_idx, part in enumerate(self.__condition)])
+
     def concatenate(self, other_where_condition: WhereCondition, logical_sql_operator: str):
         """
         Concatenates another WhereCondition with self.
@@ -65,7 +96,7 @@ class WhereCondition:
         """
 
         if len(self.__condition) > 0:
-            self.__condition = f"{self.__condition} {logical_sql_operator} {other_where_condition.condition}"
+            self.__condition += [logical_sql_operator] + other_where_condition.condition
         else:
             self.__condition = other_where_condition.condition
         self.__values += other_where_condition.values
