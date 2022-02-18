@@ -719,3 +719,26 @@ class PeptideBase:
             if mass < cls.PARTITONS[idx]:
                 return idx
         return -1
+
+    @classmethod
+    def count(cls, database_cursor, where_condition: Optional[WhereCondition]) -> int:
+        """
+        Returns the peptide count
+
+        Parameters
+        ----------
+        where_condition : WhereCondition
+            Where condition [optional]
+
+        Returns
+        -------
+        Number of peptides
+        """
+        count_query = f"SELECT count(*) FROM {cls.TABLE_NAME}"
+        query_values = ()
+        if where_condition is not None:
+            count_query += f" WHERE {where_condition.get_condition_str()}"
+            query_values = where_condition.values
+        count_query += ";"
+        database_cursor.execute(count_query, query_values)
+        return database_cursor.fetchone()[0]
