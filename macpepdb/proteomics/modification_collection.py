@@ -1,5 +1,7 @@
 # std imports
+from __future__ import annotations
 import pathlib
+from typing import ClassVar, List
 
 # internal imports
 from macpepdb.proteomics.modification import Modification
@@ -35,19 +37,19 @@ class ModificationCollection:
     """
 
     
-    MAX_VARIABLE_MODIFICATIONS = 9
+    MAX_VARIABLE_MODIFICATIONS: ClassVar[int] = 9
     """Maximum number of variable modifications
     """
 
-    MAX_STATIC_N_TERMINUS_MODIFICATIONS = 1
+    MAX_STATIC_N_TERMINUS_MODIFICATIONS: ClassVar[int] = 1
     """ Maximum of static N-terminus modifications
     """
 
-    MAX_STATIC_C_TERMINUS_MODIFICATIONS = 1
+    MAX_STATIC_C_TERMINUS_MODIFICATIONS: ClassVar[int] = 1
     """ Maximum of static C-terminus modifications
     """
 
-    def __init__(self, modifications: list):
+    def __init__(self, modifications: List[Modification]):
         variable_modification_counter = 0
         static_n_terminus_counter = 0
         static_c_terminus_counter = 0
@@ -93,11 +95,11 @@ class ModificationCollection:
         if static_c_terminus_counter > self.__class__.MAX_STATIC_C_TERMINUS_MODIFICATIONS:
             raise ModificationLimitError("Only {} static c-terminus modification are allowed.".format(self.__class__.MAX_STATIC_C_TERMINUS_MODIFICATIONS))
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.__modifications)
 
     @property
-    def all(self):
+    def all(self) -> List[Modification]:
         """
         Returns
         -------
@@ -106,7 +108,7 @@ class ModificationCollection:
         return self.__modifications
 
     @property
-    def variable(self):
+    def variable(self) -> List[Modification]:
         """
         Returns
         -------
@@ -115,7 +117,7 @@ class ModificationCollection:
         return self.__variable_modifications
 
     @property
-    def static(self):
+    def static(self) -> List[Modification]:
         """
         Returns
         -------
@@ -124,7 +126,7 @@ class ModificationCollection:
         return self.__static_modifications
 
     @property
-    def static_n_terminus_modifications(self):
+    def static_n_terminus_modifications(self) -> Modification:
         """
         Returns
         -------
@@ -133,7 +135,7 @@ class ModificationCollection:
         return self.__static_n_terminus_modifications
 
     @property
-    def static_c_terminus_modifications(self):
+    def static_c_terminus_modifications(self) -> Modification:
         """
         Returns
         -------
@@ -142,7 +144,7 @@ class ModificationCollection:
         return self.__static_c_terminus_modifications
 
     @classmethod
-    def read_from_csv_file(cls, csv_file_path: pathlib.Path):
+    def read_from_csv_file(cls, csv_file_path: pathlib.Path) -> ModificationCollection:
         """
         Returns a modification collection from a csv file.
 

@@ -1,7 +1,9 @@
 # std imports
-import pathlib
-import csv
+from __future__ import annotations
 from enum import IntEnum, unique
+import csv
+import pathlib
+from typing import List, ClassVar
 
 # internal imports
 from macpepdb.proteomics.mass.convert import to_int as mass_to_int, to_float as mass_to_float
@@ -16,11 +18,11 @@ class ModificationPosition(IntEnum):
     N_TERMINUS = 2
     C_TERMINUS = 3
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name.lower() # pylint: disable=no-member
 
     @classmethod
-    def from_string(cls, position: str):
+    def from_string(cls, position: str) -> ModificationPosition:
         """
         Returns the position
 
@@ -56,7 +58,7 @@ class Modification:
     """
 
     # String to is static map
-    IS_STATIC_STRING_LOOKUP = {
+    IS_STATIC_STRING_LOOKUP: ClassVar[dict] = {
         "static": True,
         "variable": False
     }
@@ -64,21 +66,21 @@ class Modification:
     """
 
     # Is static to string map
-    IS_STATIC_BOOL_LOOKUP = {
+    IS_STATIC_BOOL_LOOKUP: ClassVar[dict] = {
         True: "static",
         False: "variable"
     }
     """ Lookup is static status to string
     """
 
-    PEFF_KEY_UNIMOD = "ModResUnimod"
+    PEFF_KEY_UNIMOD: ClassVar[str] = "ModResUnimod"
     """PEFF key for Unimod
     """
-    PEFF_KEY_PSI = "ModResPsi"
+    PEFF_KEY_PSI: ClassVar[str] = "ModResPsi"
     """Peff key fopr PSI
     """
 
-    PEFF_KEY_OTHER = "ModRes"
+    PEFF_KEY_OTHER: ClassVar[str] = "ModRes"
     """PEFF key for others
     """
 
@@ -91,7 +93,7 @@ class Modification:
         self.__position = position
 
     @property
-    def accession(self):
+    def accession(self) -> str:
         """
         Returns
         -------
@@ -100,7 +102,7 @@ class Modification:
         return self.__accession
 
     @property
-    def name(self):
+    def name(self) -> str:
         """
         Returns
         -------
@@ -109,7 +111,7 @@ class Modification:
         return self.__name
 
     @property
-    def amino_acid(self):
+    def amino_acid(self) -> str:
         """
         Returns
         -------
@@ -118,7 +120,7 @@ class Modification:
         return self.__amino_acid
 
     @property
-    def delta(self):
+    def delta(self) -> int:
         """
         Returns
         -------
@@ -127,7 +129,7 @@ class Modification:
         return self.__delta
 
     @property
-    def is_static(self):
+    def is_static(self) -> bool:
         """
         Returns
         -------
@@ -136,7 +138,7 @@ class Modification:
         return self.__is_static
 
     @property
-    def is_variable(self):
+    def is_variable(self)  -> bool:
         """
         Returns
         -------
@@ -145,7 +147,7 @@ class Modification:
         return not self.__is_static
 
     @property
-    def position(self):
+    def position(self) -> ModificationPosition:
         """
         Returns
         -------
@@ -155,7 +157,7 @@ class Modification:
 
     # Returns the modifications delta mass + the amino acid mono mass
     @property
-    def mono_mass(self):
+    def mono_mass(self) -> int:
         """
         Returns
         -------
@@ -164,7 +166,7 @@ class Modification:
         return self.__amino_acid.mono_mass + self.__delta
 
     @property
-    def peff_key(self):
+    def peff_key(self) -> str:
         """
         Returns
         -------
@@ -178,7 +180,7 @@ class Modification:
             return self.__class__.PEFF_KEY_OTHER
 
     @classmethod
-    def read_from_csv_file(cls, csv_file_path: pathlib.Path):
+    def read_from_csv_file(cls, csv_file_path: pathlib.Path) -> List[Modification]:
         """
         Reads modifications from CSV file.
 
@@ -202,7 +204,7 @@ class Modification:
                 )
         return modifications
 
-    def to_comet_parameter(self):
+    def to_comet_parameter(self) -> str:
         """
         Returns the modifications as comet parameter. If the the modification is static, the result is ready to use.
         If the modification is variable or terminus modification, the resulting string contains a placeholder ('|i') for the variable modification index and another one ('|v') for the variable modification maximum.
@@ -235,7 +237,7 @@ class Modification:
             )
                 
     @property
-    def is_position_anywhere(self):
+    def is_position_anywhere(self) -> bool:
         """
         Returns
         -------
@@ -244,7 +246,7 @@ class Modification:
         return self.__position == ModificationPosition.ANYWHERE
     
     @property
-    def is_position_n_terminus(self):
+    def is_position_n_terminus(self) -> bool:
         """
         Returns
         -------
@@ -253,7 +255,7 @@ class Modification:
         return self.__position == ModificationPosition.N_TERMINUS
 
     @property
-    def is_position_c_terminus(self):
+    def is_position_c_terminus(self) -> bool:
         """
         Returns
         -------
@@ -262,7 +264,7 @@ class Modification:
         return self.__position == ModificationPosition.C_TERMINUS
 
     @property
-    def is_terminus_modification(self):
+    def is_terminus_modification(self) -> bool:
         """
         Returns
         -------
@@ -270,7 +272,7 @@ class Modification:
         """
         return self.is_position_n_terminus or self.is_position_c_terminus
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "accession:  {}\nname:       {}\namino_acid: {}\ndelta:      {}\nstatic?:    {}\nposition:   {}".format(
             self.__accession,
             self.__name,
@@ -281,7 +283,7 @@ class Modification:
         )
 
     @property
-    def is_none_modification(self):
+    def is_none_modification(self) -> bool:
         """
         Depracted: Will be removed in a feature release.
 
@@ -292,7 +294,7 @@ class Modification:
         return False
 
     @classmethod
-    def string_to_is_static(cls, is_static: str):
+    def string_to_is_static(cls, is_static: str) -> bool:
         """
         'Converts' string to boolean
 
@@ -316,7 +318,7 @@ class Modification:
             raise AttributeError("Is static {} is unknown.".format(is_static))
 
     @classmethod
-    def is_static_to_string(cls, is_static: bool):
+    def is_static_to_string(cls, is_static: bool) -> str:
         """
         'Converts' is bool to 'static' or 'variable'
 
@@ -338,14 +340,14 @@ class Modification:
         except KeyError:
             raise AttributeError("Is static is unknown.")
 
-    def is_static_as_string(self):
+    def is_static_as_string(self) -> str:
         """
         See class method `Modification.string_to_is_static()`
         """
         return self.__class__.is_static_to_string(self.__is_static)
 
     @classmethod
-    def from_dict(cls, attributes: dict):
+    def from_dict(cls, attributes: dict) -> Modification:
         """
         Creates modification from dictionary.
 
