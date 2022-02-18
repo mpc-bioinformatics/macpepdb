@@ -1,6 +1,7 @@
 # std imports
 from __future__ import annotations
 import json
+from typing import ClassVar
 
 class MaintenanceInformation:
     """
@@ -16,7 +17,7 @@ class MaintenanceInformation:
 
     DATABASE_STATUS_KEY = 'database_status'
     DIGESTION_PARAMTERS_KEY = 'digestion_parameters'
-
+    COMMENT_KEY: ClassVar[str] = 'comment'
     TABLE_NAME = "maintenance_information"
 
     def __init__(self, key: str, values: dict):
