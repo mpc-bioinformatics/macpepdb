@@ -105,7 +105,7 @@ class ModifiedPeptideWhereClauseBuilderTestCase(AbstractDatabaseTestCase, Databa
                 # Without modifications there is only one between-condition.
                 self.assertEqual(len(matches), 1)
 
-                peptides = Peptide.select(database_cursor, where_condition, True)
+                peptides = Peptide.select(database_cursor, where_condition, fetchall=True)
 
                 # Check if only matching peptides were found
                 self.assertEqual(len(peptides), len(PEPTIDES_FOR_UNMODIFIED_SEARCH['matching']))
@@ -128,7 +128,7 @@ class ModifiedPeptideWhereClauseBuilderTestCase(AbstractDatabaseTestCase, Databa
             with self.database_connection.cursor() as database_cursor:
                 modification_combination_list =  ModificationCombinationList(modification_collection, precursor, PRECURSOR_TOLERANCE, PRECURSOR_TOLERANCE, VARIABLE_MODIFICATION_MAXIMUM)
                 where_condition = modification_combination_list.to_where_condition()
-                peptides = Peptide.select(database_cursor, where_condition, True)
+                peptides = Peptide.select(database_cursor, where_condition, fetchall=True)
 
                 # Check if only matching peptides were found
                 self.assertEqual(len(peptides), len(PEPTIDES_FOR_MODIFIED_SEARCH['matching']))
@@ -186,7 +186,7 @@ class ModifiedPeptideWhereClauseBuilderTestCase(AbstractDatabaseTestCase, Databa
             with self.database_connection.cursor() as database_cursor:
                 modification_combination_list =  ModificationCombinationList(modification_collection, PRECURSOR, PRECURSOR_TOLERANCE, PRECURSOR_TOLERANCE, VARIABLE_MODIFICATION_LIMIT)
                 where_conditions = modification_combination_list.to_where_condition()
-                peptides = Peptide.select(database_cursor, where_conditions, True)
+                peptides = Peptide.select(database_cursor, where_conditions, fetchall=True)
 
                 queried_matching_peptide_sequences = set()
                 for peptide in peptides:

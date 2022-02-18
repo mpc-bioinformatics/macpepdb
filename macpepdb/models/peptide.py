@@ -1,6 +1,6 @@
 # std imports
 from __future__ import annotations
-from typing import Optional
+from typing import Iterator, Optional, List, Union
 
 
 # internal imports
@@ -43,7 +43,9 @@ class Peptide(PeptideBase):
         return self.__metadata
 
     @classmethod
-    def select(cls, database_cursor, where_condition: WhereCondition = None, fetchall: bool = False, include_metadata: bool = False):
+    # pylint: disable=arguments-differ
+    def select(cls, database_cursor, where_condition: Optional[WhereCondition] = None,
+        order_by: Optional[str] = None, fetchall: bool = False, stream: bool = False, include_metadata: bool = False) -> Optional[Union[PeptideBase, List[PeptideBase], Iterator[PeptideBase]]]:
         """
         Selects peptides.
         
@@ -51,38 +53,48 @@ class Peptide(PeptideBase):
             Active database cursor
         where_condition : WhereCondition
             Where condition (optional)
+        order_by : str
+            Order by instruction, e.g `mass DESC` (optional)
         fetchall : bool
             Indicates if multiple rows should be fetched
+        stream : bool
+            If true, a generator is returned which yields all matching PeptideBase records
         include_metadata : bool
             Indicates if peptides is returned with metadata (is_swiss_prot, is_trembl, taxonomy_ids, unique_taxonomy_ids, proteome_ids)
         
         Returns
-        None, Peptide or list of Peptides
         -------
-        Petide or list of peptides
+        None, Petide, list of peptides or generator which yield peptides
         """
         if not include_metadata:
-            return super().select(database_cursor, where_condition, fetchall)
+            return super().select(database_cursor, where_condition, order_by, fetchall, stream)
         else:
             select_query = (
-                "SELECT peps.partition, peps.mass, peps.sequence, peps.number_of_missed_cleavages, meta.is_swiss_prot, meta.is_trembl, meta.taxonomy_ids, meta.unique_taxonomy_ids, meta.proteome_ids FROM {cls.TABLE_NAME} "
+                f"SELECT peps.partition, peps.mass, peps.sequence, peps.number_of_missed_cleavages, meta.is_swiss_prot, meta.is_trembl, meta.taxonomy_ids, meta.unique_taxonomy_ids, meta.proteome_ids FROM {cls.TABLE_NAME} as peps "
                 f"INNER JOIN {metadata_module.PeptideMetadata.TABLE_NAME} as meta ON meta.partition = peps.partition AND meta.mass = peps.mass AND meta.sequence = peps.sequence"
             )
             select_values = ()
             if where_condition is not None:
-                select_query += f" WHERE {where_condition.condition}"
+                select_query += f" WHERE {where_condition.get_condition_str(table='peps')}"
                 select_values = where_condition.values
+            if order_by is not None:
+                select_query += f" ORDER BY peps.{order_by}"
             select_query += ";"
             database_cursor.execute(select_query, select_values)
-            if fetchall:
-                return [cls(row[2], row[3], metadata_module.PeptideMetadata(row[4], row[5], row[6], row[7], row[8])) for row in database_cursor.fetchall()]
-            else:
-                row = database_cursor.fetchone()
-                if row:
-                    return cls(row[2], row[3], metadata_module.PeptideMetadata(row[4], row[5], row[6], row[7], row[8]))
+            if not stream:
+                if fetchall:
+                    return [cls(row[2], row[3], metadata_module.PeptideMetadata(row[4], row[5], row[6], row[7], row[8])) for row in database_cursor.fetchall()]
                 else:
-                    return None
-
+                    row = database_cursor.fetchone()
+                    if row:
+                        return cls(row[2], row[3], metadata_module.PeptideMetadata(row[4], row[5], row[6], row[7], row[8]))
+                    else:
+                        return None
+            else:
+                def gen():
+                    for row in database_cursor:
+                        yield cls(row[2], row[3], metadata_module.PeptideMetadata(row[4], row[5], row[6], row[7], row[8]))
+                return gen()
 
     def proteins(self, database_cursor):
         """

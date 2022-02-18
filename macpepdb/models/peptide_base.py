@@ -1,5 +1,7 @@
 # std imports
+from __future__ import annotations
 from collections import Counter
+from typing import Iterator, Optional, Union, List
 
 # external imports
 from psycopg2.extras import execute_values
@@ -537,7 +539,8 @@ class PeptideBase:
 
 
     @classmethod
-    def select(cls, database_cursor, where_condition: WhereCondition = None, fetchall: bool = False):
+    def select(cls, database_cursor, where_condition: Optional[WhereCondition] = None, 
+        order_by: Optional[str] = None, fetchall: bool = False, stream: bool = False) -> Optional[Union[PeptideBase, List[PeptideBase], Iterator[PeptideBase]]]:
         """
         Selects peptides.
 
@@ -545,32 +548,43 @@ class PeptideBase:
         ----------
         database_cursor
             Database cursor
-        select_conditions : WhereCondition
+        where_condition : WhereCondition
             Where condition (optional)
+        order_by : str
+            Order by instruction, e.g `mass DESC` (optional)
         fetchall : bool
             Indicates if multiple rows should be fetched
-        
+        stream : bool
+            If true, a generator is returned which yields all matching PeptideBase records
+
         Returns
-        
         -------
-        Petide or list of peptides
+        None, Petide, list of peptides or generator which yield peptides
         """
         select_query = f"SELECT sequence, number_of_missed_cleavages FROM {cls.TABLE_NAME}"
-        select_values = ()
+        select_values = []
         if where_condition is not None:
-            select_query += f" WHERE {where_condition.condition}"
-            select_values = where_condition.values
+            select_query += f" WHERE {where_condition.get_condition_str()}"
+            select_values += where_condition.values
+        if order_by is not None:
+            select_query += f" ORDER BY {order_by}"
         select_query += ";"
         database_cursor.execute(select_query, select_values)
-        
-        if fetchall:
-            return [cls(row[0], row[1]) for row in database_cursor.fetchall()]
-        else:
-            row = database_cursor.fetchone()
-            if row:
-                return cls(row[0], row[1])
+
+        if not stream:
+            if fetchall:
+                return [cls(row[0], row[1]) for row in database_cursor.fetchall()]
             else:
-                return None
+                row = database_cursor.fetchone()
+                if row:
+                    return cls(row[0], row[1])
+                else:
+                    return None
+        else:
+            def gen():
+                for row in database_cursor:
+                    yield cls(row[0], row[1])
+            return gen()
 
     @classmethod
     def insert(cls, database_cursor, peptide):
