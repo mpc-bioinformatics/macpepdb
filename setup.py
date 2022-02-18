@@ -15,10 +15,9 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     classifiers=[
     ],
-    python_requires='>=3.8, <3.9',
+    python_requires='>=3.9, <3.10',
     install_requires = [
-        "psycopg2==2.8.6",
-        "SQLAlchemy==1.3.19",
-        "alembic==1.4.2",
+        "alembic >=1, <2",
+        "psycopg2 >=2, <3"
     ]
 )

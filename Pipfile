@@ -4,14 +4,13 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-alembic = ">=1, <2"
-psycopg2 = ">=2, <3"
+macpepdb = {editable = true, path = "."}
 
 [dev-packages]
 pylint = "*"
 
 [requires]
-python_version = "3.8"
+python_version = "3.9"
 
 [scripts]
 tests = "bash -c 'python -m unittest tests/*_test_case.py'"
