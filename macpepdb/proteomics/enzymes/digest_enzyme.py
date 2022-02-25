@@ -1,5 +1,6 @@
 # std imports
 import re
+from typing import ClassVar
 
 # internal imports
 from macpepdb.models import peptide
@@ -24,6 +25,10 @@ class DigestEnzyme:
         Minimum peptide length
     maximum_peptide_length : int
         Maxiumum peptide length
+    """
+
+    MISSED_CLEAVAGE_REGEX: ClassVar[re.Pattern] = re.compile(r"[A-Z](?!$)")
+    """Regex to count missed cleavages
     """
     
     def __init__(self, name: str = "Abstract Digest Enzym", shortcut: str = "", regex: re = r".", max_number_of_missed_cleavages: int = 0, minimum_peptide_length: int = 0, maximum_peptide_length: int = 1):
@@ -199,3 +204,20 @@ class DigestEnzyme:
             for replacement_amino_acid in REPLACEABLE_AMBIGIOUS_AMINO_ACID_LOOKUP[sequence[position]]:
                 new_sequence = sequence[:position] + replacement_amino_acid.one_letter_code + sequence[position + 1:]
                 cls.__differentiate_ambigous_sequences(new_sequence, differentiated_sequences, position + 1)
+
+    @classmethod
+    def count_missed_cleavages(cls, sequence: str) -> int:
+        """
+        Counts missed cleavage in sequence.
+
+        Parameters
+        ----------
+        sequence : str
+            Amino acid sequence
+
+        Returns
+        -------
+        int
+            Number of missed cleavages
+        """
+        return len(cls.MISSED_CLEAVAGE_REGEX.findall(sequence))

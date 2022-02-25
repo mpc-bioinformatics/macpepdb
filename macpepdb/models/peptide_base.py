@@ -140,6 +140,7 @@ class PeptideBase:
     def __init__(self, sequence: str, number_of_missed_cleavages: int):
         self.__sequence = sequence.upper()
         self.__number_of_missed_cleavages = number_of_missed_cleavages
+        self.__sequence_with_modification_markers = None
         self.__mass = self.__class__.calculate_mass(self.__sequence)
         self.__partition = self.__class__.get_partition(self.__mass)
         # On demand values
@@ -148,6 +149,27 @@ class PeptideBase:
     @property
     def sequence(self):
         return self.__sequence
+
+    @property
+    def sequence_with_modification_markers(self) -> Optional[str]:
+        """
+        Returns
+        -------
+        Option[str]
+            Seqeunce with modification markers
+        """
+        return self.__sequence_with_modification_markers
+
+    @sequence_with_modification_markers.setter
+    def sequence_with_modification_markers(self, value: str):
+        """
+        Parameters
+        ----------
+        value : str
+            Sequence with modification marker
+        """
+        if self.__sequence_with_modification_markers is None:
+            self.__sequence_with_modification_markers = value
 
     @property
     def mass(self):

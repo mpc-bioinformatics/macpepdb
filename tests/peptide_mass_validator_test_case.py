@@ -1,135 +1,151 @@
 # std imports
+import pathlib
+from typing import ClassVar
 import unittest
+from macpepdb.models.peptide import Peptide
 
 # internal imports
-from macpepdb.models.peptide import Peptide
+from macpepdb.proteomics.enzymes.trypsin import Trypsin
 from macpepdb.peptide_mass_validator import PeptideMassValidator
-from macpepdb.proteomics.amino_acid import AminoAcid
 from macpepdb.proteomics.mass.convert import to_int as mass_to_int
 from macpepdb.proteomics.mass.precursor_range import PrecursorRange
-from macpepdb.proteomics.modification import Modification, ModificationPosition
 from macpepdb.proteomics.modification_collection import ModificationCollection
 
-# Leptin peptide with 2 missed cleavages with a weigh of 5818137657950 (5818.137657950 Da)
-LEPTIN_PEPTIDE_SEQUENCE = "DJJHJJAASKSCPJPQVRAJESJESJGVVJEASJYSTEVVAJSRJQGSJQDMJR"
-
 class PeptideMassValidatorTestCase(unittest.TestCase):
+    """
+    Tests peptide mass validator with modified peptides.
+    """
+
+    PRECURSOR = mass_to_int(1751.868942379)
+    """Precursor
+    """
+
+    PRECURSOR_RANGE = PrecursorRange(PRECURSOR, 5, 5)
+    """Precursor tolerance
+    """
+
+    PEPTIDE_SEQUENCES = [
+        ("VYMGWJKGVYTTYR", "VYM[v:any:15994915000]GWJKGVYTTYR"),
+        ("AVMQCVTVQSKPYNK", "AVMQC[s:any:57021464000]VTVQSKPYNK"),
+        ("MTEYPDVJWGTRIR", "M[v:any:15994915000]TEYPDVJWGTRIR"),
+        ("EPEHJDVJMPRMAAK", "EPEHJDVJMPRM[v:any:15994915000]AAK"),
+        ("WYMAZLVWJIZER", "WYM[v:any:15994915000]AZLVWJIZER"),
+        ("CGCJVHJJMFFJAR", "C[s:any:57021464000]GC[s:any:57021464000]JVHJJM[v:any:15994915000]FFJAR"),
+        ("CVPPPQSATDJQNVAR", "C[s:any:57021464000]VPPPQSATDJQNVAR"),
+        ("LJPYRVPFTPMCDK", "LJPYRVPFTPM[v:any:15994915000]C[s:any:57021464000]DK"),
+        ("VFFTWESJTVHCVK", "VFFTWESJTVHC[s:any:57021464000]VK"),
+        ("JSYNCDIEJRASRR", "JSYNC[s:any:57021464000]DIEJRASRR"),
+        ("QYECRRVOWYR", "QYEC[s:any:57021464000]RRVOWYR"),
+        ("AYYWJNRGFYJMR", "AYYWJNRGFYJMR"),
+        ("JQATYMTSGGTSPPITK", "JQATYMTSGGTSPPITK"),
+        ("ODGANVQZRTBPMAJ", "ODGANVQZRTBPMAJ"),
+        ("QJMVFGKQQCQLEK", "QJM[v:any:15994915000]VFGKQQC[s:any:57021464000]QLEK"),
+        ("PAPVHCDYPPYPVJK", "PAPVHC[s:any:57021464000]DYPPYPVJK"),
+        ("VBLVVTBMDHVHMVK", "VBLVVTBMDHVHM[v:any:15994915000]VK"),
+        ("MIHCPAFYRIMAVK", "MIHC[s:any:57021464000]PAFYRIM[v:any:15994915000]AVK"),
+        ("QMYFARHJHDGLHK", "QMYFARHJHDGLHK"),
+        ("QJDJRMBTTFDBKR", "QJDJRMBTTFDBKR"),
+        ("QRTEFCREIGEVTK", "QRTEFC[s:any:57021464000]REIGEVTK"),
+        ("HKDDRTVQLFAMYL", "HKDDRTVQLFAM[v:any:15994915000]YL"),
+        ("VAEPMFDRVMRMVR", "VAEPMFDRVM[v:any:15994915000]RMVR"),
+        ("WTEQAPSJYJMGGRK", "WTEQAPSJYJM[v:any:15994915000]GGRK"),
+        ("ATVFPQLKEQJVTUK", "ATVFPQLKEQJVTUK"),
+        ("FQSVVBFVEBIHYR", "FQSVVBFVEBIHYR"),
+        ("ZVVCCJVJSABIYGR", "ZVVC[s:any:57021464000]C[s:any:57021464000]JVJSABIYGR"),
+        ("EGRSAAAETCVVFSLR", "EGRSAAAETC[s:any:57021464000]VVFSLR"),
+        ("HQQMDAVTKSPGTQPK", "HQQMDAVTKSPGTQPK"),
+        ("VDFAFVQRPKCEEK", "VDFAFVQRPKC[s:any:57021464000]EEK"),
+        ("DQMCPFRJCKJIR", "DQM[v:any:15994915000]C[s:any:57021464000]PFRJC[s:any:57021464000]KJIR"),
+        ("MCMHTJRIVEFKR", "M[v:any:15994915000]C[s:any:57021464000]M[v:any:15994915000]HTJRIVEFKR"),
+        ("JJSPGDYTPHVTHGMK", "JJSPGDYTPHVTHGMK"),
+        ("FVKMYGRFJCYPR", "FVKM[v:any:15994915000]YGRFJC[s:any:57021464000]YPR"),
+        ("CIMPYRGRTIQWR", "C[s:any:57021464000]IM[v:any:15994915000]PYRGRTIQWR"),
+        ("FYVDVHMFTJQQPK", "FYVDVHMFTJQQPK"),
+        ("ODBRVBFMYAAIGK", "ODBRVBFM[v:any:15994915000]YAAIGK"),
+        ("FFVMCRPNDRVVGR", "FFVMC[s:any:57021464000]RPNDRVVGR"),
+        ("UPMVTQPAGPPIIPKR", "UPMVTQPAGPPIIPKR"),
+        ("FTBDTIVVTNZFPQK", "FTBDTIVVTNZFPQK"),
+        ("JMQWKCFVPJVCR", "JM[v:any:15994915000]QWKC[s:any:57021464000]FVPJVC[s:any:57021464000]R"),
+        ("YKQFTFFMGJAEVR", "YKQFTFFM[v:any:15994915000]GJAEVR"),
+        ("HTVVJTFJJSKUVSTG", "HTVVJTFJJSKUVSTG"),
+        ("WAKQJSNRCTFWR", "WAKQJSNRC[s:any:57021464000]TFWR"),
+        ("JSJGWZBJCWAYJK", "JSJGWZBJC[s:any:57021464000]WAYJK"),
+        ("YYSNIHNQAIVRQF", "YYSNIHNQAIVRQF"),
+        ("REVJRDIMFPMGEK", "REVJRDIM[v:any:15994915000]FPM[v:any:15994915000]GEK"),
+        ("MJNCMTWAGKQKLR", "MJNC[s:any:57021464000]M[v:any:15994915000]TWAGKQKLR"),
+        ("FGILPJSVRWQUTGK", "FGILPJSVRWQUTGK"),
+        ("YYPGKPEPMKRENK", "YYPGKPEPM[v:any:15994915000]KRENK"),
+        ("JTMVDENNWAJKYR", "JTMVDENNWAJKYR"),
+        ("QQYMICAJAPMVRR", "QQYMIC[s:any:57021464000]AJAPM[v:any:15994915000]VRR"),
+        ("CIGFEQKIKBZQMK", "C[s:any:57021464000]IGFEQKIKBZQMK"),
+        ("FQAIBSPMVKTMBVR", "FQAIBSPMVKTM[v:any:15994915000]BVR"),
+        ("LIDFIZAZLAVTIUR", "LIDFIZAZLAVTIUR"),
+        ("YAMKPASAMJKMJGPAG", "YAMKPASAM[v:any:15994915000]JKMJGPAG"),
+        ("PQNGPZQPJZTCKQK", "PQNGPZQPJZTC[s:any:57021464000]KQK"),
+        ("MCIQMQJKYPPRR", "M[v:any:15994915000]C[s:any:57021464000]IQM[v:any:15994915000]QJKYPPRR"),
+        ("CWNHPAKJVWWQK", "C[s:any:57021464000]WNHPAKJVWWQK"),
+        ("WZGQTAVGZAQQOGR", "WZGQTAVGZAQQOGR"),
+        ("MQCDJGHSORKQR", "MQC[s:any:57021464000]DJGHSORKQR"),
+        ("TSFFHFVINNKDQR", "TSFFHFVINNKDQR"),
+        ("WLQQJAGTEQPYYR", "WLQQJAGTEQPYYR"),
+        ("TCMTDDRIRPVJJY", "TC[s:any:57021464000]MTDDRIRPVJJY"),
+        ("MKGBMIPSJAZVYQR", "MKGBM[v:any:15994915000]IPSJAZVYQR"),
+        ("KGAHJQQQDADAAPFR", "KGAHJQQQDADAAPFR"),
+        ("EVWVGYTDGRJVCAK", "EVWVGYTDGRJVC[s:any:57021464000]AK"),
+        ("OAYIJRPUFRSNK", "OAYIJRPUFRSNK"),
+        ("BCDAVMAVBAJPIVHK", "BC[s:any:57021464000]DAVMAVBAJPIVHK"),
+        ("QJPMCKFPYEPAKK", "QJPM[v:any:15994915000]C[s:any:57021464000]KFPYEPAKK"),
+        ("UHRFRQVFJFPVR", "UHRFRQVFJFPVR"),
+        ("QMPJOAASZWBPQK", "QM[v:any:15994915000]PJOAASZWBPQK"),
+        ("CMGJEJLDVKKMDGK", "C[s:any:57021464000]M[v:any:15994915000]GJEJLDVKKMDGK"),
+        ("VDCDJTQJJEQKYK", "VDC[s:any:57021464000]DJTQJJEQKYK"),
+        ("NVVNFDVPVMVJMEF", "NVVNFDVPVMVJMEF"),
+        ("MJVQVCFIJNDTQR", "M[v:any:15994915000]JVQVC[s:any:57021464000]FIJNDTQR"),
+        ("DVJACKGQSRTQGJGY", "DVJAC[s:any:57021464000]KGQSRTQGJGY"),
+        ("JQCPJQCRYVKCK", "JQC[s:any:57021464000]PJQC[s:any:57021464000]RYVKC[s:any:57021464000]K"),
+        ("MNPASVJEMTJFJMR", "MNPASVJEMTJFJMR"),
+        ("IPDTQRYKMAJCEK", "IPDTQRYKMAJC[s:any:57021464000]EK"),
+        ("HAOSJPJVUGKMPAK", "HAOSJPJVUGKM[v:any:15994915000]PAK"),
+        ("VSTPVRJFMVACGCR", "VSTPVRJFMVAC[s:any:57021464000]GC[s:any:57021464000]R"),
+        ("CVGGAKALDYHYJSAK", "C[s:any:57021464000]VGGAKALDYHYJSAK"),
+        ("RVVEPFAYCJEDVR", "RVVEPFAYC[s:any:57021464000]JEDVR"),
+        ("CJMPMMVPMKVQKK", "C[s:any:57021464000]JMPM[v:any:15994915000]M[v:any:15994915000]VPMKVQKK"),
+        ("ZQRYJFVYMTFZK", "ZQRYJFVYMTFZK"),
+        ("JGTWPASJHDSLYHR", "JGTWPASJHDSLYHR"),
+        ("HTBDTEZJCROIK", "HTBDTEZJC[s:any:57021464000]ROIK"),
+        ("ALWJEYSRCJEANK", "ALWJEYSRC[s:any:57021464000]JEANK"),
+        ("WGDSCDIGAJJPPVPR", "WGDSC[s:any:57021464000]DIGAJJPPVPR"),
+        ("MJREDFJIEIWCK", "MJREDFJIEIWC[s:any:57021464000]K"),
+        ("VGHQMAMGPPJVDQJK", "VGHQM[v:any:15994915000]AM[v:any:15994915000]GPPJVDQJK"),
+        ("WGAYRRJYWYYR", "WGAYRRJYWYYR"),
+        ("KGQRVYZMNBQTJR", "KGQRVYZM[v:any:15994915000]NBQTJR"),
+        ("SWMQEKSPVFWAIK", "SWM[v:any:15994915000]QEKSPVFWAIK"),
+        ("FKQAGTVMYMYJJR", "FKQAGTVM[v:any:15994915000]YM[v:any:15994915000]YJJR"),
+        ("BJPVSFPQBHGTWVR", "BJPVSFPQBHGTWVR"),
+        ("QDGLJJPFWNMYQK", "QDGLJJPFWNMYQK"),
+        ("DCITAMHPAKPMPKR", "DC[s:any:57021464000]ITAMHPAKPMPKR"),
+        ("BMJZMJVDYJPRMK", "BMJZMJVDYJPRMK")
+    ]
+    """Plain and PTM annotated peptide seqeunces
+    """
+
+    MODIFICATION_COLLECTION: ClassVar[ModificationCollection] = ModificationCollection.read_from_csv_file(pathlib.Path("./test_files/modifications.csv"))
+    """Modification Collection
+    """
+
+    NUMBER_OF_VARIABLE_MODIFICATIONS: ClassVar[int] = 3
+    """Number of variable modifications
+    """
+
     def test_validation(self):
-        static_carbamidomethylation_of_c = Modification('unimod:4', 'carbamidomethylation of cysteine', AminoAcid.get_by_one_letter_code('C'), mass_to_int(57.021464), True, ModificationPosition.ANYWHERE)
-        variable_oxidation_of_m = Modification('unimod:35', 'oxidation of methionine', AminoAcid.get_by_one_letter_code('M'), mass_to_int(15.994915), False, ModificationPosition.ANYWHERE)
-        static_custom_modification_of_n_terminal_d = Modification('custom:1', 'custom of aspartic acid', AminoAcid.get_by_one_letter_code('D'), mass_to_int(10.01541), True, ModificationPosition.N_TERMINUS)
-        variable_custom_modification_of_n_terminal_d = Modification('custom:2', 'custom of aspartic acid', AminoAcid.get_by_one_letter_code('D'), mass_to_int(10.01541), False, ModificationPosition.N_TERMINUS)
-        static_custom_modification_of_c_terminal_r = Modification('custom:3', 'custom of arginine', AminoAcid.get_by_one_letter_code('R'), mass_to_int(6.153215), True, ModificationPosition.C_TERMINUS)
-        variable_custom_modification_of_c_terminal_r = Modification('custom:4', 'custom of arginine', AminoAcid.get_by_one_letter_code('R'), mass_to_int(6.153215), False, ModificationPosition.C_TERMINUS)
-
-        peptide = Peptide(LEPTIN_PEPTIDE_SEQUENCE, 2)
-
-        # Static carbamidomethylation of C
-        expected_peptide_mass = peptide.mass + peptide.c_count * static_carbamidomethylation_of_c.delta
-        modification_collection = ModificationCollection([static_carbamidomethylation_of_c])
-        precursor_range = PrecursorRange(expected_peptide_mass, 0, 0)
-        validator = PeptideMassValidator(modification_collection, 0, precursor_range)
-        self.assertTrue(validator.validate(peptide))
-
-        # This should als match with allowed variable modification (where actually none is applied)
-        # Static carbamidomethylation of C
-        # Variable oxidation of M (not considered in expected_mass)
-        modification_collection = ModificationCollection([static_carbamidomethylation_of_c, variable_oxidation_of_m])
-        validator = PeptideMassValidator(modification_collection, 3, precursor_range)
-        self.assertTrue(validator.validate(peptide))
-
-
-        # Static carbamidomethylation of C
-        # 1 variable oxidation of M
-        expected_peptide_mass = peptide.mass \
-            + peptide.c_count * static_carbamidomethylation_of_c.delta \
-            + 1 * variable_oxidation_of_m.delta
-        modification_collection = ModificationCollection([static_carbamidomethylation_of_c, variable_oxidation_of_m])
-        precursor_range = PrecursorRange(expected_peptide_mass, 0, 0)
-        validator = PeptideMassValidator(modification_collection, 3, precursor_range)
-        self.assertTrue(validator.validate(peptide))
-
-        # This should not match if no variable modifiations are allowed
-        # Static carbamidomethylation of C
-        # Variable oxidation of M (considered in expected_mass but no variable modification allowed in validation)
-        validator.set_maximum_number_of_variable_modifications(0)
-        self.assertFalse(validator.validate(peptide))
-
-        # Lets replace two Js with Ms and test 3 applied variable oxidations of M
-        # Static carbamidomethylation of C
-        # 3 Variable oxidation of M
-        peptide = Peptide(LEPTIN_PEPTIDE_SEQUENCE.replace('J', 'M', 2), 2)
-        expected_peptide_mass = peptide.mass \
-            + peptide.c_count * static_carbamidomethylation_of_c.delta \
-            + 3 * variable_oxidation_of_m.delta
-        modification_collection = ModificationCollection([static_carbamidomethylation_of_c, variable_oxidation_of_m])
-        precursor_range = PrecursorRange(expected_peptide_mass, 0, 0)
-        validator = PeptideMassValidator(modification_collection, 3, precursor_range)
-        self.assertTrue(validator.validate(peptide))
-
-        # This should fail with only 2 allowed variable modifications
-        validator.set_maximum_number_of_variable_modifications(2)
-        self.assertFalse(validator.validate(peptide))
-
-
-        # Test variable n-terminal
-        # Variable n-terminal modification of D
-        # Static carbamidomethylation of C
-        # 2 variable oxidation of M
-        expected_peptide_mass = peptide.mass \
-            + variable_custom_modification_of_n_terminal_d.delta \
-            + peptide.c_count * static_carbamidomethylation_of_c.delta \
-            + 2 * variable_oxidation_of_m.delta
-        modification_collection = ModificationCollection([static_carbamidomethylation_of_c, variable_oxidation_of_m, variable_custom_modification_of_n_terminal_d])
-        precursor_range = PrecursorRange(expected_peptide_mass, 0, 0)
-        validator = PeptideMassValidator(modification_collection, 3, precursor_range)
-        self.assertTrue(validator.validate(peptide))
-
-        # This should fail with only 2 allowed variable modifications
-        validator.set_maximum_number_of_variable_modifications(2)
-        self.assertFalse(validator.validate(peptide))
-
-
-        # Test static n-terminal modification
-        # Static n-terminal modification of D
-        # Static carbamidomethylation of C
-        # 2 variable oxidation of M
-        expected_peptide_mass = peptide.mass \
-            + static_custom_modification_of_n_terminal_d.delta \
-            + peptide.c_count * static_carbamidomethylation_of_c.delta \
-            + 2 * variable_oxidation_of_m.delta
-        modification_collection = ModificationCollection([static_carbamidomethylation_of_c, variable_oxidation_of_m, static_custom_modification_of_n_terminal_d])
-        precursor_range = PrecursorRange(expected_peptide_mass, 0, 0)
-        validator = PeptideMassValidator(modification_collection, 3, precursor_range)
-        self.assertTrue(validator.validate(peptide))
-
-        # Test variable n-terminal
-        # Variable c-terminal modification of R
-        # Static carbamidomethylation of C
-        # 2 variable oxidation of M
-        expected_peptide_mass = peptide.mass \
-            + variable_custom_modification_of_c_terminal_r.delta \
-            + peptide.c_count * static_carbamidomethylation_of_c.delta \
-            + 2 * variable_oxidation_of_m.delta
-        modification_collection = ModificationCollection([static_carbamidomethylation_of_c, variable_oxidation_of_m, variable_custom_modification_of_c_terminal_r])
-        precursor_range = PrecursorRange(expected_peptide_mass, 0, 0)
-        validator = PeptideMassValidator(modification_collection, 3, precursor_range)
-        self.assertTrue(validator.validate(peptide))
-
-        # This should fail with only 2 allowed variable modifications
-        validator.set_maximum_number_of_variable_modifications(2)
-        self.assertFalse(validator.validate(peptide))
-
-
-        # Test static n-terminal modification
-        # Static c-terminal modification of R
-        # Static carbamidomethylation of C
-        # 2 variable oxidation of M
-        expected_peptide_mass = peptide.mass \
-            + static_custom_modification_of_c_terminal_r.delta \
-            + peptide.c_count * static_carbamidomethylation_of_c.delta \
-            + 2 * variable_oxidation_of_m.delta
-        modification_collection = ModificationCollection([static_carbamidomethylation_of_c, variable_oxidation_of_m, static_custom_modification_of_c_terminal_r])
-        precursor_range = PrecursorRange(expected_peptide_mass, 0, 0)
-        validator = PeptideMassValidator(modification_collection, 3, precursor_range)
-        self.assertTrue(validator.validate(peptide))
+        """
+        Checks if mass validation works.
+        """
+        peptide_mass_validator = PeptideMassValidator(
+            self.__class__.MODIFICATION_COLLECTION,
+            self.__class__.NUMBER_OF_VARIABLE_MODIFICATIONS,
+            self.__class__.PRECURSOR_RANGE
+        )
+        for plain_sequence, annotated_sequence in self.__class__.PEPTIDE_SEQUENCES:
+            peptide = Peptide(plain_sequence, Trypsin.count_missed_cleavages(plain_sequence))
+            self.assertTrue(peptide_mass_validator.validate(peptide, True), f"expected: {annotated_sequence}; is: {peptide.sequence_with_modification_markers}")
