@@ -111,7 +111,7 @@ class Modification:
         return self.__name
 
     @property
-    def amino_acid(self) -> str:
+    def amino_acid(self) -> AminoAcid:
         """
         Returns
         -------
