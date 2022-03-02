@@ -17,8 +17,8 @@ class DigestEnzyme:
         Name
     shortcut: str
         Shortcut
-    regex: re
-        Regex to find cleavage sites
+    cleavage_regex: re
+        cleavage_regex to find cleavage sites
     max_number_of_missed_cleavages : int
         Maximum number of missed cleavages
     minimum_peptide_length : int
@@ -31,10 +31,10 @@ class DigestEnzyme:
     """Regex to count missed cleavages
     """
     
-    def __init__(self, name: str = "Abstract Digest Enzym", shortcut: str = "", regex: re = r".", max_number_of_missed_cleavages: int = 0, minimum_peptide_length: int = 0, maximum_peptide_length: int = 1):
+    def __init__(self, name: str = "Abstract Digest Enzym", shortcut: str = "", cleavage_regex: re = r".", max_number_of_missed_cleavages: int = 0, minimum_peptide_length: int = 0, maximum_peptide_length: int = 1):
         self.__name = name
         self.__shortcut = shortcut
-        self.__regex = regex
+        self.__cleavage_regex = cleavage_regex
         self.__max_number_of_missed_cleavages = max_number_of_missed_cleavages
         self.__minimum_peptide_length = minimum_peptide_length
         self.__maximum_peptide_length = maximum_peptide_length
@@ -83,7 +83,7 @@ class DigestEnzyme:
         """
         peptides = set()
         # Split protein sequence on every cleavage position
-        protein_parts = re.split(self.__regex, protein.sequence)
+        protein_parts = re.split(self.__cleavage_regex, protein.sequence)
         # Start with every part
         for part_index in range(0, len(protein_parts)):
             # Check if end of protein_parts is reached before the last missed cleavage (prevent overflow)
