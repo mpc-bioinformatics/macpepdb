@@ -1,3 +1,6 @@
+# std imports
+from __future__ import annotations
+
 # internal imports
 from macpepdb.proteomics.mass.convert import to_int as mass_to_int
 
@@ -30,6 +33,12 @@ class AminoAcid:
         self.chemical_formula = chemical_formula
         self.mono_mass = mass_to_int(mono_mass)
         self.average_mass = mass_to_int(average_mass)
+
+    def __hash__(self) -> int:
+        return hash(self.one_letter_code)
+
+    def __eq__(self, other: AminoAcid) -> bool:
+        return self.one_letter_code == other.one_letter_code
 
     def get_one_letter_code_ascii_dec(self) -> int:
         """
