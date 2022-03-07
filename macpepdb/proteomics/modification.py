@@ -282,6 +282,33 @@ class Modification:
             str(self.__position)
         )
 
+    def __repr__(self) -> str:
+        """
+        Returns
+        -------
+        Returns the modification in format: `[s|v:any|term:delta]` (s = static, v = variable, any = anywhere, term = terminus) for non static terminus modification,
+        and `[delta].` for static n-terminus modifications and `.[delta]` for static c-terminuns modification.
+        """
+        if self.is_variable or self.is_static and not self.is_terminus_modification:
+            # Returns one_letter_code[static_or_variable:any_or_term:delta]
+            return (
+                f"{self.__amino_acid.one_letter_code}"
+                "["
+                f"{'s' if self.is_static else 'v'}"
+                ":"
+                f"{'any' if self.is_position_anywhere else 'term'}"
+                ":"
+                f"{self.delta}"
+                "]"
+            )
+        else:
+            # Retun [delta]. when n-term modification else .[delta]
+            return (
+                f"{'.' if self.is_position_c_terminus else ''}"
+                f"[{self.delta}]"
+                f"{'.' if self.is_position_n_terminus else ''}"
+            )
+
     @property
     def is_none_modification(self) -> bool:
         """
