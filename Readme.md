@@ -1,4 +1,4 @@
-# MaCPepDB - Mass Centric Peptide Database
+# MaCPepDB 2.0 - Mass Centric Peptide Database
 
 ## Description
 Creates a peptide databases by digesting proteins stored in FASTA-/Uniprot-Text-files.
@@ -13,15 +13,15 @@ Only necessary for development and non-Docker installation
 * [pyenv](https://github.com/pyenv/pyenv)
 * [pipenv](https://pipenv.pypa.io/en/latest/)
 
-
 ## Development
+Make sure `pipenv` finds `pyenv` 
 ### Prepare development environment
 ```bash
-# Install the correct python version
-pyenv install $(cat .python-version)
-
-# Create an environment
+# Install correkt python version and create environment
 pipenv install -d
+
+# Change to environment
+pipenv shell
 
 # Start the database
 docker-compose up
@@ -42,10 +42,9 @@ Run `python -m macpepdb --help` in the root-folder of the repository.
 ## Usage
 
 ### Native installation
-Make sure you have all necessary dependencies.
 Than update pip with `pip install --upgrade pip` and run `pip install -e git+https://github.com/mpc-bioinformatics/macpepdb.git@<MACPEPDB_GIT_TAG>#egg=MaCPepDB` to install MaCPepDB.
 Then you can use MacPepDB by running `python -m macpepdb`. 
-Appending `--help` shows the available command line parmeter.
+Appending `--help` shows the available command line parameter.
 
 ### Docker installation
 To create a Docker image use: `docker build --tag macpepdb-py .` . You can use the image to start a container with
@@ -57,7 +56,7 @@ If you intend to create a protein/peptide database and your Postgresql server is
 #### Prepare the database
 1. Follow the [Citus documentation](http://docs.citusdata.com/en/v10.0/installation/multi_node.html) to setup a Citus cluster.
 2. Run `psql -h <CITUS_CONTROLLER> -U <DB_USER> -c "ALTER DATABASE <DB_NAME> SET citus.multi_shard_modify_mode = 'sequential';"` and `psql -h <CITUS_CONTROLLER> -U <DB_USER> -c "ALTER DATABASE <DB_NAME> SET citus.shard_count = 100;"` to configure the database
-4. Run `MACPEPDB_DB_URL=postgresql://<USER>:<PASSWORD>@<HOST>:<PORT>/<DATABASE> alembic upgrade head`, if you use the docker container, run the command in a temporary container: `docker run --rm -it macpepdb-py sh`
+4. Run `MACPEPDB_DB_URL=postgresql://<USER>:<PASSWORD>@<HOST>:<PORT>/<DATABASE> alembic upgrade head`, if you use the docker container, run the command in a temporary container: `docker run --rm -it macpepdb sh`
 
 #### Fill the database
 First create a work folder with the following structure:
@@ -71,3 +70,7 @@ Place your protein data files as `.dat`- or `.txt`-files, containing the protein
 If you like to use the web interface as well, download the `taxdump.zip` from [NCBI](https://ftp.ncbi.nih.gov/pub/taxonomy/) and put the contained `.dmp`-files in the `taxonomy_data`-folder.
 
 Than start the database maintenance job with `python -m macpepdb database ...`. Run `python -m macpepdb database --help` to see the required arguments. Remember to use the container internal paths when using a docker container.
+
+## Upgrading 
+### 1.x to 2.x
+Due to changes of the database schema and the database engine, version 2.x is not compatible with version 1.x. You have to recreate the database.
