@@ -26,6 +26,9 @@ class ColumnDefinition:
         self.__operator = operator
         self.__values = values
 
+    def __str__(self) -> str:
+        return f"{self.__column_name} {self.__operator}" % tuple(self.__values)
+
     @property
     def column_name(self) -> str:
         """
