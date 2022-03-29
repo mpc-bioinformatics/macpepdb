@@ -1,5 +1,4 @@
 # std imports
-from dataclasses import replace
 import pathlib
 
 # internal imports
@@ -7,7 +6,6 @@ from macpepdb.proteomics.mass.precursor_range import PrecursorRange
 from macpepdb.proteomics.mass.convert import to_float as mass_to_float, to_int as mass_to_int
 from macpepdb.proteomics.modification_collection import ModificationCollection
 from macpepdb.models.modification_combination_list import ModificationCombinationList
-from macpepdb.database.indexes.post_translational_modification_search_index import PostTranslationalModificationSearchIndex as PtmIndex
 
 
 class PrecursorRangeCalculation:
@@ -26,11 +24,14 @@ class PrecursorRangeCalculation:
         Collection of modifications
     max_number_of_variable_modifications: int
         Number of maximum variable modifications per peptide.
+    with_partition : bool
+        If true the mass partition is added to the output
     """
 
-    def __init__(self, precursor: int, lower_precursor_tolerance_ppm: int, upper_precursor_tolerance_ppm: int, modification_collection: ModificationCollection, max_number_of_variable_modifications: int):
+    def __init__(self, precursor: int, lower_precursor_tolerance_ppm: int, upper_precursor_tolerance_ppm: int, modification_collection: ModificationCollection, max_number_of_variable_modifications: int, with_partition: bool):
         self.__precursor_range = PrecursorRange(precursor, lower_precursor_tolerance_ppm, upper_precursor_tolerance_ppm)
         self.__max_number_of_variable_modifications = max_number_of_variable_modifications
+        self.__with_partition = with_partition
         self.__modification_collection_list = ModificationCombinationList(
             modification_collection,
             self.__precursor_range.precursor,
@@ -46,7 +47,7 @@ class PrecursorRangeCalculation:
             amino_acid_counts = []
 
             for condition in combination.where_conditions:
-                if condition.column_name == "partition":
+                if not self.__with_partition and condition.column_name == "partition":
                     continue
                 output = f"{condition.column_name} {condition.operator}"
                 if condition.column_name == "mass":
@@ -73,7 +74,8 @@ class PrecursorRangeCalculation:
             args.lower_precursor_tolerance,
             args.upper_precursor_tolerance,
             ModificationCollection.read_from_csv_file(pathlib.Path(args.modifications)) if args.modifications is not None else ModificationCollection([]),
-            args.max_variable_modifications
+            args.max_variable_modifications,
+            args.partitions
         )
         print(calculation)
 
@@ -93,4 +95,5 @@ class PrecursorRangeCalculation:
         parser.add_argument("--upper-precursor-tolerance", "-u", type=int, required=True, help="Upper precursor tolerance (ppm)")
         parser.add_argument("--modifications", "-m", type=str, required=False, help="CSV with post translational modifications.")
         parser.add_argument("--max-variable-modifications", "-v", type=int, default=3, required=False, help="Maximum number of variable modifications per peptide.")
+        parser.add_argument('--partitions', default=False, action='store_true', help="Add partitons to outputs")
         parser.set_defaults(func=cls.start_from_comand_line)

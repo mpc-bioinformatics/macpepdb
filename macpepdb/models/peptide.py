@@ -71,7 +71,7 @@ class Peptide(PeptideBase):
         else:
             select_query = (
                 f"SELECT peps.partition, peps.mass, peps.sequence, peps.number_of_missed_cleavages, meta.is_swiss_prot, meta.is_trembl, meta.taxonomy_ids, meta.unique_taxonomy_ids, meta.proteome_ids FROM {cls.TABLE_NAME} as peps "
-                f"INNER JOIN {metadata_module.PeptideMetadata.TABLE_NAME} as meta ON meta.partition = peps.partition AND meta.mass = peps.mass AND meta.sequence = peps.sequence"
+                f"LEFT JOIN {metadata_module.PeptideMetadata.TABLE_NAME} as meta ON meta.partition = peps.partition AND meta.mass = peps.mass AND meta.sequence = peps.sequence"
             )
             select_values = ()
             if where_condition is not None:
@@ -83,17 +83,30 @@ class Peptide(PeptideBase):
             database_cursor.execute(select_query, select_values)
             if not stream:
                 if fetchall:
-                    return [cls(row[2], row[3], metadata_module.PeptideMetadata(row[4], row[5], row[6], row[7], row[8])) for row in database_cursor.fetchall()]
+                    return [
+                        cls(
+                            row[2],
+                            row[3],
+                            metadata_module.PeptideMetadata(row[4], row[5], row[6], row[7], row[8]) if row[4] is not None else None
+                        ) for row in database_cursor.fetchall()]
                 else:
                     row = database_cursor.fetchone()
                     if row:
-                        return cls(row[2], row[3], metadata_module.PeptideMetadata(row[4], row[5], row[6], row[7], row[8]))
+                        return cls(
+                            row[2],
+                            row[3],
+                            metadata_module.PeptideMetadata(row[4], row[5], row[6], row[7], row[8]) if row[4] is not None else None
+                        )
                     else:
                         return None
             else:
                 def gen():
                     for row in database_cursor:
-                        yield cls(row[2], row[3], metadata_module.PeptideMetadata(row[4], row[5], row[6], row[7], row[8]))
+                        yield cls(
+                            row[2],
+                            row[3],
+                            metadata_module.PeptideMetadata(row[4], row[5], row[6], row[7], row[8]) if row[4] is not None else None
+                        )
                 return gen()
 
     def proteins(self, database_cursor):
