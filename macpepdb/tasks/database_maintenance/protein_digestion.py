@@ -7,7 +7,6 @@ import json
 from ctypes import c_ulonglong
 from datetime import datetime
 from multiprocessing import Event, Array, Queue
-from typing import Tuple
 
 # external imports
 import psycopg2
@@ -78,6 +77,10 @@ class ProteinDigestion:
         -------
         Number of digestion errors.
         """
+        # Bevore initalizing the whole multiprocessing stuff, just check if there is an actual datafile to process.
+        if len(self.__input_file_paths) == 0:
+            return 0
+
         # Initialize signal handler for TERM and INT
         signal.signal(signal.SIGTERM, self.__termination_event_handler)
         signal.signal(signal.SIGINT, self.__termination_event_handler)
