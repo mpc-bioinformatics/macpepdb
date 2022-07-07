@@ -27,7 +27,7 @@ class Trypsin(DigestEnzyme):
     """Enzym shortcut
     """
 
-    REGEX = r"(?<=[KR])(?!P)"
+    CLEAVAGE_REGEX: ClassVar[re.Pattern] = re.compile(r"(?<=[KR])(?!P)")
     """Regex for finding cleavage positions
     """
 
@@ -39,7 +39,7 @@ class Trypsin(DigestEnzyme):
         super().__init__(
             self.NAME,
             self.SHORTCUT,
-            self.REGEX,
+            self.CLEAVAGE_REGEX,
             max_number_of_missed_cleavages,
             minimum_peptide_length,
             maximum_peptide_length

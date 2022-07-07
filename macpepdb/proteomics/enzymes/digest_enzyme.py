@@ -28,6 +28,14 @@ class DigestEnzyme:
         Maxiumum peptide length
     """
 
+    NAME: ClassVar[str] = "GenericDigestEnzym"
+    """Enzym name
+    """
+
+    CLEAVAGE_REGEX: ClassVar[re.Pattern] = re.compile(r"[A-Z](?!$)")
+    """Regex for finding cleavage positions
+    """
+
     MISSED_CLEAVAGE_REGEX: ClassVar[re.Pattern] = re.compile(r"[A-Z](?!$)")
     """Regex to count missed cleavages
     """
@@ -84,7 +92,7 @@ class DigestEnzyme:
         """
         peptides = set()
         # Split protein sequence on every cleavage position
-        protein_parts = re.split(self.__cleavage_regex, protein.sequence)
+        protein_parts = self.__cleavage_regex.split(protein.sequence)
         # Start with every part
         for part_index in range(0, len(protein_parts)):
             # Check if end of protein_parts is reached before the last missed cleavage (prevent overflow)
@@ -189,3 +197,20 @@ class DigestEnzyme:
             Number of missed cleavages
         """
         return len(cls.MISSED_CLEAVAGE_REGEX.findall(sequence))
+
+    @classmethod
+    def is_enzymatic(cls, sequence: str) -> bool:
+        """
+        Checks if the last amino acid in the given sequence is enzymatic.
+
+        Parameters
+        ----------
+        sequence : str
+            Amino acid sequence
+
+        Returns
+        -------
+        bool
+            True if last amino acid is cleavage site, False otherwise.
+        """
+        return cls.CLEAVAGE_REGEX.search(sequence[-1]) is not None
