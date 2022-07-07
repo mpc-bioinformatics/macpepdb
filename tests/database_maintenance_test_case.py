@@ -11,6 +11,7 @@ from macpepdb.models.peptide_metadata import PeptideMetadata
 from macpepdb.models.protein import Protein
 from macpepdb.models.protein_peptide_association import ProteinPeptideAssociation
 from macpepdb.proteomics.enzymes.digest_enzyme import DigestEnzyme
+from macpepdb.proteomics.enzymes import get_digestion_enzyme_by_name
 from macpepdb.proteomics.file_reader.uniprot_text_reader import UniprotTextReader
 from macpepdb.tasks.database_maintenance.database_maintenance import DatabaseMaintenance, DatabaseStatus
 
@@ -64,7 +65,7 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase, DatabaseMaintenanceW
 
         maintenance.start()
 
-        EnzymeClass = DigestEnzyme.get_enzyme_by_name("Trypsin")
+        EnzymeClass = get_digestion_enzyme_by_name("Trypsin")
         trypsin = EnzymeClass(TRYPSIN_MAX_MISSED_CLEAVAGES, TRYPSIN_MIN_PEPTIDE_LENGTH, TRYPSIN_MAX_PEPTIDE_LENGTH)
 
         # Read proteins from file
@@ -137,7 +138,7 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase, DatabaseMaintenanceW
         initial_digest_file_proteins = initial_digest_file_proteins + merged_file_proteins
         self.assertEqual(len(initial_digest_file_proteins), old_file_proteins_len)
 
-        EnzymeClass = DigestEnzyme.get_enzyme_by_name("Trypsin")
+        EnzymeClass = get_digestion_enzyme_by_name("Trypsin")
         trypsin = EnzymeClass(TRYPSIN_MAX_MISSED_CLEAVAGES, TRYPSIN_MIN_PEPTIDE_LENGTH, TRYPSIN_MAX_PEPTIDE_LENGTH)
 
         self.verify_database_integrity(initial_digest_file_proteins, trypsin)
@@ -207,7 +208,7 @@ class DigestionToDatabaseTestCase(AbstractDatabaseTestCase, DatabaseMaintenanceW
         # Length should be decreased by one
         self.assertEqual(len(initial_and_merged_digest_file_proteins), old_file_proteins_len - 1)
 
-        EnzymeClass = DigestEnzyme.get_enzyme_by_name("Trypsin")
+        EnzymeClass = get_digestion_enzyme_by_name("Trypsin")
         trypsin = EnzymeClass(TRYPSIN_MAX_MISSED_CLEAVAGES, TRYPSIN_MIN_PEPTIDE_LENGTH, TRYPSIN_MAX_PEPTIDE_LENGTH)
 
         self.verify_database_integrity(initial_and_merged_digest_file_proteins, trypsin)

@@ -11,7 +11,7 @@ from enum import unique, Enum
 # internal imports
 from macpepdb import process_context
 from macpepdb.models.maintenance_information import MaintenanceInformation
-from macpepdb.proteomics.enzymes.digest_enzyme import DigestEnzyme
+from macpepdb.proteomics.enzymes import get_known_digestion_enzymes
 from macpepdb.tasks.database_maintenance.peptide_metadata_collector import PeptideMetadataCollector
 from macpepdb.tasks.database_maintenance.protein_digestion import ProteinDigestion
 from macpepdb.tasks.database_maintenance.taxonomy_tree import TaxonomyTree
@@ -306,7 +306,7 @@ class DatabaseMaintenance():
         parser.add_argument("--work-dir", "-w", type=str, required=True, help="Protein file (can be used multiple times)")
         parser.add_argument("--statistics-write-period", type=int, help="Seconds between writes to the statistics file (default: 900)", default=900)
         parser.add_argument("--thread-count", "-t", type=int, required=True, help="Number of concurrent digestions and inserts to the database")
-        parser.add_argument("--enzyme-name", "-e", type=str, required=True, help="The name of the enzyme", choices=DigestEnzyme.get_known_enzymes())
+        parser.add_argument("--enzyme-name", "-e", type=str, required=True, help="The name of the enzyme", choices=get_known_digestion_enzymes())
         parser.add_argument("--maximum-number-of-missed-cleavages", "-c", type=int, help="Maximum number of missed cleavages (default: 2)", default="2")
         parser.add_argument("--minimum-peptide-length", type=int, help="Minimum peptide length (default: 5)", default="5")
         parser.add_argument("--maximum-peptide-length", type=int, help="Maximum peptide length (default: 60)", default="60")

@@ -14,7 +14,7 @@ import psycopg2
 # internal imports
 from macpepdb import process_context
 from macpepdb.models.maintenance_information import MaintenanceInformation
-from macpepdb.proteomics.enzymes.digest_enzyme import DigestEnzyme
+from macpepdb.proteomics.enzymes import get_digestion_enzyme_by_name
 from macpepdb.tasks.database_maintenance.multiprocessing.embl_file_reader_process import EmblFileReaderProcess
 from macpepdb.tasks.database_maintenance.multiprocessing.logger_process import LoggerProcess
 from macpepdb.tasks.database_maintenance.multiprocessing.protein_digestion_process import ProteinDigestionProcess
@@ -56,7 +56,7 @@ class ProteinDigestion:
         self.__unprocessible_proteins_embl_file_path = log_dir_path.joinpath(f"unprocessible_proteins_{run_count}.txt")
         self.__number_of_threads = number_of_threads
         self.__max_protein_queue_size = 3 * self.__number_of_threads
-        EnzymeClass = DigestEnzyme.get_enzyme_by_name(enzyme_name)
+        EnzymeClass = get_digestion_enzyme_by_name(enzyme_name)
         self.__enzyme = EnzymeClass(maximum_number_of_missed_cleavages, minimum_peptide_length, maximum_peptide_length)
         self.__input_file_paths = [pathlib.Path(path) for path in protein_data_dir.glob('*.txt')]
         self.__input_file_paths += [pathlib.Path(path) for path in protein_data_dir.glob('*.dat')]
@@ -191,7 +191,7 @@ class ProteinDigestion:
             digestion_information_row = database_cursor.fetchone()
             if digestion_information_row:
                 digestion_information_values = digestion_information_row[0]
-                DigestEnzymeClass = DigestEnzyme.get_enzyme_by_name(digestion_information_values['enzyme_name'])
+                DigestEnzymeClass = get_digestion_enzyme_by_name(digestion_information_values['enzyme_name'])
                 self.__enzyme = DigestEnzymeClass(
                     digestion_information_values['maximum_number_of_missed_cleavages'],
                     digestion_information_values['minimum_peptide_length'], 

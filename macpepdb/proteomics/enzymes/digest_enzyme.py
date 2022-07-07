@@ -1,10 +1,11 @@
 # std imports
+from __future__ import annotations
 import re
-from typing import ClassVar
+from typing import ClassVar, List
 
 # internal imports
-from macpepdb.models import peptide
-from macpepdb.models import protein
+from macpepdb.models import peptide as peptide_mod
+from macpepdb.models import protein as protein_mod
 from macpepdb.proteomics.amino_acid import X as UnknwonAminoAcid, REPLACEABLE_AMBIGIOUS_AMINO_ACID_LOOKUP
 
 class DigestEnzyme:
@@ -31,7 +32,7 @@ class DigestEnzyme:
     """Regex to count missed cleavages
     """
     
-    def __init__(self, name: str = "Abstract Digest Enzym", shortcut: str = "", cleavage_regex: re = r".", max_number_of_missed_cleavages: int = 0, minimum_peptide_length: int = 0, maximum_peptide_length: int = 1):
+    def __init__(self, name: str = "Abstract Digest Enzym", shortcut: str = "", cleavage_regex: re.Pattern = r".", max_number_of_missed_cleavages: int = 0, minimum_peptide_length: int = 0, maximum_peptide_length: int = 1):
         self.__name = name
         self.__shortcut = shortcut
         self.__cleavage_regex = cleavage_regex
@@ -68,7 +69,7 @@ class DigestEnzyme:
         return self.__maximum_peptide_length
 
 
-    def digest(self, protein: 'protein.Protein') -> list:
+    def digest(self, protein: protein_mod.Protein) -> List[peptide_mod.Peptide]:
         """
         Digests a protein.
 
@@ -95,7 +96,7 @@ class DigestEnzyme:
             for missed_cleavage in range(part_index, last_part_to_add):
                 peptide_sequence += protein_parts[missed_cleavage]
                 if len(peptide_sequence) in self.__peptide_range and not UnknwonAminoAcid.one_letter_code in peptide_sequence:
-                    peptides.add(peptide.Peptide(peptide_sequence, missed_cleavage - part_index))
+                    peptides.add(peptide_mod.Peptide(peptide_sequence, missed_cleavage - part_index))
                     if self.__class__.is_sequence_containing_replaceable_ambigous_amino_acids(peptide_sequence):
                         # If there is a replaceable ambigous amino acid within the sequence, calculate each sequence combination of the actual amino acids
                         # Note: Some protein sequences in SwissProt and TrEMBL contain ambigous amino acids (B, Z). In most cases B and Z are denoted with the average mass of their encoded amino acids (D, N and E, Q).
@@ -103,41 +104,8 @@ class DigestEnzyme:
                         # This works only, when the actual amino acids have distinct masses like for B and Z, therefore we have to tolerate Js.
                         differentiated_sequences = self.__class__.differentiate_ambigous_sequences(peptide_sequence)
                         for sequence in differentiated_sequences:
-                            peptides.add(peptide.Peptide(sequence, missed_cleavage - part_index))
+                            peptides.add(peptide_mod.Peptide(sequence, missed_cleavage - part_index))
         return list(peptides)
-
-    @classmethod
-    def get_enzyme_by_name(cls, name: str):
-        """
-        Returns a enzyme by name.
-
-        Argument
-        ========
-
-        Returns
-        -------
-        DigestEnzym
-        """
-        # to prevent cyclic imports, import enzyms here not at the top
-        from .trypsin import Trypsin
-        if name.lower() == Trypsin.NAME.lower():
-            return Trypsin
-        # elif name.lower() == OtherEnzym.NAME.lower()
-        raise NameError("Unknown enzym '{}'".format(name))
-
-    @classmethod
-    def get_known_enzymes(cls):
-        """
-        Returns a list of DigestEnzym names.
-
-        Returns
-        -------
-        List of names.
-        """
-        from .trypsin import Trypsin
-        return [
-            Trypsin.NAME.lower()
-        ]
 
     @classmethod
     def is_sequence_containing_replaceable_ambigous_amino_acids(cls, sequence: str) -> bool:
