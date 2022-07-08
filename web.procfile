@@ -1,0 +1,1 @@
+web: python -m macpepdb web serve $( test -f ./config.local.yaml && printf %s '-c ./config.local.yaml' )

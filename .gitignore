@@ -4,6 +4,7 @@
 # Local development files like database files
 /.db
 /tmp
+config.local.yaml
 
 # Files produced by tests
 /digestion_test.*

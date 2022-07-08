@@ -8,6 +8,8 @@ Only necessary for development and non-Docker installation
 * GIT
 * Build tools (Ubuntu: `build-essential`, Arch Linux: `base-devel`)
 * C/C++-header for PostgreSQL (Ubuntu: `libpq-dev`, Arch Linux: `postgresql-libs`)
+* C/C++-header for libev (Ubuntu: `libev-dev`, Arch Linux: `libev`)
+* Rust Compiler
 * Docker & Docker Compose
 * Python 3.x
 * [pyenv](https://github.com/pyenv/pyenv)
@@ -70,6 +72,17 @@ Place your protein data files as `.dat`- or `.txt`-files, containing the protein
 If you like to use the web interface as well, download the `taxdump.zip` from [NCBI](https://ftp.ncbi.nih.gov/pub/taxonomy/) and put the contained `.dmp`-files in the `taxonomy_data`-folder.
 
 Than start the database maintenance job with `python -m macpepdb database ...`. Run `python -m macpepdb database --help` to see the required arguments. Remember to use the container internal paths when using a docker container.
+
+### WebAPI
+Create a new config file with the default config
+```
+python -m macpepdb web write-config-file <PATH_TO_CONFIG_YAML>
+```
+Adjust the YAML file to your needs. Than start the WebAPI with
+```
+python -m macpepdb web serve -e production -c <PATH_TO_CONFIG_YAML>
+```
+For high availability in production use start multiple WebAPI and combine them with NginX (have a look in `nginx.example.conf`)
 
 ## Upgrading 
 ### 1.x to 2.x

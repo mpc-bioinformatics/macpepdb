@@ -5,6 +5,7 @@ import argparse
 from macpepdb.tasks.database_maintenance.database_maintenance import DatabaseMaintenance
 from macpepdb.tasks.precursor_range_calculation import PrecursorRangeCalculation
 from macpepdb.tasks.statistics import Statistics
+from macpepdb.web.cli import ComandLineInterface as WebComandLineInterface
 
 class ComandLineInterface():
     """
@@ -17,6 +18,7 @@ class ComandLineInterface():
         DatabaseMaintenance.comand_line_arguments(subparsers)
         PrecursorRangeCalculation.comand_line_arguments(subparsers)
         Statistics.command_line_arguments(subparsers)
+        WebComandLineInterface.add_cli_arguments(subparsers)
 
     def start(self):
         """
