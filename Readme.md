@@ -87,3 +87,9 @@ For high availability in production use start multiple WebAPI and combine them w
 ## Upgrading 
 ### 1.x to 2.x
 Due to changes of the database schema and the database engine, version 2.x is not compatible with version 1.x. You have to recreate the database.
+
+## Citation and Publication
+* **MaCPepDB: A Database to Quickly Access All Tryptic Peptides of the UniProtKB**   
+    Julian Uszkoreit, Dirk Winkelhardt, Katalin Barkovits, Maximilian Wulf, Sascha Roocke, Katrin Marcus, and Martin Eisenacher   
+    Journal of Proteome Research 2021 20 (4), 2145-2150   
+    [DOI: 10.1021/acs.jproteome.0c00967](https://doi.org/10.1021/acs.jproteome.0c00967)
