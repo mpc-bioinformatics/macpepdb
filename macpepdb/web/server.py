@@ -1,14 +1,13 @@
 # std imports
 import argparse
 import json
-import os
 from pathlib import Path
+import re
 import traceback
 from threading import Thread
-from typing import Optional
+from typing import Optional, Union, Dict, Any, List
 
 # 3rd part imports
-import bjoern
 from flask import Flask, g as request_store, request
 from werkzeug.exceptions import HTTPException
 
@@ -52,14 +51,47 @@ def get_database_connection():
     return request_store.database_connection
 
 
-def start(config_file: Optional[Path] = None, environment: Optional[Environment] = None):
-    global app
-    global macpepdb_pool
+def initialize_config(config_file: Optional[Union[Path, str]] = None, environment: Optional[Union[Environment, str]] = None):
+    """
+    Parses the config_file and environment if necessary and initializes the configuration.
+
+    Parameters
+    ----------
+    config_file : Optional[Union[Path, str]], optional
+        Path to config file, by default None
+    environment : Optional[Union[Environment, str]], optional
+        Environment as str, by default None
+    """
+    if config_file is not None and isinstance(config_file, str):
+        config_file = Path(config_file)
+    if environment is not None and isinstance(environment, str):
+        environment = Environment.from_str(environment)
 
     Configuration.initialize(
         config_file,
         environment
     )
+
+def get_app(config_file: Optional[Union[Path, str]] = None, environment: Optional[Union[Environment, str]] = None) -> Flask:
+    """
+    Build and set Flask app as global 
+
+    Parameters
+    ----------
+    config_file : Optional[Union[Path, str]], optional
+        Path to config file, by default None
+    environment : Optional[Union[Environment, str]], optional
+        Environment as str, by default None
+
+    Returns
+    -------
+    Flask
+        Flask app.
+    """
+    global app
+    global macpepdb_pool
+
+    initialize_config(config_file, environment)
 
     app = Flask('app')
     # Default Flask parameter
@@ -149,18 +181,60 @@ def start(config_file: Optional[Path] = None, environment: Optional[Environment]
     from macpepdb.web.routes import register_routes
     register_routes(app)
 
-    print(f"Start MaCPepDB webinterface in {Configuration.environment().name} mode on { Configuration.values()['interface']}:{ Configuration.values()['port']}")
+    bind: str = f"{Configuration.values()['interface']}:{ Configuration.values()['port']}"
+    print(f"Start MaCPepDB webinterface in {Configuration.environment().name} mode on {bind}")
+    return app
 
-    if Configuration.environment() == Environment.production or os.getenv("USE_BJOERN", "false") == "true":
-        bjoern.run(app,  Configuration.values()['interface'],  Configuration.values()['port'])
-    else:
-        app.run( Configuration.values()['interface'],  Configuration.values()['port'])
+def start(config_file: Optional[Union[Path, str]] = None, environment: Optional[Union[Environment, str]] = None):
+    """
+    Starts Flask app with integrated server. Good for development.
+
+    Parameters
+    ----------
+    config_file : Optional[Union[Path, str]], optional
+        Path to config file, by default None
+    environment : Optional[Union[Environment, str]], optional
+        Environment as str, by default None
+    """
+    app: Flask = get_app(config_file, environment)
+    app.run(
+        Configuration.values()['interface'],
+        Configuration.values()['port']
+    )
 
 def start_by_cli(cli_args):
-    start(
-        Path(cli_args.config) if cli_args.config is not None else None,
-        Environment.from_str(cli_args.environment) if cli_args.environment is not None else None
-    )
+    """
+    Starts server with CLI arguments
+
+    Parameters
+    ----------
+    cli_args : Any
+        CLI arguments from argparse
+    """
+    config_path: Optional[Path] = Path(cli_args.config).absolute() if cli_args.config is not None else None
+    environment: Optional[Environment] = Environment.from_str(cli_args.environment) if cli_args.environment is not None else None
+    
+    # If gunicorn is not set, just start the app
+    # Otherwise build and sprint gunicorn parameters.
+    if cli_args.gunicorn is None:
+        start(
+            config_path,
+            environment
+        )
+    else:
+        initialize_config(config_path, environment)
+
+        config_path_str: str = f"\"{config_path}\"" if config_path is not None else "None"
+        environment_str: str = f"\"{environment}\"" if environment is not None else "None"
+        gunicorn_args: str = cli_args.gunicorn
+        
+        # Add bind from config if not defined in guncicorn
+        if not "-b" in gunicorn_args and not "--bind" in gunicorn_args:
+            gunicorn_args += f" -b {Configuration.values()['interface']}:{Configuration.values()['port']} "
+        print(
+            f"{gunicorn_args} 'macpepdb.web.server:get_app(config_file={config_path_str}, environment={environment_str})'"
+        )
+
 
 def add_cli_arguments(subparsers: argparse._SubParsersAction):
     """
@@ -174,5 +248,19 @@ def add_cli_arguments(subparsers: argparse._SubParsersAction):
     parser = subparsers.add_parser("serve", help="Starts webserver")
     parser.add_argument("--environment", "-e", default=None, choices=[env.value for env in Environment], help="Environment to run")
     parser.add_argument("--config", "-c", required=False, default=None, help="Optional config file")
+    parser.add_argument(
+        "--gunicorn",
+        nargs='?',
+        type=str,
+        default=None,                       # When not present 
+        const="",                           # When present without value
+        help=(
+            "Can be used as flag or to pass arguments for Gunicorn webserver. "
+            "If this is used (even without value), it returns a Gunicorn arguments string "
+            "to start MaCPepDB using Gunicorn with the given config file and environment. "
+            "Just pass the string to Gunicorn binary. "
+            "If no Gunicorn bind option is added (-b|--bind) the interface and port of the config will be used."
+        )
+    )
     parser.set_defaults(func=start_by_cli)
 

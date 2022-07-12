@@ -18,7 +18,7 @@ setuptools.setup(
     python_requires='>=3.9, <3.10',
     install_requires = [
         "alembic >=1, <2",
-        "bjoern >= 3, <4",
+        "gunicorn >= 20.1, <20.2",
         "Flask >=1, <2",
         "markupsafe ==2.0.1",       # fix for `ImportError: cannot import name 'soft_unicode'
         "matplotlib >=3, <4",
