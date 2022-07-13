@@ -375,7 +375,7 @@ class ApiAbstractPeptideController(ApplicationController):
         )
 
     @staticmethod
-    def stream(spectrum_conversion: Callable[[int, Peptide], Iterator[ByteString]], delimiter: ByteString, pre_peptide_content: ByteString, post_spectra_content: Callable[[Any, WhereCondition], ByteString],
+    def stream(peptide_conversion: Callable[[int, Peptide], Iterator[ByteString]], delimiter: ByteString, pre_peptide_content: ByteString, post_spectra_content: Callable[[Any, WhereCondition], ByteString],
         where_condition: WhereCondition, order_by_instruction: str, offset: int, limit: int, include_metadata: bool,
         metadata_condition: MetadataCondition) -> Iterable[ByteString]:
         """
@@ -383,7 +383,7 @@ class ApiAbstractPeptideController(ApplicationController):
 
         Parameters
         ----------
-        spectrum_conversion : Callable[[int, Peptide], Iterator[ByteString]]
+        peptide_conversion : Callable[[int, Peptide], Iterator[ByteString]]
             Function with peptide index and peptide as input and yields the given peptide as bytes string for the response.
         delimiter : ByteString
             Delimiter between peptides
@@ -424,7 +424,7 @@ class ApiAbstractPeptideController(ApplicationController):
                     if peptide_idx >= offset - 1 and (not do_metadata_checks or metadata_condition.validate(peptide.metadata)):
                         if written_peptides > 0:
                             yield delimiter
-                        for json_chunk in spectrum_conversion(peptide_idx, peptide):
+                        for json_chunk in peptide_conversion(peptide_idx, peptide):
                             yield json_chunk
                         written_peptides += 1
                     # Break peptide cursor loop if limit is hit
