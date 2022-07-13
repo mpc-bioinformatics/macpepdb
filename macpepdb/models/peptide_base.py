@@ -1,7 +1,9 @@
 # std imports
 from __future__ import annotations
+import base64
 from collections import Counter
-from typing import Iterator, Optional, Union, List
+from typing import ByteString, Iterator, Optional, Union, List, ClassVar
+import zlib
 
 # external imports
 from psycopg2.extras import execute_values
@@ -10,6 +12,7 @@ from psycopg2.extras import execute_values
 from macpepdb.database.query_helpers.where_condition import WhereCondition
 from macpepdb.proteomics.neutral_loss import H2O
 from macpepdb.proteomics.amino_acid import AminoAcid
+from macpepdb.proteomics.mass.convert import to_float as mass_to_float
 
 # This class is only a super class acutal peptide classes e.g. Peptide
 class PeptideBase:
@@ -24,12 +27,16 @@ class PeptideBase:
         Number of missed cleavages
     """
 
-    TABLE_NAME = 'peptide_base'
+    TABLE_NAME: ClassVar[str] = 'peptide_base'
     """Name of the database table
     """
     
-    FASTA_HEADER_PREFIX = ">PEPTIDE_"
+    FASTA_HEADER_PREFIX: ClassVar[str] = ">macpepdb"
     """Prefix for FASTA entries
+    """
+
+    CSV_HEADER: ClassVar[List[str]] = ["mass", "sequence", "number_of_missed_cleavages"]
+    """Header for CSV output
     """
 
     PARTITONS = [
@@ -764,3 +771,72 @@ class PeptideBase:
         count_query += ";"
         database_cursor.execute(count_query, query_values)
         return database_cursor.fetchone()[0]
+
+    def to_fasta_entry(self, accession: Optional[ByteString] = None) -> Iterator[ByteString]:
+        """
+        Peptide as FASTA entry
+
+        Parameters
+        ----------
+        accession : Optional[ByteString]
+            Accession for fasta entry. If none, the base64 encoded, zlib compression of the encoded sequence is used.
+
+        Yields
+        ------
+        Iterator[ByteString]
+            FASTA entry
+        """
+        # Begin FASTA entry with '>macpepdb|' ...
+        yield f">{self.FASTA_HEADER_PREFIX}|".encode("utf-8")
+        encoded_seqeunce = self.sequence.encode()
+        # Use 'P' + index or base64 encoded, zlib compression if sequence as accession
+        yield accession if accession is not None else base64.b64encode(zlib.compress(encoded_seqeunce))
+        yield b"|"
+        # ... add the sequence in chunks of 60 amino acids ...
+        for chunk_start in range(0, len(self.encoded_seqeunce), 60):
+            yield b"\n"
+            yield self.encoded_seqeunce[chunk_start : chunk_start+60]
+
+    def to_json(self, close: bool = True) -> Iterator[ByteString]:
+        """
+        Generator which yields the peptides as a json formatted string
+
+        Arguments
+        ---------
+        close : bool
+            If true a closing bracket is added, default True
+
+        Yields
+        ------
+        Iterator[ByteString]
+            JSON formatted string.
+        """
+        yield b"{\"mass\":"
+        yield str(mass_to_float(self.mass)).encode("utf-8")
+        yield b",\"sequence\":\""
+        yield self.sequence.encode("utf-8")
+        yield b"\",\"length\":"
+        yield str(self.length).encode("utf-8")
+        yield b",\"number_of_missed_cleavages\":"
+        yield str(self.number_of_missed_cleavages).encode("utf-8")#
+        if close:
+            yield b"}"
+
+    def to_csv_row(self) -> Iterator[ByteString]:
+        """
+        Yields the peptide as CSV row
+
+        Yields
+        ------
+        Iterator[ByteString]
+            CSV row with 2 or 7 columns, depending if the peptide was queried with metadata
+        """
+        yield str(mass_to_float(self.mass)).encode("utf-8")
+        # At this point only string values are added to the cssv, so we quote them for better compatibility
+        yield b",\""
+        yield self.sequence.encode("utf-8")
+        yield b"\","
+        yield str(self.number_of_missed_cleavages).encode("utf-8")
+
+    def to_plain_text(self) -> Iterator[ByteString]:
+        yield self.sequence.encode("utf-8")

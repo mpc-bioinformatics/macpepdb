@@ -1,15 +1,12 @@
-from flask import request, jsonify
+from typing import Iterator
+from flask import request, jsonify, Response
 
 from macpepdb.database.query_helpers.where_condition import WhereCondition
 from macpepdb.proteomics.amino_acid import AminoAcid
-from macpepdb.proteomics.mass.convert import to_float as mass_to_float
 from macpepdb.models.protein import Protein
 from macpepdb.models.peptide import Peptide
 from macpepdb.models.protein_peptide_association import ProteinPeptideAssociation
-from macpepdb.models.taxonomy import Taxonomy
-
 from macpepdb.web.server import app, get_database_connection
-from macpepdb.web.models.convert import peptide_to_dict, protein_to_dict
 from macpepdb.web.controllers.application_controller import ApplicationController
 from macpepdb.web.controllers.api.api_digestion_controller import ApiDigestionController
 
@@ -31,12 +28,10 @@ class ApiProteinsController(ApplicationController):
             )
 
             if protein:
-                response_body = protein_to_dict(protein)
-                database_cursor.execute(f"SELECT name FROM {Taxonomy.TABLE_NAME} WHERE id = %s;", (protein.taxonomy_id,))
-                taxonomy_name_row = database_cursor.fetchone()
-                response_body["taxonomy_name"] = taxonomy_name_row[0] if taxonomy_name_row else None
-
-                return jsonify(response_body)
+                return Response(
+                    protein.to_json(),
+                    content_type="application/json"
+                )
             else:               
                 return jsonify({
                     "errors": {
@@ -60,18 +55,19 @@ class ApiProteinsController(ApplicationController):
                 )
                 peptides.sort(key = lambda peptide: peptide.mass)
 
-                return jsonify({
-                    "peptides": [{
-                        "mass": mass_to_float(peptide.mass),
-                        "sequence": peptide.sequence,
-                        "number_of_missed_cleavages": peptide.number_of_missed_cleavages,
-                        "is_swiss_prot": peptide.metadata.is_swiss_prot,
-                        "is_trembl": peptide.metadata.is_trembl,
-                        "taxonomy_ids": peptide.metadata.taxonomy_ids,
-                        "unique_taxonomy_ids": peptide.metadata.unique_taxonomy_ids,
-                        "proteome_ids": peptide.metadata.proteome_ids
-                    } for peptide in peptides]
-                })
+                def json_stream() -> Iterator[bytes]:
+                    yield b"{\"peptides\": ["
+                    for peptide_idx, peptide in enumerate(peptides):
+                        if peptide_idx > 0:
+                            yield b","
+                        yield from peptide.to_json()
+                    yield b"]}"
+                    
+                return Response(
+                    json_stream(),
+                    content_type="application/json"
+                )
+
 
 
     @staticmethod
@@ -99,7 +95,8 @@ class ApiProteinsController(ApplicationController):
                 )
                 if protein:
                     peptides = list(filter(
-                        lambda peptide: peptide.number_of_missed_cleavages <= data["maximum_number_of_missed_cleavages"] and data["minimum_peptide_length"] <= peptide.length <= data["maximum_peptide_length"],
+                        lambda peptide: peptide.number_of_missed_cleavages <= data["maximum_number_of_missed_cleavages"] \
+                            and data["minimum_peptide_length"] <= peptide.length <= data["maximum_peptide_length"],
                         protein.peptides(database_cursor)
                     ))
                     peptides.sort(key = lambda peptide: peptide.mass)
@@ -107,10 +104,17 @@ class ApiProteinsController(ApplicationController):
                     errors["accession"].append("not found")
 
         if len(errors) == 0:
-            return jsonify({
-                "peptides": [peptide_to_dict(peptide) for peptide in peptides],
-                "count": len(peptides)
-            })
+            def json_stream():
+                yield b"{\"peptides\": ["
+                for peptide_idx, peptide in enumerate(peptides):
+                    if peptide_idx > 0:
+                        yield b","
+                    yield from peptide.to_json()
+                yield f"], \"count\": {len(peptides)}}}".encode("utf-8 ")
+            return Response(
+                json_stream(),
+                content_type="application/json"
+            )
         else:
             return jsonify({
                 "errors": errors

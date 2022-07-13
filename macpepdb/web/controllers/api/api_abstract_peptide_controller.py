@@ -14,12 +14,10 @@ from macpepdb.proteomics.modification import Modification
 from macpepdb.proteomics.modification_collection import ModificationCollection
 from macpepdb.models.modification_combination_list import ModificationCombinationList
 from macpepdb.models.taxonomy import Taxonomy, TaxonomyRank
+from macpepdb.models.peptide import Peptide
 from macpepdb.models.peptide_metadata import PeptideMetadata
-
-
 from macpepdb.web.server import get_database_connection, macpepdb_pool, app
 from macpepdb.web.controllers.application_controller import ApplicationController
-from macpepdb.web.models.peptide import Peptide
 
 @unique
 class OutputFormat(Enum):

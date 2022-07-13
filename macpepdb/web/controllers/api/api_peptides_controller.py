@@ -6,17 +6,14 @@ from typing import ClassVar, Iterator
 # 3rd party imports
 from flask import request, jsonify, Response
 from macpepdb.database.query_helpers.where_condition import WhereCondition
+from macpepdb.models.peptide import Peptide
 from macpepdb.models.protein import Protein
 from macpepdb.models.protein_peptide_association import ProteinPeptideAssociation
 from macpepdb.proteomics.mass.convert import to_float as mass_to_float
 from macpepdb.proteomics.enzymes import get_digestion_enzyme_by_name
-
-# internal imports
 from macpepdb.web.server import app, get_database_connection, macpepdb_pool
-from macpepdb.web.models.convert import peptide_to_dict, protein_to_dict
 from macpepdb.web.controllers.api.api_abstract_peptide_controller import ApiAbstractPeptideController
 from macpepdb.web.controllers.api.api_digestion_controller import ApiDigestionController
-from macpepdb.web.models.peptide import Peptide
 
 
 class ApiPeptidesController(ApiAbstractPeptideController):
@@ -80,23 +77,36 @@ class ApiPeptidesController(ApiAbstractPeptideController):
                 True
             )
 
-            reviewed_proteins_rows = []
-            unreviewed_proteins_rows = []
+            reviewed_proteins = []
+            unreviewed_proteins = []
 
             for protein in proteins:
                 if protein.is_reviewed:
-                    reviewed_proteins_rows.append(
-                        protein_to_dict(protein)
+                    reviewed_proteins.append(
+                        protein
                     )
                 else:
-                    unreviewed_proteins_rows.append(
-                        protein_to_dict(protein)
+                    unreviewed_proteins.append(
+                        protein
                     )
 
-            return jsonify({
-                "reviewed_proteins": reviewed_proteins_rows,
-                "unreviewed_proteins": unreviewed_proteins_rows
-            })
+            def json_stream() -> Iterator[bytes]:
+                yield b"{\"reviewed_proteins\": ["
+                for protein_idx, protein in enumerate(reviewed_proteins):
+                    if protein_idx > 0:
+                        yield b","
+                    yield from protein.to_json()
+                yield b"],\"unreviewed_proteins\": ["
+                for protein_idx, protein in enumerate(unreviewed_proteins):
+                    if protein_idx > 0:
+                        yield b","
+                    yield from protein.to_json()
+                yield b"]}"
+                
+            return Response(
+                json_stream(),
+                content_type="application/json"
+            )
 
     @staticmethod
     def sequence_mass(sequence):
@@ -125,25 +135,41 @@ class ApiPeptidesController(ApiAbstractPeptideController):
             enzyme = EnzymeClass(data["maximum_number_of_missed_cleavages"], data["minimum_peptide_length"], data["maximum_peptide_length"])
             digestion_peptides = enzyme.digest(Protein("TMP", [], "TMP", "TMP", data["sequence"], [], [], False, 0))
 
-            where_clause = " OR ".join(["mass = %s AND sequence = %s"] * len(digestion_peptides))
-            where_values = list(itertools.chain.from_iterable([[peptide.mass, peptide.sequence] for peptide in digestion_peptides]))
-
             if "do_database_search" in data and isinstance(data["do_database_search"], bool) and data["do_database_search"]:
                 database_connection = get_database_connection()           
                 with database_connection.cursor() as database_cursor:
-                    database_peptides = Peptide.select(database_cursor, (where_clause, where_values), fetchall=True)
+                    database_peptides = Peptide.select(
+                        database_cursor,
+                        WhereCondition(
+                            ["(partition, mass, sequence) IN %s"],
+                            (tuple((peptide.partition, peptide.mass, peptide.sequence) for peptide in digestion_peptides),)
+                        ),
+                        fetchall=True
+                    )
                 database_peptides.sort(key = lambda peptide: peptide.mass)
                 digestion_peptides = [peptide for peptide in digestion_peptides if peptide not in database_peptides]
-
 
             digestion_peptides.sort(key = lambda peptide: peptide.mass)
 
         if len(errors) == 0:
-            return jsonify({
-                "database": [peptide_to_dict(peptide) for peptide in database_peptides],
-                "digestion": [peptide_to_dict(peptide) for peptide in digestion_peptides],
-                "count": len(database_peptides) +  len(digestion_peptides)
-            })
+            def json_stream() -> Iterator[bytes]:
+                yield b"{\"database\": ["
+                for peptide_idx, peptide in enumerate(database_peptides):
+                    if peptide_idx > 0:
+                        yield b","
+                    yield from peptide.to_json()
+                yield b"],\"digestion\": ["
+                for peptide_idx, peptide in enumerate(digestion_peptides):
+                    if peptide_idx > 0:
+                        yield b","
+                    yield from peptide.to_json()
+                yield f"],\"count\": {len(database_peptides) +  len(digestion_peptides)}}}".encode("utf-8")
+                
+            return Response(
+                json_stream(),
+                content_type="application/json"
+            )
+
         else:
             return jsonify({
                 "errors": errors

@@ -1,6 +1,6 @@
 # std imports
 from __future__ import annotations
-from typing import Iterator, Optional, List, Union
+from typing import ByteString, ClassVar, Iterator, Optional, List, Union
 
 
 # internal imports
@@ -25,8 +25,12 @@ class Peptide(PeptideBase):
         Peptide metadata (optional)
     """
 
-    TABLE_NAME = 'peptides'
+    TABLE_NAME: ClassVar[str] = 'peptides'
     """Database table name
+    """
+
+    METADATA_CSV_HEADER: ClassVar[List[str]] = ["in_swiss_prot", "in_trembl", "taxonomy_ids", "unique_for_taxonomy_ids", "proteome_ids"]
+    """Additional CSV header for metadata
     """
     
     def __init__(self, sequence: str, number_of_missed_cleavages: int, metadata: metadata_module.PeptideMetadata = None):
@@ -177,3 +181,83 @@ class Peptide(PeptideBase):
                 unique_taxonomy_ids,
                 list(proteome_ids)
             )
+
+        
+    @classmethod
+    def __taxonomy_ids_to_json(cls, taxonomy_ids: List[int]) -> Iterator[ByteString]:
+        """
+        Generator which yields array of taxonomy IDs as json formatted string.
+
+        Parameters
+        ----------
+        taxonomy_ids : List[int]
+            Taxonomy IDs
+
+        Yields
+        ------
+        Iterator[ByteString]
+            JSON formatted string
+        """
+        yield b"["
+        for idx, taxonomy_id in enumerate(taxonomy_ids):
+            if idx > 0:
+                yield b","
+            yield str(taxonomy_id).encode("utf-8")
+        yield b"]"
+
+    def to_json(self) -> Iterator[ByteString]:
+        """
+        Generator which yields the peptides as a json formatted string including metadata if present
+
+        Yields
+        ------
+        Iterator[ByteString]
+            JSON formatted string.
+        """
+        yield from super().to_json(False)
+        yield b",\"metadata\":"
+        if self.metadata is not None:
+            yield b"{\"is_swiss_prot\":"
+            yield b"true" if self.metadata.is_swiss_prot else b"false"
+            yield b",\"is_trembl\":"
+            yield b"true" if self.metadata.is_trembl else b"false"
+            yield b",\"taxonomy_ids\":"
+            for taxonomy_id_chunk in self.__class__.__taxonomy_ids_to_json(self.metadata.taxonomy_ids):
+                yield taxonomy_id_chunk
+            yield b",\"unique_taxonomy_ids\":"
+            for taxonomy_id_chunk in self.__class__.__taxonomy_ids_to_json(self.metadata.unique_taxonomy_ids):
+                yield taxonomy_id_chunk
+            yield b",\"proteome_ids\":["
+            for idx, proteome_id in enumerate(self.metadata.proteome_ids):
+                if idx > 0:
+                    yield b","
+                yield b"\""
+                yield proteome_id.encode("utf-8")
+                yield b"\""
+            yield b"]}"
+        else:
+            yield b"null"
+        yield b"}"
+
+    def to_csv_row(self) -> Iterator[ByteString]:
+        """
+        Yields the peptide as CSV row including metadata if present
+
+        Yields
+        ------
+        Iterator[ByteString]
+            CSV row with 2 or 7 columns, depending if the peptide was queried with metadata
+        """
+        yield from super().to_csv_row()
+        if self.metadata is not None:
+            yield ",\""
+            yield b"true" if self.metadata.is_swiss_prot else b"false"
+            yield b"\",\""
+            yield b"true" if self.metadata.is_trembl else b"false"
+            yield b"\",\""
+            yield ",".join([str(taxonomy_id) for taxonomy_id in self.metadata.taxonomy_ids]).encode()
+            yield b"\",\""
+            yield ",".join([str(taxonomy_id) for taxonomy_id in self.metadata.unique_taxonomy_ids]).encode()
+            yield b"\",\""
+            yield ",".join([f"{proteome_id}" for proteome_id in self.metadata.proteome_ids]).encode()
+            yield b"\""

@@ -1,7 +1,7 @@
 from __future__ import annotations
 import re
 from datetime import datetime
-from typing import List, Tuple
+from typing import ByteString, List, Tuple, Iterator
 
 # external imports
 from psycopg2.extras import execute_values
@@ -498,3 +498,28 @@ class Protein:
                 fetch=True
             )
         ]
+
+    def to_json(self) -> Iterator[ByteString]:
+        """
+        Generator which yields the protein as a json formatted string
+
+        Yields
+        ------
+        Iterator[ByteString]
+            JSON formatted string.
+        """
+        yield b"{\"accession\":\""
+        yield self.accession.encode("utf-8")
+        yield b"\",\"entry_name\":\""
+        yield self.accession.encode("utf-8")
+        yield b"\",\"name\":\""
+        yield self.name.encode("utf-8")
+        yield b"\",\"sequence\":\""
+        yield self.sequence.encode("utf-8")
+        yield b"\",\"taxonomy_id\":"
+        yield str(self.taxonomy_id).encode("utf-8")
+        yield b",\"proteome_id\":"
+        yield f"\"{self.proteome_id}\"".encode("utf-8") if self.proteome_id is not None else b"null"
+        yield b",\"is_reviewed\":"
+        yield b"true" if self.is_reviewed else b"false"
+        yield b"}"
