@@ -49,6 +49,7 @@ def register_routes(app: Flask):
     # Taxonomy controller
     app.add_url_rule("/api/taxonomies/search", view_func=ApiTaxonomiesController.search, methods=["POST"], endpoint="taxonomy_search")
     app.add_url_rule("/api/taxonomies/<int:id>", view_func=ApiTaxonomiesController.show, endpoint="taxonomy_show")
+    app.add_url_rule("/api/taxonomies/<int:id>/sub-species", view_func=ApiTaxonomiesController.sub_species)
     app.add_url_rule("/api/taxonomies/by/ids", view_func=ApiTaxonomiesController.by_ids, methods=["POST"])
 
     # Documents controller

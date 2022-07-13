@@ -74,6 +74,30 @@ class ApiTaxonomiesController(ApplicationController):
             return jsonify(["not found"]), 422
 
     @staticmethod
+    def sub_species(id):
+        database_connection = get_database_connection()
+        with database_connection.cursor() as database_cursor:
+            taxonomy = Taxonomy.select(database_cursor, ("id = %s", [id]))
+
+            if taxonomy is None:
+                taxonomy_merge = TaxonomyMerge.select(database_cursor, ("source_id = %s", [id]))
+                if taxonomy_merge:
+                    taxonomy = Taxonomy.select(database_cursor, ("id = %s", [taxonomy_merge.target_id]))
+
+            if taxonomy is not None:
+                return jsonify({
+                    "sub_species": [
+                        {
+                            "id": sub_taxonomy.id,
+                            "name": sub_taxonomy.name,
+                            "parent": sub_taxonomy.parent_id,
+                            "rank": sub_taxonomy.rank,
+                        } for sub_taxonomy in taxonomy.sub_species(database_cursor)
+                    ]
+                })
+        return jsonify(["not found"]), 422
+
+    @staticmethod
     def by_ids():
         data = request.get_json()
         errors = defaultdict(list)

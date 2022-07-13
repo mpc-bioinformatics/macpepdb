@@ -1,9 +1,11 @@
 # internal imports
 from __future__ import annotations
 from enum import IntEnum, unique
+from typing import List
 
 # external imports
 from psycopg2.extras import execute_values
+from psycopg2.extensions import cursor as DatabaseCursor
 
 @unique
 class TaxonomyRank(IntEnum):
@@ -230,3 +232,31 @@ class Taxonomy:
                 return cls(row[0], row[1], row[2], row[3])
             else:
                 return None
+
+    def sub_species(self, database_cursor: DatabaseCursor) -> List[Taxonomy]:
+        """
+        Returns all sub taxonomies with rank TaxonomyRank.SPECIES including itself if itself has rank TaxonomyRank.SPECIES.
+
+        Parameters
+        ----------
+        database_cursor : DatabaseCursor
+            Database cursor
+
+        Returns
+        -------
+        List[Taxonomy]
+            List of taxonomies including the self
+        """
+        recursive_subspecies_id_query = (
+            "WITH RECURSIVE subtaxonomies AS ("
+                "SELECT id, parent_id, name, rank "
+                f"FROM {self.__class__.TABLE_NAME} "
+                "WHERE id = %s "
+                "UNION " 
+                    "SELECT t.id, t.parent_id, t.name, t.rank "
+                    f"FROM {self.__class__.TABLE_NAME} t "
+                    "INNER JOIN subtaxonomies s ON s.id = t.parent_id "
+            f") SELECT id, parent_id, name, rank FROM subtaxonomies WHERE rank = %s;"
+        )
+        database_cursor.execute(recursive_subspecies_id_query, (self.id, TaxonomyRank.SPECIES.value))
+        return [self.__class__(row[0], row[1], row[2], row[3]) for row in database_cursor.fetchall()]

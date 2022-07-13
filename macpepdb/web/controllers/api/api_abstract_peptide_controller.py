@@ -259,22 +259,18 @@ class ApiAbstractPeptideController(ApplicationController):
                     # List of metadata conditions
                     if "taxonomy_id" in data:
                         if isinstance(data["taxonomy_id"], int):
-                            # Recursively select all taxonomies below the given one
-                            recursive_subspecies_id_query = (
-                                "WITH RECURSIVE subtaxonomies AS ("
-                                    "SELECT id, parent_id, rank "
-                                    f"FROM {Taxonomy.TABLE_NAME} "
-                                    "WHERE id = %s "
-                                    "UNION " 
-                                        "SELECT t.id, t.parent_id, t.rank "
-                                        f"FROM {Taxonomy.TABLE_NAME} t "
-                                        "INNER JOIN subtaxonomies s ON s.id = t.parent_id "
-                                f") SELECT id FROM subtaxonomies WHERE rank = %s;"
-                            )
-
-                            with database_connection.cursor() as db_cursor:
-                                db_cursor.execute(recursive_subspecies_id_query, (data["taxonomy_id"], TaxonomyRank.SPECIES.value))
-                                metadata_condition.taxonomy_ids = [row[0] for row in db_cursor.fetchall()]
+                            with database_connection.cursor() as database_cursor:
+                                taxonomy = Taxonomy.select(
+                                    database_cursor,
+                                    (
+                                        "id = %s",
+                                        (data["taxonomy_id"], )
+                                    )
+                                )
+                                if taxonomy is not None:
+                                    metadata_condition.taxonomy_ids = [sub.id for sub in taxonomy.sub_species(database_cursor)]
+                                else:
+                                    errors["taxonomy_id"].append("not found")
 
                         else:
                             errors["taxonomy_id"].append("must be an integer")
