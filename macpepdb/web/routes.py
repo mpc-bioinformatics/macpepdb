@@ -44,7 +44,7 @@ def register_routes(app: Flask):
     app.add_url_rule("/api/peptides/<string:sequence>/proteins", view_func=ApiPeptidesController.proteins, methods=["GET"])
     app.add_url_rule("/api/peptides/mass/<string:sequence>", view_func=ApiPeptidesController.sequence_mass, methods=["GET"])
     app.add_url_rule("/api/peptides/digest", view_func=ApiPeptidesController.digest, methods=["POST"], endpoint="peptide_digest")
-    app.add_url_rule("/api/peptides/lookup", view_func=ApiPeptidesController.seqeunce_lookup, methods=["POST"])
+    app.add_url_rule("/api/peptides/lookup", view_func=ApiPeptidesController.sequence_lookup, methods=["POST"])
 
     # Taxonomy controller
     app.add_url_rule("/api/taxonomies/search", view_func=ApiTaxonomiesController.search, methods=["POST"], endpoint="taxonomy_search")

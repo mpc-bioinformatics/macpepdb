@@ -151,7 +151,7 @@ class ApiPeptidesController(ApiAbstractPeptideController):
 
 
     @staticmethod
-    def seqeunce_lookup():
+    def sequence_lookup():
         """
         Check if the incoming peptide sequences exists in MaCPepDB
 
