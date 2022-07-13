@@ -65,7 +65,7 @@ class ApiTaxonomiesController(ApplicationController):
                     "id": taxonomy.id,
                     "name": taxonomy.name,
                     "parent": taxonomy.parent_id,
-                    "children": [taxonomy.id for taxonomy in taxonomy.children(database_cursor)]
+                    "rank": taxonomy.rank,
                 }
 
         if response:
