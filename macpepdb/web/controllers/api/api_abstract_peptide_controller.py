@@ -339,8 +339,9 @@ class ApiAbstractPeptideController(ApplicationController):
             peptide_conversion = lambda _, peptide: peptide.to_json()
             delimiter = b","
             pre_peptide_content = b"{\"peptides\":["
-            post_peptide_content = lambda _, __: b"]}" if not include_count else \
-                lambda database_cursor, where_condition: f"],\"count\":{Peptide.count(database_cursor, where_condition)}}}".encode("utf-8")
+            post_peptide_content = lambda _, __: b"]}"
+            if include_count:
+                post_peptide_content = lambda database_cursor, where_condition: f"],\"count\":{Peptide.count(database_cursor, where_condition)}}}".encode("utf-8")
         elif output_style == OutputFormat.stream:
             peptide_conversion = lambda _, peptide: peptide.to_json()
             delimiter = b"\n"
