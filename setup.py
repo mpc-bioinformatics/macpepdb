@@ -13,6 +13,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/mpc-bioinformatics/macpepdb",
     packages=setuptools.find_packages(),
+    include_package_data=True,
     classifiers=[
     ],
     python_requires='>=3.9, <3.10',

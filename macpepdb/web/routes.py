@@ -4,6 +4,7 @@ from flask import Flask
 # internal imports
 from macpepdb.web.controllers.api.api_dashboard_controller import ApiDashboardController
 from macpepdb.web.controllers.api.api_digestion_controller import ApiDigestionController
+from macpepdb.web.controllers.api.api_documents_controller import ApiDocumentsController
 from macpepdb.web.controllers.api.api_modifications_controller import ApiModificationsController
 from macpepdb.web.controllers.api.api_peptides_controller import ApiPeptidesController
 from macpepdb.web.controllers.api.api_proteins_controller import ApiProteinsController
@@ -49,3 +50,8 @@ def register_routes(app: Flask):
     app.add_url_rule("/api/taxonomies/search", view_func=ApiTaxonomiesController.search, methods=["POST"], endpoint="taxonomy_search")
     app.add_url_rule("/api/taxonomies/<int:id>", view_func=ApiTaxonomiesController.show, endpoint="taxonomy_show")
     app.add_url_rule("/api/taxonomies/by/ids", view_func=ApiTaxonomiesController.by_ids, methods=["POST"])
+
+    # Documents controller
+    app.add_url_rule("/api/documents/20220314-macpepdb__increasing-performance.pdf", view_func=ApiDocumentsController.increasing_performance)
+    app.add_url_rule("/api/documents/20220331-enhancement_of_macpepdb.pdf", view_func=ApiDocumentsController.enhancement)
+    
