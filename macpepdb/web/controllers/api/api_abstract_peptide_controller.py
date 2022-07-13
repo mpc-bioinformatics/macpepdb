@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from enum import Enum, unique
 import json
 import math
+import traceback
 from typing import ByteString, Callable, Iterator, List, Iterable, Optional, Any
 
 from flask import jsonify, Response
@@ -433,6 +434,8 @@ class ApiAbstractPeptideController(ApplicationController):
                         break
             with database_connection.cursor() as database_cursor:
                 yield post_spectra_content(database_cursor, where_condition)
-
+        except BaseException as e:
+            app.logger.error(f"steam throws err => {e}\n\ntraceback => {traceback.format_exc()}")
+            raise e
         finally:
             macpepdb_pool.putconn(database_connection)
