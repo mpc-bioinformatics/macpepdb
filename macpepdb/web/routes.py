@@ -24,7 +24,7 @@ def register_routes(app: Flask):
     # you have to give them a distinct endpioint name.
 
     # Dashboard controller
-    app.add_url_rule("/api/dashboard/citus", view_func=ApiDashboardController.citus)
+    app.add_url_rule("/api/dashboard/status", view_func=ApiDashboardController.status)
     app.add_url_rule("/api/dashboard/maintenance", view_func=ApiDashboardController.maintenance)
     
     # Modifications controller

@@ -1,3 +1,6 @@
+# std imports
+from typing import Dict, Any
+
 # 3rd party imports
 from flask import jsonify
 from macpepdb.models.maintenance_information import MaintenanceInformation
@@ -8,7 +11,7 @@ from macpepdb.web.controllers.application_controller import ApplicationControlle
 
 class ApiDashboardController(ApplicationController):
     @staticmethod
-    def citus():
+    def status():
         database_connection = get_database_connection()
         with database_connection.cursor() as database_cursor:
             database_cursor.execute("SELECT count(*) from pg_dist_node");
@@ -18,24 +21,24 @@ class ApiDashboardController(ApplicationController):
             rebalance_job_rows = database_cursor.fetchall()
             finished_rebalance_job_rows = list(filter(lambda row: row[8] == 2, rebalance_job_rows))
             running_rebalance_job_rows = list(filter(lambda row: row[8] == 1, rebalance_job_rows))
-
-            return jsonify({
+            database_status = MaintenanceInformation.select(database_cursor, MaintenanceInformation.DATABASE_STATUS_KEY)
+            status: Dict[str, Any] = {
                 "number_of_nodes": number_of_nodes,
                 "number_of_rebalance_jobs": len(rebalance_job_rows),
                 "number_of_finished_rebalance_jobs": len(finished_rebalance_job_rows),
-                "number_of_running_rebalance_jobs": len(running_rebalance_job_rows)
-            })
+                "number_of_running_rebalance_jobs": len(running_rebalance_job_rows),
+            }
+            status.update(database_status.values)
+            return jsonify(status)
 
     @staticmethod
     def maintenance():
         database_connection = get_database_connection()
         with database_connection.cursor() as database_cursor:
             comment = MaintenanceInformation.select(database_cursor, MaintenanceInformation.COMMENT_KEY)
-            database_status = MaintenanceInformation.select(database_cursor, MaintenanceInformation.DATABASE_STATUS_KEY)
             digestion_parameter = MaintenanceInformation.select(database_cursor, MaintenanceInformation.DIGESTION_PARAMTERS_KEY)
 
             return jsonify({
-                "comment": comment.values[comment] if comment is not None else None,
-                "database_status": database_status.values,
+                "comment": comment.values["comment"] if comment is not None else None,
                 "digestion_parameters": digestion_parameter.values
             })
