@@ -426,8 +426,7 @@ class ApiAbstractPeptideController(ApplicationController):
                     if peptide_idx >= offset - 1 and (not do_metadata_checks or metadata_condition.validate(peptide.metadata)):
                         if written_peptides > 0:
                             yield delimiter
-                        for json_chunk in peptide_conversion(peptide_idx, peptide):
-                            yield json_chunk
+                        yield from peptide_conversion(peptide_idx, peptide)
                         written_peptides += 1
                     # Break peptide cursor loop if limit is hit
                     if written_peptides == limit:
