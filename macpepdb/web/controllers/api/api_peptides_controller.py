@@ -27,7 +27,7 @@ class ApiPeptidesController(ApiAbstractPeptideController):
     def show(sequence: str):
         is_reviewed = request.args.get("is_reviewed", None)
         if is_reviewed is not None:
-            is_reviewed = bool(is_reviewed)
+            is_reviewed = bool(int(is_reviewed))
         sequence = sequence.upper()
         database_connection = get_database_connection()
         with database_connection.cursor() as database_cursor:
@@ -51,11 +51,12 @@ class ApiPeptidesController(ApiAbstractPeptideController):
             # or is_reviewed is requested and False and metadata is_trembl is True
             if is_reviewed is None \
                 or is_reviewed and peptide.metadata.is_swiss_prot \
-                or not is_reviewed and peptide.metadata.peptide.metadata.is_trembl:
+                or not is_reviewed and peptide.metadata.is_trembl:
                 return Response(
                     peptide.to_json(),
                     content_type="application/json"
                 )
+            return jsonify({}), 404
 
     @staticmethod
     def proteins(sequence: str):
