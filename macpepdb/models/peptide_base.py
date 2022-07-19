@@ -793,9 +793,9 @@ class PeptideBase:
         yield accession if accession is not None else base64.b64encode(zlib.compress(encoded_seqeunce))
         yield b"|"
         # ... add the sequence in chunks of 60 amino acids ...
-        for chunk_start in range(0, len(self.encoded_seqeunce), 60):
+        for chunk_start in range(0, len(encoded_seqeunce), 60):
             yield b"\n"
-            yield self.encoded_seqeunce[chunk_start : chunk_start+60]
+            yield encoded_seqeunce[chunk_start : chunk_start+60]
 
     def to_json(self, close: bool = True) -> Iterator[ByteString]:
         """
