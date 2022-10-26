@@ -43,6 +43,14 @@ matomo:
   site_id: 1
   auth_token: ""
 """
+    """Default configuration.
+    """
+
+    ENVIRONMENT_ENV_VAR_NAME: ClassVar[str] = "MACPEPDB_WEB_ENV"
+    """ Name of the environment variable to decide for which envirnment 
+    (development or production) to use.
+    """
+
     __values: ClassVar[Dict[str, Any]] = {}
     __environment: ClassVar[Environment] = Environment.production
 
@@ -57,17 +65,17 @@ matomo:
     @classmethod
     def initialize(cls, config_path: Optional[Path] = None, environment: Optional[Environment] = None):
         if environment is None:
-            environment = Environment.from_str(os.getenv('MACPEPDB_WEB_ENV', str(Environment.development)))
+            environment = Environment.from_str(os.getenv(cls.ENVIRONMENT_ENV_VAR_NAME, str(Environment.development)))
 
         config = yaml_load(cls.DEFAULT_CONFIG, Loader=YamlLoader)
         if config_path:
             with config_path.open("r") as config_file:
                 new_config = yaml_load(config_file.read(), Loader=YamlLoader)
-                config = Configuration._merge_dicts_recursively(new_config, config)
-        Configuration._validate_config(config)
+                config = cls._merge_dicts_recursively(new_config, config)
+        cls._validate_config(config)
 
-        Configuration.__values = config
-        Configuration.__environment = environment
+        cls.__values = config
+        cls.__environment = environment
 
     @classmethod
     def _validate_config(cls, config: Dict[str, Any]):
