@@ -3,6 +3,28 @@
 ## Description
 Creates a peptide databases by digesting proteins stored in FASTA-/Uniprot-Text-files.
 
+### Ambiguous amino acids
+Some UniProt entries contain one letter codes which encode multiple amino acids. Usually the encoded amino acids
+have a similar or equal mass. Ambiguous one letter codes are:
+
+* `B` encodes `D` & `N`
+* `J` encodes `I` & `L`
+* `Z` encodes `E` & `Q`
+
+Because the amino acids encoded by `B` & `Z` have a different mass and only a few hundreds entries contain these, MaCPepDB resolves the ambiguity by creating all possible combination of the peptide with the distinct amino acids, e.g.:   
+
+| ambiguous peptide | distinct peptides |
+| --- | --- |
+| `PE_B_TIDE_Z_K` | `PE_D_TIDE_E_K` |
+|                 | `PE_D_TIDE_Q_K` |
+|                 | `PE_N_TIDE_E_K` |
+|                 | `PE_N_TIDE_Q_K` |
+
+`J` encodes Leucine and Isoleucine, both have the same mass. Resolving those would not make the peptides better distinguishable by mass.
+
+In theory `X` is also ambiguous encoding **all** amino acids. Practically a lot more entries containing `X` sometimes with a high abundance of `X`. Resolving this would increase the amount of peptides significantly and slow down MaCPepDB's search functionality. Because `X` has no mass peptides, containing it, will be discarded entirely.
+
+
 ## Dependencies
 Only necessary for development and non-Docker installation
 * GIT
@@ -19,7 +41,7 @@ Only necessary for development and non-Docker installation
 Make sure `pipenv` finds `pyenv` 
 ### Prepare development environment
 ```bash
-# Install correkt python version and create environment
+# Install correct python version and create environment
 pipenv install -d
 
 # Change to environment
@@ -51,8 +73,8 @@ Appending `--help` shows the available command line parameter.
 ### Docker installation
 To create a Docker image use: `docker build --tag macpepdb-py .` . You can use the image to start a container with
 `docker run -it --rm macpepdb-py --help`.
-To access your files in the container mount your files to `/usr/src/macpepdb/data` with `-v YOUR_DATA_FOLDER:/usr/src/macpepdb/data` (add it before the `macpepdb-py`). Keep in mind your working in a container, so all files pathes are within the container.   
-If you intend to create a protein/peptide database and your Postgresql server is running in a Docke container too, make sure both, the  Postgresql server and the MacPepDB container have access to the same Docker network by adding `--network=YOUR_DOCKER_NETWORK` (before the ´macpepdb-py´).
+To access your files in the container mount your files to `/usr/src/macpepdb/data` with `-v YOUR_DATA_FOLDER:/usr/src/macpepdb/data` (add it before the `macpepdb-py`). Keep in mind your working in a container, so all file paths are within the container.   
+If you intend to create a protein/peptide database and your Postgresql server is running in a Docker container too, make sure both, the  Postgresql server and the MacPepDB container have access to the same Docker network by adding `--network=YOUR_DOCKER_NETWORK` (before the ´macpepdb-py´).
 
 ### Building a database
 #### Prepare the database
