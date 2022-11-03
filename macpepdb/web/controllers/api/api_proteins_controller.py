@@ -1,5 +1,5 @@
-from typing import Iterator
-from flask import request, jsonify, Response
+from typing import ClassVar, Iterator, Optional, Tuple
+from flask import request, jsonify, Response, request
 
 from macpepdb.database.query_helpers.where_condition import WhereCondition
 from macpepdb.proteomics.amino_acid import AminoAcid
@@ -9,8 +9,14 @@ from macpepdb.models.protein_peptide_association import ProteinPeptideAssociatio
 from macpepdb.web.server import app, get_database_connection
 from macpepdb.web.controllers.application_controller import ApplicationController
 from macpepdb.web.controllers.api.api_digestion_controller import ApiDigestionController
+from macpepdb.web.utility.content_type import ContentType
 
 class ApiProteinsController(ApplicationController):
+    PEPTIDES_PERMITTED_CONTENT_TYPES: ClassVar[Tuple[ContentType]] = (
+        ContentType.csv,
+        ContentType.json
+    )
+
     @staticmethod
     def show(accession: str):
         accession = accession.upper()
@@ -40,8 +46,7 @@ class ApiProteinsController(ApplicationController):
                 }), 404
 
     @staticmethod
-    def peptides(accession: str):
-
+    def peptides(accession: str, file_extension: Optional[str] = None):
         database_connection = get_database_connection()
         with database_connection.cursor() as database_cursor:
                 peptides = Peptide.select(
@@ -55,20 +60,41 @@ class ApiProteinsController(ApplicationController):
                 )
                 peptides.sort(key = lambda peptide: peptide.mass)
 
-                def json_stream() -> Iterator[bytes]:
-                    yield b"{\"peptides\": ["
-                    for peptide_idx, peptide in enumerate(peptides):
-                        if peptide_idx > 0:
-                            yield b","
-                        yield from peptide.to_json()
-                    yield b"]}"
-                    
-                return Response(
-                    json_stream(),
-                    content_type="application/json"
+                content_type: Optional[str] = ContentType.get_content_type_by_request(
+                    request,
+                    permitted_content_types=ApiProteinsController.PEPTIDES_PERMITTED_CONTENT_TYPES,
+                    default=ContentType.json
                 )
+                    
+                if content_type == ContentType.json:
+                    def json_stream() -> Iterator[bytes]:
+                        yield b"{\"peptides\": ["
+                        for peptide_idx, peptide in enumerate(peptides):
+                            if peptide_idx > 0:
+                                yield b","
+                            yield from peptide.to_json()
+                        yield b"]}"
+                        
+                    return Response(
+                        json_stream(),
+                        content_type=f"{content_type}; charset=utf-8"
+                    )
+                elif content_type == ContentType.csv:
+                    def csv_stream() -> Iterator[bytes]:
+                        yield ",".join(Peptide.CSV_HEADER + Peptide.METADATA_CSV_HEADER).encode()
+                        yield b"\n"
+                        for peptide_idx, peptide in enumerate(peptides):
+                            if peptide_idx > 0:
+                                yield b"\n"
+                            yield from peptide.to_csv_row()
+                    return Response(
+                        csv_stream(),
+                        content_type=f"{content_type}; charset=utf-8",
+                        headers={
+                            "Content-Disposition": f"attachment; filename={accession}_peptides.csv"
+                        }
 
-
+                    )
 
     @staticmethod
     def digest():

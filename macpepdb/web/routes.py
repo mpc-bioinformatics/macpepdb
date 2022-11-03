@@ -34,6 +34,7 @@ def register_routes(app: Flask):
     # Proteins controller
     app.add_url_rule("/api/proteins/<string:accession>", view_func=ApiProteinsController.show, endpoint="protein_show")
     app.add_url_rule("/api/proteins/<string:accession>/peptides", view_func=ApiProteinsController.peptides)
+    app.add_url_rule("/api/proteins/<string:accession>/peptides.<string:file_extension>", view_func=ApiProteinsController.peptides, endpoint="protein_peptides_file_ext")
     app.add_url_rule("/api/proteins/digest", view_func=ApiProteinsController.digest, methods=["POST"], endpoint="protein_digest")
     app.add_url_rule("/api/proteins/amino-acids", view_func=ApiProteinsController.amino_acids)
 
