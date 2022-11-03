@@ -513,7 +513,7 @@ class Protein:
         yield b"\",\"entry_name\":\""
         yield self.accession.encode("utf-8")
         yield b"\",\"name\":\""
-        yield self.name.encode("utf-8")
+        yield self.name.replace("\\", "\\\\").encode("utf-8")   # Proteins with "\" in name exists (A0A084VXA8), need to escape it.
         yield b"\",\"sequence\":\""
         yield self.sequence.encode("utf-8")
         yield b"\",\"taxonomy_id\":"
