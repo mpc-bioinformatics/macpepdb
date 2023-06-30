@@ -590,7 +590,7 @@ class PeptideBase:
         -------
         None, Petide, list of peptides or generator which yield peptides
         """
-        select_query = f"SELECT sequence, number_of_missed_cleavages FROM {cls.TABLE_NAME}"
+        select_query = f"SELECT sequence, number_of_missed_cleavages FROM {cls.TABLE_NAME} as peps"
         select_values = []
         if where_condition is not None:
             select_query += f" WHERE {where_condition.get_condition_str()}"
