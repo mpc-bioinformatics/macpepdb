@@ -60,7 +60,7 @@ def upgrade():
 
     # Distribute 'peptides' by mass
     connection = op.get_bind()
-    connection.execute("SELECT create_distributed_table('peptides', 'partition');")
+    connection.execute(sa.text("SELECT create_distributed_table('peptides', 'partition');"))
 
     op.create_index("peptides_mass_aa_count_idx", "peptides", [
         "partition",

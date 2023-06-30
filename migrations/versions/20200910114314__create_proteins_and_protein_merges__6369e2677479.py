@@ -35,7 +35,7 @@ def upgrade():
 
     # Make 'proteins' a reference table (copy to all nodes)
     connection = op.get_bind()
-    connection.execute("SELECT create_reference_table('proteins');")
+    connection.execute(sa.text("SELECT create_reference_table('proteins');"))
 
 def downgrade():
     op.drop_table('proteins')

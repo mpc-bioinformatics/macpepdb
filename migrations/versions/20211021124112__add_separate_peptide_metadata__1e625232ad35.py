@@ -31,7 +31,7 @@ def upgrade():
     )
 
     connection = op.get_bind()
-    connection.execute("SELECT create_distributed_table('peptide_metadata', 'partition', colocate_with => 'peptides');")
+    connection.execute(sa.text("SELECT create_distributed_table('peptide_metadata', 'partition', colocate_with => 'peptides');"))
 
 
 def downgrade():

@@ -30,7 +30,7 @@ def upgrade():
     op.create_index('proteins_peptides_peptide_mass_seqeunce_idx', 'proteins_peptides', ['partition', 'peptide_mass', 'peptide_sequence'])
 
     connection = op.get_bind()
-    connection.execute("SELECT create_distributed_table('proteins_peptides', 'partition', colocate_with => 'peptides');",)
+    connection.execute(sa.text("SELECT create_distributed_table('proteins_peptides', 'partition', colocate_with => 'peptides');",))
 
 
 def downgrade():
