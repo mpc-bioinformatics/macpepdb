@@ -1,0 +1,15 @@
+name: macpepdb
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - gcc
+  - gxx
+  - python=3.9
+  - pip
+  - setuptools
+  - libffi
+  - libpq
+  - yarn
+  - pip:
+    - -e ''.[dev]''

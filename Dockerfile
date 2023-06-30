@@ -1,29 +1,35 @@
-FROM python:3.9-buster as app
+FROM mambaorg/micromamba:1.2.0-jammy
 LABEL maintainer="dirk.winkelhardt@rub.de"
 
-ARG USER_ID=999
-ARG GROUP_ID=999
+ARG NEW_MAMBA_USER_ID=1000
+ARG NEW_MAMBA_USER_GID=1000
 
-ENV USER_ID=$USER_ID
-ENV GROUP_ID=$GROUP_ID
+USER root
+RUN usermod "--login=mambauser" "--home=/home/mambauser" \
+        --move-home "-u ${NEW_MAMBA_USER_ID}" "${MAMBA_USER}" && \
+    groupmod "--new-name=mambauser" \
+        "-g ${NEW_MAMBA_USER_GID}" "${MAMBA_USER}" && \
+    # Update the expected value of MAMBA_USER for the
+    # _entrypoint.sh consistency check.
+    echo "mambauser" > "/etc/arg_mamba_user" && \
+    :
+RUN apt-get update -y \
+    && apt-get upgrade -y \
+    && apt-get install -y git curl
 
-WORKDIR /home/app
-# Copy macpepdb
-COPY . macpepdb_src/
+WORKDIR /home/mambauser
+COPY --chown=mambauser:mambauser . macpepdb/
+WORKDIR /home/mambauser/macpepdb
 
-RUN apt-get update -y && apt-get install -y libxml2-dev libxslt-dev libpq-dev gcc g++ libc-dev \
-    && groupadd -g $GROUP_ID app \
-    && useradd -g $GROUP_ID -m -s /bin/bash -u $USER_ID app \
-    && chown -R app:app .
-
-USER app
-ENV HOME /home/app
+USER mambauser
+ENV HOME /home/mambauser
 ENV PATH $PATH:$HOME/.local/bin
+ENV ENV_NAME=macpepdb
 
-RUN python -m pip install --user virtualenv \
-    && virtualenv ~/appenv \
-    && . ~/appenv/bin/activate \
-    && pip install --upgrade pip \
-    && pip install ~/macpepdb_src
+RUN echo 'show_banner: false' > ~/.mambarc
 
-ENTRYPOINT [ "/home/app/macpepdb_src/entrypoint.sh" ]
+RUN micromamba env create -y -f environment.yml \
+    && micromamba clean --all --yes
+
+
+ENTRYPOINT [ "/usr/local/bin/_entrypoint.sh", "/home/mambauser/macpepdb/entrypoint.sh" ]
