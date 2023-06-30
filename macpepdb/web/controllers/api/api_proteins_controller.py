@@ -56,7 +56,7 @@ class ApiProteinsController(ApplicationController):
                         [accession]
                     ),
                     fetchall=True,
-                    include_metadata= True
+                    include_metadata= False
                 )
                 peptides.sort(key = lambda peptide: peptide.mass)
 
