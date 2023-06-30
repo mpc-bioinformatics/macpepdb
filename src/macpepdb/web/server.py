@@ -10,6 +10,7 @@ from typing import Optional, Union, Dict, Any, List
 # 3rd part imports
 from flask import Flask, g as request_store, request
 from werkzeug.exceptions import HTTPException
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # internal imports
 from macpepdb.web.database.connection_pool import ConnectionPool
@@ -100,6 +101,15 @@ def get_app(config_file: Optional[Union[Path, str]] = None, environment: Optiona
         DEBUG =  Configuration.values()['debug'],
         SECRET_KEY = bytes( Configuration.values()['secret'], "ascii")
     )
+
+    if Configuration.values()["use_reverse_proxy"]:
+        app.wsgi_app = ProxyFix(
+            app.wsgi_app,
+            x_for=1,
+            x_proto=1,
+            x_host=1,
+            x_prefix=1
+        )
 
     macpepdb_pool = ConnectionPool(1, Configuration.values()['macpepdb']['pool_size'], Configuration.values()['macpepdb']['url'])
 

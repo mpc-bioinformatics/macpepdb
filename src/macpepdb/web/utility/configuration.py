@@ -42,6 +42,8 @@ matomo:
   url: ""
   site_id: 1
   auth_token: ""
+# Set this to true if you are using a reverse proxy (e.g. nginx) in front of the application
+use_reverse_proxy: false
 """
     """Default configuration.
     """
@@ -99,6 +101,7 @@ matomo:
             cls._validate_ascii_string(config['secret'], 'secret')
             cls._validate_psql_url(config['macpepdb']['url'], 'macpepdb.url')
             cls._validate_type(config['macpepdb']['pool_size'], int, 'integer', 'macpepdb.pool_size')
+            cls._validate_type(config['use_reverse_proxy'], bool, 'bool', 'use_reverse_proxy')
         except KeyError as key_error:
             raise KeyError(f"The configuration key {key_error} is missing.")
 
