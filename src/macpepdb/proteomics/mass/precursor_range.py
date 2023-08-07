@@ -46,6 +46,24 @@ class PrecursorRange:
         Upper limit of the range.
         """
         return self.__upper_limit
+    
+    @property
+    def lower_tolerance_ppm(self) -> int:
+        """
+        Returns
+        -------
+        Lower lower tolerance in ppm.
+        """
+        return self.__lower_tolerance_ppm
+
+    @property
+    def upper_tolerance_ppm(self) -> int:
+        """
+        Returns
+        -------
+        Upper mass tolerance in ppm.
+        """
+        return self.__upper_tolerance_ppm
 
     def __contains__(self, value: int):
         """
