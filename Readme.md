@@ -1,3 +1,5 @@
+**The development of MaCPepDB is moved to a new repository: https://github.com/medbioinf/macpepdb**
+
 # MaCPepDB 2.0 - Mass Centric Peptide Database
 
 ## Description
