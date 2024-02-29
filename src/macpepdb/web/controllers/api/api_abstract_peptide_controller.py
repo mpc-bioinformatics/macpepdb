@@ -13,9 +13,9 @@ from macpepdb.proteomics.mass.convert import to_int as mass_to_int
 from macpepdb.proteomics.modification import Modification
 from macpepdb.proteomics.modification_collection import ModificationCollection
 from macpepdb.models.modification_combination_list import ModificationCombinationList
-from macpepdb.models.taxonomy import Taxonomy, TaxonomyRank
+from macpepdb.models.taxonomy import Taxonomy
 from macpepdb.models.peptide import Peptide
-from macpepdb.models.peptide_metadata import PeptideMetadata
+from macpepdb.helpers.metadata_condition import MetadataCondition
 from macpepdb.web.server import get_database_connection, macpepdb_pool, app
 from macpepdb.web.controllers.application_controller import ApplicationController
 
@@ -41,120 +41,6 @@ class OutputFormat(Enum):
             if format.value == lower_value:
                 return format
         raise KeyError(f"f{value} not found")
-
-@dataclass
-class MetadataCondition:
-    __slots__ = [
-        "__is_swiss_prot",
-        "__is_trembl",
-        "__taxonomy_ids",
-        "__unique_taxonomy_ids",
-        "__proteome_id"
-    ]
-
-    __is_swiss_prot: Optional[bool]
-    __is_trembl: Optional[bool]
-    __taxonomy_ids: Optional[List[int]]
-    __unique_taxonomy_ids: Optional[List[int]]
-    __proteome_id: Optional[str]
-
-    def __init__(self):
-        self.__is_swiss_prot = None
-        self.__is_trembl = None
-        self.__taxonomy_ids = None
-        self.__unique_taxonomy_ids = None
-        self.__proteome_id = None
-
-    @property
-    def is_swiss_prot(self) -> Optional[bool]:
-        return self.__is_swiss_prot
-
-    @property
-    def is_trembl(self) -> Optional[bool]:
-        return self.__is_trembl
-
-    @property
-    def taxonomy_ids(self) -> Optional[List[int]]:
-        return self.__taxonomy_ids
-
-    @property
-    def unique_taxonomy_ids(self) -> Optional[List[int]]:
-        return self.__unique_taxonomy_ids
-
-    @property
-    def proteome_id(self) -> Optional[str]:
-        return self.__proteome_id
-
-    @is_swiss_prot.setter
-    def is_swiss_prot(self, value: Optional[bool]):
-        self.__is_swiss_prot = value
-
-    @is_trembl.setter
-    def is_trembl(self, value: Optional[bool]):
-        self.__is_trembl = value
-
-    @taxonomy_ids.setter
-    def taxonomy_ids(self, value: Optional[List[int]]):
-        self.__taxonomy_ids = value
-
-    @unique_taxonomy_ids.setter
-    def unique_taxonomy_ids(self, value: Optional[List[int]]):
-        self.__unique_taxonomy_ids = value
-
-    @proteome_id.setter
-    def proteome_id(self, value: Optional[str]):
-        self.__proteome_id = value
-
-
-    def validate(self, metadata: PeptideMetadata) -> bool:
-        if self.__is_swiss_prot is not None and metadata.is_swiss_prot != self.__is_swiss_prot:
-            return False
-        if self.__is_trembl is not None and metadata.is_trembl != self.__is_trembl:
-            return False
-        if self.__taxonomy_ids is not None and not self.__class__.is_intersecting(self.__taxonomy_ids, metadata.taxonomy_ids):
-            return False
-        if self.__unique_taxonomy_ids is not None and not self.__class__.is_intersecting(self.__unique_taxonomy_ids, metadata.unique_taxonomy_ids):
-            return False
-        if self.__proteome_id is not None and self.__proteome_id not in metadata.proteome_ids:
-            return False
-        return True
-
-    def has_conditions(self) -> bool:
-        """
-        Checks if metadata conditions exists
-
-        Returns
-        -------
-        bool
-            False if no check is needed (not metadata condition)
-        """
-        return self.__is_swiss_prot is not None \
-            or self.__is_trembl is not None \
-            or self.__taxonomy_ids is not None \
-            or self.__unique_taxonomy_ids is not None \
-            or self.__proteome_id is not None \
-        
-    @classmethod
-    def is_intersecting(cls, iterable_x: Iterable[Any], iterable_y: Iterable[Any]) -> bool:
-        """
-        Checks if two iterables are intersecting by checking if one element of iterable x is contained by iterable y.
-
-        Arguments
-        ---------
-        iterable_x: Iterable[Any]
-            List with elements
-        iterable_y: Iterable[Any]
-            List with elements
-        
-        Returns
-        -------
-        Ture if intersect
-        """
-        for x_element in iterable_x:
-            if x_element in iterable_y:
-                return True
-        return False
-
 
 class ApiAbstractPeptideController(ApplicationController):
     SUPPORTED_ORDER_COLUMNS = ['mass', 'length', 'sequence', 'number_of_missed_cleavages']
@@ -291,9 +177,9 @@ class ApiAbstractPeptideController(ApplicationController):
                             errors["is_reviewed"].append("must be a boolean")
 
                     # Sort by `order_by`
-                    order_by_instruction = None
+                    order_by_instruction = "sequence ASC"
                     if order_by and not output_style == OutputFormat.text:
-                        order_by_instruction = f"{order_by} {data['order_direction']}"
+                        order_by_instruction = f"{order_by} {data['order_direction']}, sequence ASC"
 
                     # Note about offset and limit: It is much faster to fetch data from server and discard rows below the offset and stop the fetching when the limit is reached, instead of applying LIMIT and OFFSET directly to the query.
                     # Even on high offsets, which discards a lot of rows, this approach is faster.
@@ -325,18 +211,18 @@ class ApiAbstractPeptideController(ApplicationController):
 
         include_metadata = include_metadata or metadata_condition.has_conditions()
 
-        peptide_conversion = lambda _, __: (b"",) # lambda to convert peptide to output type
-        delimiter = b""                           # delimiter between each converted peptide
-        pre_peptide_content = b""                 # content before peptide
-        post_peptide_content = lambda _, __: b""  # content after peptides
+        peptide_conversion = lambda _, __: (b"",)       # lambda to convert peptide to output type
+        delimiter = b""                                 # delimiter between each converted peptide
+        pre_peptide_content = b""                       # content before peptide
+        post_peptide_content = lambda _, __, ___: b""   # content after peptides
 
         if output_style == OutputFormat.json:
             peptide_conversion = lambda _, peptide: peptide.to_json()
             delimiter = b","
             pre_peptide_content = b"{\"peptides\":["
-            post_peptide_content = lambda _, __: b"]}"
+            post_peptide_content = lambda _, __, ___: b"]}"
             if include_count:
-                post_peptide_content = lambda database_cursor, where_condition: f"],\"count\":{Peptide.count(database_cursor, where_condition)}}}".encode("utf-8")
+                post_peptide_content = lambda database_cursor, where_condition, metadata_condition: f"],\"count\":{Peptide.count_on_stream(database_cursor, where_condition, metadata_condition)}}}".encode("utf-8")
         elif output_style == OutputFormat.stream:
             peptide_conversion = lambda _, peptide: peptide.to_json()
             delimiter = b"\n"
@@ -371,7 +257,7 @@ class ApiAbstractPeptideController(ApplicationController):
         )
 
     @staticmethod
-    def stream(peptide_conversion: Callable[[int, Peptide], Iterator[ByteString]], delimiter: ByteString, pre_peptide_content: ByteString, post_spectra_content: Callable[[Any, WhereCondition], ByteString],
+    def stream(peptide_conversion: Callable[[int, Peptide], Iterator[ByteString]], delimiter: ByteString, pre_peptide_content: ByteString, post_peptide_content: Callable[[Any, WhereCondition, MetadataCondition], ByteString],
         where_condition: WhereCondition, order_by_instruction: str, offset: int, limit: int, include_metadata: bool,
         metadata_condition: MetadataCondition) -> Iterable[ByteString]:
         """
@@ -385,7 +271,7 @@ class ApiAbstractPeptideController(ApplicationController):
             Delimiter between peptides
         pre_peptide_content : ByteString
             _description_
-        post_spectra_content : Callable[[Any, WhereCondition], ByteString]
+        post_peptide_content : Callable[[Any, WhereCondition], ByteString]
             Function which yields content after peptides, e.g. to add the count.
             Arguments are is the database cursor and the where condition
         where_condition : WhereCondition
@@ -416,17 +302,22 @@ class ApiAbstractPeptideController(ApplicationController):
             with database_connection.cursor(name="peptide_search") as database_cursor:
                 # Counter for written peptides necessary of manual limit offset handling
                 written_peptides = 0
-                for peptide_idx, peptide in enumerate(Peptide.select(database_cursor, where_condition, order_by=order_by_instruction, include_metadata=include_metadata, stream=True)):
-                    if peptide_idx >= offset - 1 and (not do_metadata_checks or metadata_condition.validate(peptide.metadata)):
-                        if written_peptides > 0:
-                            yield delimiter
-                        yield from peptide_conversion(peptide_idx, peptide)
-                        written_peptides += 1
+                matching_peptides = 0
+                for peptide in Peptide.select(database_cursor, where_condition, order_by=order_by_instruction, include_metadata=include_metadata, stream=True):
+                    if do_metadata_checks and not metadata_condition.validate(peptide.metadata):
+                        continue
+                    matching_peptides += 1
+                    if matching_peptides <= offset:
+                        continue
+                    if written_peptides > 0:
+                        yield delimiter
+                    yield from peptide_conversion(matching_peptides, peptide)
+                    written_peptides += 1
                     # Break peptide cursor loop if limit is hit
                     if written_peptides == limit:
                         break
             with database_connection.cursor() as database_cursor:
-                yield post_spectra_content(database_cursor, where_condition)
+                yield post_peptide_content(database_cursor, where_condition, metadata_condition if do_metadata_checks else None)
         except BaseException as e:
             app.logger.error(f"steam throws err => {e}\n\ntraceback => {traceback.format_exc()}")
             raise e

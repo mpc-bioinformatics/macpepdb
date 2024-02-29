@@ -2,6 +2,8 @@
 from __future__ import annotations
 from typing import ByteString, ClassVar, Iterator, Optional, List, Union
 
+# 3rd party imports
+from psycopg2.extensions import cursor as DatabaseCursor
 
 # internal imports
 from macpepdb.database.query_helpers.where_condition import WhereCondition
@@ -10,6 +12,7 @@ from macpepdb.models.protein_peptide_association import ProteinPeptideAssociatio
 from macpepdb.models import protein
 # Do no import PeptideMetadata directly to prevent circula import
 from macpepdb.models import peptide_metadata as metadata_module
+from macpepdb.helpers.metadata_condition import MetadataCondition
 
 class Peptide(PeptideBase):
     """
@@ -261,3 +264,32 @@ class Peptide(PeptideBase):
             yield b"\",\""
             yield ",".join([f"{proteome_id}" for proteome_id in self.metadata.proteome_ids]).encode()
             yield b"\""
+
+    @classmethod
+    def count_on_stream(
+            cls,
+            database_cursor: DatabaseCursor,
+            where_condition: WhereCondition,
+            metadata_condition: Optional[MetadataCondition]
+    ) -> int:
+        """
+        Returns the peptide count for the given where condition and metadata condition.
+
+        Parameters
+        ----------
+        database_cursor : DatabaseCursor
+            Database cursor
+        where_condition : WhereCondition
+            WhereCondition for SQL query
+        metadata_condition : Optional[MetadataCondition]
+            Metadata condition
+
+        Returns
+        -------
+        int
+            Number of peptide
+        """
+        if metadata_condition:
+            return sum(1 if metadata_condition.validate(peptide.metadata) else 0 for peptide in cls.select(database_cursor, where_condition, include_metadata=True, stream=True))
+        else:
+            return sum(1 for _ in cls.select(database_cursor, where_condition, stream=True))
